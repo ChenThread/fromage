@@ -1,0 +1,7 @@
+bin=fromage.bin
+cue=fromage.cue
+lic=isolicence.pal
+
+# /
+dat=./system.cnf
+dat=./boot.exe

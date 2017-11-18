@@ -1,0 +1,5 @@
+BOOT = cdrom:\BOOT.EXE;1
+TCB = 4
+EVENT = 10
+STACK = 801ff000
+

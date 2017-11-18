@@ -1,0 +1,58 @@
+#include <unistd.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <math.h>
+
+#include "psx.h"
+
+typedef int32_t fixed;
+typedef int64_t fixed64;
+typedef fixed vec3[3];
+typedef fixed vec4[4];
+typedef vec4 mat4[4];
+
+#define FM_PI ((fixed)0x00008000)
+
+// Files
+#define LEVEL_LX 64
+#define LEVEL_LY 64
+#define LEVEL_LZ 64
+extern uint32_t fsys_mctex[];
+extern uint8_t fsys_level[LEVEL_LY][LEVEL_LZ][LEVEL_LX];
+
+// gpu.c
+extern volatile uint32_t vblank_counter;
+void gp0_command(uint32_t v);
+void gp0_data(uint32_t v);
+void gp0_data_xy(uint32_t x, uint32_t y);
+void gp1_command(uint32_t v);
+
+// joy.c
+extern volatile uint8_t joy_id;
+extern volatile uint8_t joy_hid;
+extern volatile uint16_t joy_buttons;
+extern volatile uint8_t joy_axes[4];
+extern volatile uint32_t joy_read_counter;
+extern volatile uint8_t joy_has_ack;
+extern volatile uint8_t joy_rumble0; // small
+extern volatile uint8_t joy_rumble1; // large
+void joy_unlock_dualshock(void);
+void joy_do_read(void);
+
+// world.c
+uint8_t world_get_top_opaque(int32_t cx, int32_t cz);
+uint32_t world_get_vis_blocks_unsafe(int32_t cx, int32_t cy, int32_t cz);
+int32_t world_get_block_unsafe(int32_t cx, int32_t cy, int32_t cz);
+int32_t world_get_render_faces_unsafe(int32_t cx, int32_t cy, int32_t cz);
+int32_t world_get_block(int32_t cx, int32_t cy, int32_t cz);
+void world_set_block(int32_t cx, int32_t cy, int32_t cz, uint8_t b, uint8_t flags);
+bool world_cast_ray(int32_t px, int32_t py, int32_t pz, int32_t vx, int32_t vy, int32_t vz, int32_t *ocx, int32_t *ocy, int32_t *ocz, int32_t max_steps, bool use_block_before_hit);
+uint32_t world_is_translucent(int32_t b);
+uint32_t world_is_walkable(int32_t b);
+int32_t world_is_colliding(int32_t x1, int32_t y1, int32_t z1, int32_t x2, int32_t y2, int32_t z2);
+int32_t world_is_colliding_fixed(int32_t x1, int32_t y1, int32_t z1, int32_t x2, int32_t y2, int32_t z2);
+void world_schedule_block_update(int32_t cx, int32_t cy, int32_t cz, uint32_t delay);
+void world_init();
+void world_update(uint32_t ticks);
