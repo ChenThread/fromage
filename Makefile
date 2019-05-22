@@ -58,7 +58,7 @@ OBJS = $(OBJDIR)/head.o \
 all: $(EXE_NAME).exe $(ISO_NAME).cue
 
 clean:
-	$(RM_F) $(OBJS) $OBJDIR)/$(EXE_NAME).elf $(ISO_NAME).bin $(ISO_NAME).cue tools/pscd-new
+	$(RM_F) $(OBJS) $(OBJDIR)/$(EXE_NAME).elf $(ISO_NAME).bin $(ISO_NAME).cue tools/pscd-new
 
 $(ISO_NAME).cue: $(ISO_NAME) tools/pscd-new
 	./tools/pscd-new manifest.txt
