@@ -1,5 +1,7 @@
 #include "common.h"
 
+extern uint32_t block_lighting[6];
+
 void draw_current_block(void)
 {
 	int32_t cam_cx = cam_x >> 8;
@@ -36,19 +38,23 @@ void draw_hotbar(void)
 
 	for (int i = 0; i < HOTBAR_MAX; i++) {
 		int bx = -((bw*(HOTBAR_MAX-1))/2) + (i*bw);
-		if (current_block[i] > 0 && current_block[i] < BLOCK_MAX) {
-#if 0
-			// Solid block
-			uint16_t* bi = block_info[current_block[i]][2];
-			DMA_PUSH(3, 1);
-			dma_buffer[dma_pos++] = 0x7D000000;
-			dma_buffer[dma_pos++] = ((by-8) << 16) | ((bx-8) & 0xFFFF);
-			dma_buffer[dma_pos++] = (bi[2] << 16) | bi[0];
-#else
-			// Isometric cube
-			uint16_t *bi0 = block_info[current_block[i]][0];
-			uint16_t *bi1 = block_info[current_block[i]][2];
+		uint16_t *bi0 = block_info[current_block[i]][0];
+		uint16_t *bi1 = block_info[current_block[i]][2];
 
+		if (current_block[i] == 6 || (current_block[i] >= 37 && current_block[i] <= 40)) {
+			// Flat texture
+			DMA_PUSH(9, 1);
+			dma_buffer[dma_pos++] = 0x2C808080;
+			dma_buffer[dma_pos++] = ((by-16) << 16) | ((bx-16) & 0xFFFF);
+			dma_buffer[dma_pos++] = (bi0[2] << 16) | (bi0[0] + (0x0000));
+			dma_buffer[dma_pos++] = ((by-16) << 16) | ((bx+16) & 0xFFFF);
+			dma_buffer[dma_pos++] = (bi0[1] << 16) | (bi0[0] + (0x000F));
+			dma_buffer[dma_pos++] = ((by+16) << 16) | ((bx-16) & 0xFFFF);
+			dma_buffer[dma_pos++] = (0 << 16) | (bi0[0] + (0x0F00));
+			dma_buffer[dma_pos++] = ((by+16) << 16) | ((bx+16) & 0xFFFF);
+			dma_buffer[dma_pos++] = (0 << 16) | (bi0[0] + (0x0F0F));
+		} else if (current_block[i] > 0 && current_block[i] < BLOCK_MAX) {
+			// Isometric cube
 			// Positions:
 			//
 			// left, centre, right
@@ -66,7 +72,7 @@ void draw_hotbar(void)
 			uint32_t ru = ((by-8) << 16) | ((bx+14) & 0xFFFF);
 			uint32_t rd = ((by+8) << 16) | ((bx+14) & 0xFFFF);
 			DMA_PUSH(9, 1);
-			dma_buffer[dma_pos++] = 0x2C808080;
+			dma_buffer[dma_pos++] = 0x2C000000 | block_lighting[5];
 			dma_buffer[dma_pos++] = lu;
 			dma_buffer[dma_pos++] = (bi0[2] << 16) | (bi0[0] + (0x0000));
 			dma_buffer[dma_pos++] = cu;
@@ -77,7 +83,7 @@ void draw_hotbar(void)
 			dma_buffer[dma_pos++] = (0 << 16) | (bi0[0] + (0x0F0F));
 
 			DMA_PUSH(9, 1);
-			dma_buffer[dma_pos++] = 0x2C808080;
+			dma_buffer[dma_pos++] = 0x2C000000 | block_lighting[0];
 			dma_buffer[dma_pos++] = lu;
 			dma_buffer[dma_pos++] = (bi1[2] << 16) | (bi1[0] + (0x0000));
 			dma_buffer[dma_pos++] = cc;
@@ -88,7 +94,7 @@ void draw_hotbar(void)
 			dma_buffer[dma_pos++] = (0 << 16) | (bi0[0] + (0x0F0F));
 
 			DMA_PUSH(9, 1);
-			dma_buffer[dma_pos++] = 0x2C808080;
+			dma_buffer[dma_pos++] = 0x2C000000 | block_lighting[2];
 			dma_buffer[dma_pos++] = cc;
 			dma_buffer[dma_pos++] = (bi1[2] << 16) | (bi1[0] + (0x0000));
 			dma_buffer[dma_pos++] = ru;
@@ -97,7 +103,6 @@ void draw_hotbar(void)
 			dma_buffer[dma_pos++] = (0 << 16) | (bi0[0] + (0x0F00));
 			dma_buffer[dma_pos++] = rd;
 			dma_buffer[dma_pos++] = (0 << 16) | (bi0[0] + (0x0F0F));
-#endif
 		}
 	}
 
