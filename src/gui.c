@@ -30,28 +30,88 @@ void draw_current_block(void)
 
 void draw_hotbar(void)
 {
-	const int bw = 20;
-	const int bh = 20;
-	const int by = 108;
+	const int bw = 30;
+	const int bh = 30;
+	const int by = 103;
+
 	for (int i = 0; i < HOTBAR_MAX; i++) {
 		int bx = -((bw*(HOTBAR_MAX-1))/2) + (i*bw);
 		if (current_block[i] > 0 && current_block[i] < BLOCK_MAX) {
-			DMA_PUSH(3, 1);
+#if 0
+			// Solid block
 			uint16_t* bi = block_info[current_block[i]][2];
+			DMA_PUSH(3, 1);
 			dma_buffer[dma_pos++] = 0x7D000000;
 			dma_buffer[dma_pos++] = ((by-8) << 16) | ((bx-8) & 0xFFFF);
 			dma_buffer[dma_pos++] = (bi[2] << 16) | bi[0];
+#else
+			// Isometric cube
+			uint16_t *bi0 = block_info[current_block[i]][0];
+			uint16_t *bi1 = block_info[current_block[i]][2];
+
+			// Positions:
+			//
+			// left, centre, right
+			// up, down
+			//     cu
+			//  lu    ru
+			//     cc
+			//  ld    rd
+			//     cd
+			uint32_t lu = ((by-8) << 16) | ((bx-14) & 0xFFFF);
+			uint32_t ld = ((by+8) << 16) | ((bx-14) & 0xFFFF);
+			uint32_t cu = ((by-16) << 16) | ((bx) & 0xFFFF);
+			uint32_t cc = ((by+0) << 16) | ((bx) & 0xFFFF);
+			uint32_t cd = ((by+16) << 16) | ((bx) & 0xFFFF);
+			uint32_t ru = ((by-8) << 16) | ((bx+14) & 0xFFFF);
+			uint32_t rd = ((by+8) << 16) | ((bx+14) & 0xFFFF);
+			DMA_PUSH(9, 1);
+			dma_buffer[dma_pos++] = 0x2C808080;
+			dma_buffer[dma_pos++] = lu;
+			dma_buffer[dma_pos++] = (bi0[2] << 16) | (bi0[0] + (0x0000));
+			dma_buffer[dma_pos++] = cu;
+			dma_buffer[dma_pos++] = (bi0[1] << 16) | (bi0[0] + (0x000F));
+			dma_buffer[dma_pos++] = cc;
+			dma_buffer[dma_pos++] = (0 << 16) | (bi0[0] + (0x0F00));
+			dma_buffer[dma_pos++] = ru;
+			dma_buffer[dma_pos++] = (0 << 16) | (bi0[0] + (0x0F0F));
+
+			DMA_PUSH(9, 1);
+			dma_buffer[dma_pos++] = 0x2C808080;
+			dma_buffer[dma_pos++] = lu;
+			dma_buffer[dma_pos++] = (bi1[2] << 16) | (bi1[0] + (0x0000));
+			dma_buffer[dma_pos++] = cc;
+			dma_buffer[dma_pos++] = (bi1[1] << 16) | (bi1[0] + (0x000F));
+			dma_buffer[dma_pos++] = ld;
+			dma_buffer[dma_pos++] = (0 << 16) | (bi0[0] + (0x0F00));
+			dma_buffer[dma_pos++] = cd;
+			dma_buffer[dma_pos++] = (0 << 16) | (bi0[0] + (0x0F0F));
+
+			DMA_PUSH(9, 1);
+			dma_buffer[dma_pos++] = 0x2C808080;
+			dma_buffer[dma_pos++] = cc;
+			dma_buffer[dma_pos++] = (bi1[2] << 16) | (bi1[0] + (0x0000));
+			dma_buffer[dma_pos++] = ru;
+			dma_buffer[dma_pos++] = (bi1[1] << 16) | (bi1[0] + (0x000F));
+			dma_buffer[dma_pos++] = cd;
+			dma_buffer[dma_pos++] = (0 << 16) | (bi0[0] + (0x0F00));
+			dma_buffer[dma_pos++] = rd;
+			dma_buffer[dma_pos++] = (0 << 16) | (bi0[0] + (0x0F0F));
+#endif
 		}
-		if (i == hotbar_pos) {
-			DMA_PUSH(3, 1);
-			dma_buffer[dma_pos++] = 0x60080808;
-			dma_buffer[dma_pos++] = ((by-9) << 16) | ((bx-9) & 0xFFFF);
-			dma_buffer[dma_pos++] = ((bh-2) << 16) | ((bw-2) & 0xFFFF);
-			DMA_PUSH(3, 1);
-			dma_buffer[dma_pos++] = 0x60C0C0C0;
-			dma_buffer[dma_pos++] = ((by-11) << 16) | ((bx-11) & 0xFFFF);
-			dma_buffer[dma_pos++] = ((bh+2) << 16) | ((bw+2) & 0xFFFF);
-		}
+	}
+
+	// Box around current hotbar item
+	{
+		int bx = -((bw*(HOTBAR_MAX-1))/2) + (hotbar_pos*bw);
+		DMA_PUSH(3, 1);
+		dma_buffer[dma_pos++] = 0x60080808;
+		dma_buffer[dma_pos++] = ((by-(bh/2)+1) << 16) | ((bx-(bw/2)+1) & 0xFFFF);
+		dma_buffer[dma_pos++] = ((bh-2) << 16) | ((bw-2) & 0xFFFF);
+		DMA_PUSH(3, 1);
+		dma_buffer[dma_pos++] = 0x60C0C0C0;
+		dma_buffer[dma_pos++] = ((by-(bh/2)-1) << 16) | ((bx-(bw/2)-1) & 0xFFFF);
+		dma_buffer[dma_pos++] = ((bh+2) << 16) | ((bw+2) & 0xFFFF);
 	}
 
 	DMA_PUSH(3, 1);
