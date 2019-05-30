@@ -174,7 +174,7 @@ uint32_t dma_buffer_current = 0;
 #define OT_WORLD 2
 
 int joy_buttons_old = 0;
-int current_block[9] = {0, 1, 4, 45, 18, 4, 3, 20, 8};
+int current_block[HOTBAR_MAX] = {0, 1, 4, 45, 18, 4, 3, 20, 8};
 int hotbar_pos = 0;
 
 volatile uint32_t frame_x = 0;
@@ -919,8 +919,8 @@ void player_update(int mmul)
 
 		if (sel_valid) {
 			int32_t sel_block = world_get_block(sel_cx, sel_cy, sel_cz);
-			for (int i = 0; i <= 9; i++) {
-				if (i == 9)
+			for (int i = 0; i <= HOTBAR_MAX; i++) {
+				if (i == HOTBAR_MAX)
 					current_block[hotbar_pos] = world_get_block(sel_cx, sel_cy, sel_cz);
 				else if (current_block[i] == sel_block) {
 					hotbar_pos = i;
@@ -949,8 +949,8 @@ void player_update(int mmul)
 	if ((joy_pressed & PAD_T) != 0) current_block[hotbar_pos] = current_block[hotbar_pos] == 0 ? (BLOCK_MAX-1) : (current_block[hotbar_pos] - 1);
 	if ((joy_pressed & PAD_S) != 0) current_block[hotbar_pos] = (current_block[hotbar_pos] + 1) % BLOCK_MAX;
 
-	if ((joy_pressed & PAD_L1) != 0) { hotbar_pos--; if (hotbar_pos < 0) hotbar_pos = 8; }
-	if ((joy_pressed & PAD_R1) != 0) hotbar_pos = (hotbar_pos + 1) % 9;
+	if ((joy_pressed & PAD_L1) != 0) { hotbar_pos--; if (hotbar_pos < 0) hotbar_pos = HOTBAR_MAX-1; }
+	if ((joy_pressed & PAD_R1) != 0) hotbar_pos = (hotbar_pos + 1) % HOTBAR_MAX;
 
 	setup_matrix(false);
 	int32_t lvx = jx0 >> 1;

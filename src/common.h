@@ -57,7 +57,8 @@ extern uint32_t dma_buffer_current;
 	dma_pos++; \
 
 extern int hotbar_pos;
-extern int current_block[9];
+#define HOTBAR_MAX 9
+extern int current_block[HOTBAR_MAX];
 
 void draw_block(int32_t cx, int32_t cy, int32_t cz, int di, int block, uint32_t facemask, bool transparent);
 
