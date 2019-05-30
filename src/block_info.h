@@ -1,5 +1,4 @@
 #define QUAD(x,y) {((y)<<12)|((x)<<4), 0x0010, 0x4004 | ( ((y) * 16 + (x)) << 6), 0x0000}
-#define QUAD_MAX 6
 
 #define INFO_BLOCK_CUBE(x,y) {QUAD(x,y),QUAD(x,y),QUAD(x,y),QUAD(x,y),QUAD(x,y),QUAD(x,y)}
 #define INFO_BLOCK_CUBE_TB(x,y,xt,yt,xb,yb) {QUAD(x,y),QUAD(x,y),QUAD(x,y),QUAD(x,y),QUAD(xb,yb),QUAD(xt,yt)}
