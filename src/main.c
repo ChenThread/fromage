@@ -1,4 +1,5 @@
 #include <chenboot.h>
+#include <sawpads.h>
 #include "common.h"
 
 /*
@@ -171,20 +172,18 @@ chenboot_exception_frame_t *isr_handler_c(chenboot_exception_frame_t *sp)
 
 	if((I_STAT & (1<<0)) != 0) {
 		// VBLANK
-
 		vblank_counter++;
 		ticks++;
 
 		//
 		I_STAT = ~(1<<0);
-		joy_has_ack++;
+		sawpads_isr_vblank();
 	}
 
 	if((I_STAT & (1<<7)) != 0) {
 		// JOY
 		I_STAT = ~(1<<7);
-		JOY_CTRL |= 0x0010; // ACK
-		joy_has_ack++;
+		sawpads_isr_joy();
 	}
 
 	// Work around GTE bug
@@ -832,18 +831,21 @@ void draw_everything(void)
 
 void player_update(int mmul)
 {
-	int jx0 = (int)(int8_t)(joy_axes[2]);
-	int jy0 = (int)(int8_t)(joy_axes[3]);
-	int jx1 = (int)(int8_t)(joy_axes[0]);
-	int jy1 = (int)(int8_t)(joy_axes[1]);
-	if (use_dpad == true) {
-		jx0 = jy0 = 0;
-		if ((joy_buttons & PAD_UP) == 0) jy0 = -0x7F;
-		if ((joy_buttons & PAD_DOWN) == 0) jy0 = 0x7F;
-		if ((joy_buttons & PAD_LEFT) == 0) jx0 = -0x7F;
-		if ((joy_buttons & PAD_RIGHT) == 0) jx0 = 0x7F;
-	}
+	int jx0, jy0, jx1, jy1;
 
+	jx1 = (int)(int8_t)(sawpads_axes[0]);
+	jy1 = (int)(int8_t)(sawpads_axes[1]);
+
+	if (use_dpad == true) {
+		if ((sawpads_buttons & PAD_UP) == 0) jy0 = -0x7F;
+		if ((sawpads_buttons & PAD_DOWN) == 0) jy0 = 0x7F;
+		if ((sawpads_buttons & PAD_LEFT) == 0) jx0 = -0x7F;
+		if ((sawpads_buttons & PAD_RIGHT) == 0) jx0 = 0x7F;
+	} else {
+		jx0 = (int)(int8_t)(sawpads_axes[2]);
+		jy0 = (int)(int8_t)(sawpads_axes[3]);
+	}
+ 
 	cam_ry += (jx1<<3) * mmul;
 	cam_rx += (jy1<<3) * mmul;
 	if (cam_ry < -0x8000) cam_ry += 0x10000;
@@ -851,8 +853,8 @@ void player_update(int mmul)
 	if (cam_rx < -0x4000) cam_rx = -0x4000;
 	if (cam_rx > 0x4000) cam_rx = 0x4000;
 
-	int joy_pressed = (~joy_buttons_old) & ~joy_buttons;
-	joy_buttons_old = ~joy_buttons;
+	int joy_pressed = (~joy_buttons_old) & ~sawpads_buttons;
+	joy_buttons_old = ~sawpads_buttons;
 
 	if ((joy_pressed & PAD_SELECT) != 0)
 		use_dpad = !use_dpad;
@@ -930,7 +932,7 @@ void player_update(int mmul)
 	int32_t lvy = 0;
 	int32_t lvz = -(jy0 >> 1);
 
-	if ((joy_buttons & PAD_R3) == 0) { } else { lvx >>= 1; lvz >>= 1; }
+	if ((sawpads_buttons & PAD_R3) == 0) { } else { lvx >>= 1; lvz >>= 1; }
 
 #if 0
 	int32_t gvx = 0;
@@ -994,7 +996,7 @@ void player_update(int mmul)
 	bool in_liquid = player_is_in_liquid();
 
 	for (int i = 0; i < mmul; i++) {
-		if ((joy_buttons & PAD_X) == 0) {
+		if ((sawpads_buttons & PAD_X) == 0) {
 			if (in_liquid || !try_move(0, -16, 0, false))
 				vel_y = in_liquid ? 48 : 96;
 		}
@@ -1097,7 +1099,7 @@ int main(void)
 	I_STAT = ~(1<<7);
 	I_MASK |= (1<<7);
 
-	joy_unlock_dualshock();
+	sawpads_unlock_dualshock();
 
 	// Generate a texture
 	for(int y = 0; y < 32; y++) {
@@ -1182,7 +1184,7 @@ int main(void)
 			}
 			while(vblank_counter == 0) {}
 			gp1_command(0x05000000 | ((vis_frame_x)<<0) | ((vis_frame_y)<<10)); // Display start (x,y)
-			joy_do_read();
+			sawpads_do_read();
 		}
 	}
 

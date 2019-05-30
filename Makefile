@@ -29,7 +29,7 @@ LDFLAGS = -g -O3 -flto -Wl,-Ttext-segment=0x80010000 -pipe \
 	-msoft-float \
 	-L$(CANDYK)/lib
 
-LIBS = -lm -lc -lgcc -lchenboot
+LIBS = -lm -lsawpads -lc -lgcc -lchenboot
 
 # stuff omitted:
 # O2:
@@ -51,7 +51,6 @@ INCLUDES = src/psx.h src/common.h
 
 OBJS =	$(OBJDIR)/gui.o \
 	$(OBJDIR)/gpu.o \
-	$(OBJDIR)/joy.o \
 	$(OBJDIR)/world.o \
 	\
 	$(OBJDIR)/atlas.o \
