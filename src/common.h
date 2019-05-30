@@ -24,7 +24,7 @@ typedef vec4 mat4[4];
 #define LEVEL_LX 64
 #define LEVEL_LY 64
 #define LEVEL_LZ 64
-extern uint32_t fsys_mctex[];
+extern uint32_t atlas_raw[];
 extern uint8_t fsys_level[LEVEL_LY][LEVEL_LZ][LEVEL_LX];
 
 // block_info.h

@@ -3,7 +3,7 @@ OUTPUT_ARCH(mips);
 
 SECTIONS
 {
-	. = 0x80010000 - 0x800;
+	. = 0x80010000;
 	_LOADABLE_START_WHEAD = .;
 	.text : {
 		*(.boot)

@@ -1,3 +1,4 @@
+#include <chenboot.h>
 #include "common.h"
 
 /*
@@ -19,8 +20,6 @@ void yield(void);
 
 extern volatile uint8_t _BSS_START[];
 extern volatile uint8_t _BSS_END[];
-extern volatile uint32_t int_handler_stub[];
-extern volatile uint32_t int_handler_stub_end[];
 
 extern void aaa_nop_sled_cache_clearer(void);
 
@@ -89,30 +88,6 @@ const int16_t mesh_data_block[] = {
 const int16_t mesh_data_plant[] = {
 	// TODO
 };
-
-void aaa_start(void)
-{
-	int i;
-
-	I_MASK = 0;
-
-	I_STAT = 0xFFFF;
-	//I_MASK = 0x0001;
-	asm volatile (
-		"\tmfc0 $t0, $12\n"
-		"\tlui $t1, 0x4000\n"
-		"\tori $t1, $t1, 0x7F01\n"
-		"\tor $t0, $t0, $t1\n"
-		"\tmtc0 $t0, $12\n"
-
-		:::"t0","t1"
-	);
-
-	main();
-
-	for(;;)
-		yield();
-}
 
 void yield(void)
 {
@@ -188,12 +163,10 @@ void frame_flip(void)
 
 // ISR handler
 
-uint32_t *isr_handler_c(uint32_t *epc)
+chenboot_exception_frame_t *isr_handler_c(chenboot_exception_frame_t *sp)
 {
 	// If it's not an interrupt, spin
-	uint32_t cause;
-	asm ("mfc0 %0, $13\nnop\n" : "=r"(cause) ::);
-	while((cause & 0x3C) != 0x00) {
+	while((sp->cause & 0x3C) != 0x00) {
 	}
 
 	if((I_STAT & (1<<0)) != 0) {
@@ -215,11 +188,11 @@ uint32_t *isr_handler_c(uint32_t *epc)
 	}
 
 	// Work around GTE bug
-	if((*epc & 0xFE000000) == 0x4A000000) {
-		epc += 1; // skip op
+	if((sp->epc & 0xFE000000) == 0x4A000000) {
+		sp->epc += 1; // skip op
 	}
 
-	return epc;
+	return sp;
 }
 
 static inline bool is_face_lit(int32_t cx, int32_t cy, int32_t cz, uint32_t i) {
@@ -1058,19 +1031,12 @@ int main(void)
 	// Disable DMA
 	DMA_DPCR &= ~0x08888888;
 
-	// Set up ISR
-	((volatile uint32_t *)0xA0000000)[0] = int_handler_stub[0];
-	((volatile uint32_t *)0xA0000000)[1] = int_handler_stub[1];
-	((volatile uint32_t *)0xA0000000)[2] = int_handler_stub[2];
-	((volatile uint32_t *)0xA0000040)[0] = int_handler_stub[0];
-	((volatile uint32_t *)0xA0000040)[1] = int_handler_stub[1];
-	((volatile uint32_t *)0xA0000040)[2] = int_handler_stub[2];
-	((volatile uint32_t *)0xA0000080)[0] = int_handler_stub[0];
-	((volatile uint32_t *)0xA0000080)[1] = int_handler_stub[1];
-	((volatile uint32_t *)0xA0000080)[2] = int_handler_stub[2];
-	asm volatile ("");
-	aaa_nop_sled_cache_clearer();
-	asm volatile ("");
+	// Configure ISR
+	chenboot_isr_disable();
+	I_MASK = 0;
+	I_STAT = 0;
+	chenboot_isr_install(isr_handler_c);
+	chenboot_isr_enable();
 
 	// Reset GPU
 	gp1_command(0x00000000); // Reset
@@ -1152,7 +1118,7 @@ int main(void)
 	gp0_data_xy(0,256);
 	gp0_data_xy(256/1,256);
 	for(int i = 0; i < 256*256/2; i++) {
-		gp0_data(fsys_mctex[i]);
+		gp0_data(atlas_raw[i]);
 	}
 	gp0_command(0x01000000);
 	gp1_command(0x04000002); // DMA mode: DMA to GPU (2)
@@ -1160,7 +1126,7 @@ int main(void)
 	DMA_n_CHCR(2) = 1;
 	DMA_DICR = 0;
 	DMA_DPCR = 0x07654321;
-	DMA_n_MADR(2) = ((uint32_t)fsys_mctex)&0x00FFFFFF;
+	DMA_n_MADR(2) = ((uint32_t)atlas_raw)&0x00FFFFFF;
 	DMA_n_BCR(2)  = ((320*(256/8))<<13)|0x08;
 	gp0_command(0xA0000000);
 	gp0_data_xy(0,256);
