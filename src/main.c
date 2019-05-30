@@ -165,6 +165,7 @@ int32_t cam_z = 0x80 + (32<<8);
 int32_t vel_x = 0;
 int32_t vel_y = 0;
 int32_t vel_z = 0;
+bool use_dpad = true;
 
 uint32_t ticks = 0;
 uint32_t movement_ticks = 0;
@@ -852,6 +853,311 @@ void draw_liquid_overlay(void)
 
 }
 
+void draw_everything(void)
+{
+	// Set up GTE parameters
+	asm volatile ("ctc2 %0, $24\nnop\n" : "+r"(gte_ofx) : : );
+	asm volatile ("ctc2 %0, $25\nnop\n" : "+r"(gte_ofy) : : );
+	asm volatile ("ctc2 %0, $26\nnop\n" : "+r"(gte_h) : : );
+	asm volatile ("ctc2 %0, $29\nnop\n" : "+r"(gte_zsf3) : : );
+	asm volatile ("ctc2 %0, $30\nnop\n" : "+r"(gte_zsf4) : : );
+
+	// Set up GTE matrix
+	setup_matrix(true);
+
+	mat_tr_x = -(cam_x*mat_rt11 + cam_y*mat_rt12 + cam_z*mat_rt13 + 0x800)>>12;
+	mat_tr_y = -(cam_x*mat_rt21 + cam_y*mat_rt22 + cam_z*mat_rt23 + 0x800)>>12;
+	mat_tr_z = -(cam_x*mat_rt31 + cam_y*mat_rt32 + cam_z*mat_rt33 + 0x800)>>12;
+
+	uint32_t mat_rtp1 = (mat_rt11&0xFFFF)|(mat_rt12<<16);
+	uint32_t mat_rtp2 = (mat_rt13&0xFFFF)|(mat_rt21<<16);
+	uint32_t mat_rtp3 = (mat_rt22&0xFFFF)|(mat_rt23<<16);
+	uint32_t mat_rtp4 = (mat_rt31&0xFFFF)|(mat_rt32<<16);
+	uint32_t mat_rtp5 = (mat_rt33);
+
+	asm volatile ("ctc2 %0, $0\n" : "+r"(mat_rtp1) : : );
+	asm volatile ("ctc2 %0, $1\n" : "+r"(mat_rtp2) : : );
+	asm volatile ("ctc2 %0, $2\n" : "+r"(mat_rtp3) : : );
+	asm volatile ("ctc2 %0, $3\n" : "+r"(mat_rtp4) : : );
+	asm volatile ("ctc2 %0, $4\n" : "+r"(mat_rtp5) : : );
+	asm volatile ("ctc2 %0, $5\n" : "+r"(mat_tr_x) : : );
+	asm volatile ("ctc2 %0, $6\n" : "+r"(mat_tr_y) : : );
+	asm volatile ("ctc2 %0, $7\n" : "+r"(mat_tr_z) : : );
+
+	// Set up DMA buffer
+
+	if(dma_pos_start >= sizeof(dma_buffer)*2/sizeof(dma_buffer[0])/3) {
+		dma_pos = 0;
+	}
+	dma_pos_start = dma_pos;
+	dma_buffer_current += 1;
+	dma_buffer_current &= 3;
+	dma_start_ptr = 0x00FFFFFF&(uint32_t)&dma_order_table[dma_buffer_current][DMA_ORDER_MAX-1];
+	for(int i = 0; i < DMA_ORDER_MAX; i++) {
+		dma_order_table[dma_buffer_current][i] = (i == 0
+			? 0x00FFFFFF
+			: ((uint32_t)&dma_order_table[dma_buffer_current][i-1])&0xFFFFFF);
+	}
+
+	// Clear screen
+#if 1
+	// Sky gradient
+	DMA_PUSH(8, DMA_ORDER_MAX-1);
+	dma_buffer[dma_pos++] = 0x38FFCB7F;
+	dma_buffer[dma_pos++] = ((-160)&0xFFFF)|((-120)<<16);
+	dma_buffer[dma_pos++] = 0x00FFCB7F;
+	dma_buffer[dma_pos++] = ((+160)&0xFFFF)|((-120)<<16);
+	dma_buffer[dma_pos++] = 0x00FFF0E1;
+	dma_buffer[dma_pos++] = ((-160)&0xFFFF)|((+120)<<16);
+	dma_buffer[dma_pos++] = 0x00FFF0E1;
+	dma_buffer[dma_pos++] = ((+160)&0xFFFF)|((+120)<<16);
+#else
+	// Solid colour
+	DMA_PUSH(4, DMA_ORDER_MAX-1);
+	dma_buffer[dma_pos++] = 0x01000000;
+	//dma_buffer[dma_pos++] = 0x02FFCF9F;
+	dma_buffer[dma_pos++] = 0x02FFCB7F;
+	dma_buffer[dma_pos++] = ((frame_x+0)&0xFFFF)|((frame_y+0)<<16); // X/Y
+	dma_buffer[dma_pos++] = ((320)&0xFFFF)|((240)<<16); // W/H
+#endif
+
+	// Send VERY FIRST COMMANDS
+	DMA_PUSH(3, DMA_ORDER_MAX-1);
+	dma_buffer[dma_pos++] = 0xE3000000 | ((frame_x+0)<<0) | ((frame_y+0)<<10); // XY1 draw range
+	dma_buffer[dma_pos++] = 0xE4000000 | ((frame_x+320-1)<<0) | ((frame_y+240-1)<<10); // XY2 draw range
+	dma_buffer[dma_pos++] = 0xE5000000 | ((frame_x+320/2)<<0) | ((frame_y+240/2)<<11); // Draw offset
+
+	// Load mesh data into GTE
+	draw_world();
+
+	int32_t cam_cx = cam_x >> 8;
+	int32_t cam_cy = cam_y >> 8;
+	int32_t cam_cz = cam_z >> 8;
+
+	// Draw other things
+	draw_current_block();
+	draw_hotbar();
+	draw_crosshair();
+	draw_liquid_overlay();
+
+	DMA_PUSH(1, 0);
+	dma_buffer[dma_pos++] = 0x00000000;
+
+	/*
+	gp0_command(0x720000FF);
+	gp0_data_xy(rx1-8/2, ry1-8/2);
+	gp0_command(0x72FFFFFF);
+	gp0_data_xy(rx0-8/2, ry0-8/2);
+	*/
+
+	// DMA the data
+	if(dma_pos != dma_pos_start) {
+		while((DMA_n_CHCR(2) & (1<<24)) != 0) {
+			//
+		}
+		DMA_n_CHCR(2) = 0x00000401;
+		DMA_DICR = 0;
+		DMA_DPCR = 0x07654321;
+		DMA_n_MADR(2) = dma_start_ptr;
+		DMA_n_BCR(2)  = 0;
+		DMA_n_CHCR(2) |= 0x01000000;
+		DMA_DPCR |= (0x8<<(4*2)); // Enable DMA
+	}
+}
+
+void player_update(int mmul)
+{
+	int jx0 = (int)(int8_t)(joy_axes[2]);
+	int jy0 = (int)(int8_t)(joy_axes[3]);
+	int jx1 = (int)(int8_t)(joy_axes[0]);
+	int jy1 = (int)(int8_t)(joy_axes[1]);
+	if (use_dpad == true) {
+		jx0 = jy0 = 0;
+		if ((joy_buttons & PAD_UP) == 0) jy0 = -0x7F;
+		if ((joy_buttons & PAD_DOWN) == 0) jy0 = 0x7F;
+		if ((joy_buttons & PAD_LEFT) == 0) jx0 = -0x7F;
+		if ((joy_buttons & PAD_RIGHT) == 0) jx0 = 0x7F;
+	}
+
+	cam_ry += (jx1<<3) * mmul;
+	cam_rx += (jy1<<3) * mmul;
+	if (cam_ry < -0x8000) cam_ry += 0x10000;
+	if (cam_ry > 0x8000) cam_ry -= 0x10000;
+	if (cam_rx < -0x4000) cam_rx = -0x4000;
+	if (cam_rx > 0x4000) cam_rx = 0x4000;
+
+	int joy_pressed = (~joy_buttons_old) & ~joy_buttons;
+	joy_buttons_old = ~joy_buttons;
+
+	if ((joy_pressed & PAD_SELECT) != 0)
+		use_dpad = !use_dpad;
+
+	if ((joy_pressed & PAD_L2) != 0) {
+		int32_t sel_cx = -1;
+		int32_t sel_cy = -1;
+		int32_t sel_cz = -1;
+		bool sel_valid = world_cast_ray(
+			cam_x, cam_y, cam_z,
+			mat_rt31, mat_rt32, mat_rt33,
+			&sel_cx, &sel_cy, &sel_cz,
+			10, false);
+
+		if (sel_valid && world_get_block(sel_cx, sel_cy, sel_cz) != 0) {
+			int32_t bl = world_get_block(sel_cx, sel_cy, sel_cz);
+			if (bl == 46) {
+				for (int32_t cdx = -2; cdx <= 2; cdx++)
+				for (int32_t cdy = -2; cdy <= 2; cdy++)
+				for (int32_t cdz = -2; cdz <= 2; cdz++)
+					world_set_block(sel_cx+cdx, sel_cy+cdy, sel_cz+cdz, 0, 1);
+			} else {
+				world_set_block(sel_cx, sel_cy, sel_cz, 0, 1);
+			}
+		}
+	}
+
+	if ((joy_pressed & PAD_O) != 0) {
+		int32_t sel_cx = -1;
+		int32_t sel_cy = -1;
+		int32_t sel_cz = -1;
+		bool sel_valid = world_cast_ray(
+			cam_x, cam_y, cam_z,
+			mat_rt31, mat_rt32, mat_rt33,
+			&sel_cx, &sel_cy, &sel_cz,
+			10, false);
+
+		if (sel_valid) {
+			int32_t sel_block = world_get_block(sel_cx, sel_cy, sel_cz);
+			for (int i = 0; i <= 9; i++) {
+				if (i == 9)
+					current_block[hotbar_pos] = world_get_block(sel_cx, sel_cy, sel_cz);
+				else if (current_block[i] == sel_block) {
+					hotbar_pos = i;
+					break;
+				}
+
+			}
+		}
+	}
+
+	if ((joy_pressed & PAD_R2) != 0) {
+		int32_t sel_cx = -1;
+		int32_t sel_cy = -1;
+		int32_t sel_cz = -1;
+		bool sel_valid = world_cast_ray(
+			cam_x, cam_y, cam_z,
+			mat_rt31, mat_rt32, mat_rt33,
+			&sel_cx, &sel_cy, &sel_cz,
+			10, true);
+
+		if (sel_valid && try_move(0, 0, 0, false)) {
+			world_set_block(sel_cx, sel_cy, sel_cz, current_block[hotbar_pos], 1);
+		}
+	}
+
+	if ((joy_pressed & PAD_T) != 0) current_block[hotbar_pos] = current_block[hotbar_pos] == 0 ? (BLOCK_MAX-1) : (current_block[hotbar_pos] - 1);
+	if ((joy_pressed & PAD_S) != 0) current_block[hotbar_pos] = (current_block[hotbar_pos] + 1) % BLOCK_MAX;
+
+	if ((joy_pressed & PAD_L1) != 0) { hotbar_pos--; if (hotbar_pos < 0) hotbar_pos = 8; }
+	if ((joy_pressed & PAD_R1) != 0) hotbar_pos = (hotbar_pos + 1) % 9;
+
+	setup_matrix(false);
+	int32_t lvx = jx0 >> 1;
+	int32_t lvy = 0;
+	int32_t lvz = -(jy0 >> 1);
+
+	if ((joy_buttons & PAD_R3) == 0) { } else { lvx >>= 1; lvz >>= 1; }
+
+#if 0
+	int32_t gvx = 0;
+	int32_t gvy = 0;
+	int32_t gvz = 0;
+	gvx = (lvx*mat_rt11 + lvy*mat_rt21 + lvz*mat_rt31 + 0x800)>>12;
+	gvy = (lvx*mat_rt12 + lvy*mat_rt22 + lvz*mat_rt32 + 0x800)>>12;
+	gvz = (lvx*mat_rt13 + lvy*mat_rt23 + lvz*mat_rt33 + 0x800)>>12;
+	cam_x += gvx;
+	cam_y += gvy;
+	cam_z += gvz;
+#else
+	int32_t gvx = 0;
+	int32_t gvz = 0;
+	gvx = (lvx*mat_hr11 + lvz*mat_hr31 + 0x800)>>12;
+	gvz = (lvx*mat_hr13 + lvz*mat_hr33 + 0x800)>>12;
+#if 1
+	int acc_x = gvx;
+	int acc_z = gvz;
+
+	// Get normalised accel vector
+	int nacc_x = acc_x;
+	int nacc_z = acc_z;
+	int nacc_len = 1;
+	while(nacc_len*nacc_len < nacc_x*nacc_x + nacc_z*nacc_z) {
+		nacc_len <<= 1;
+	}
+	nacc_len >>= 1;
+	while(nacc_len*nacc_len < nacc_x*nacc_x + nacc_z*nacc_z) {
+		nacc_len++;
+	}
+	nacc_len--;
+	nacc_x = (nacc_x<<12) / nacc_len;
+	nacc_z = (nacc_z<<12) / nacc_len;
+
+	// Cap acceleration
+	if(nacc_len > (0x1000>>6)) {
+		acc_x = (nacc_x+(1<<5))>>6;
+		acc_z = (nacc_z+(1<<5))>>6;
+	}
+
+	// Apply friction
+	if (!try_move(0, -16, 0, false)) {
+		vel_x -= ((vel_x+1)>>1) + (vel_x>>31);
+		vel_z -= ((vel_z+1)>>1) + (vel_z>>31);
+	}
+
+	// Get speed cap
+	int speed_cap_dot = vel_x*nacc_x + vel_z*nacc_z;
+
+	int speed_cap = 0x100;
+	if(speed_cap_dot < speed_cap*speed_cap) {
+		vel_x += acc_x;
+		vel_z += acc_z;
+	}
+#else
+	vel_x = (vel_x + gvx) / 2;
+	vel_z = (vel_z + gvz) / 2;
+#endif
+
+	bool in_liquid = player_is_in_liquid();
+
+	for (int i = 0; i < mmul; i++) {
+		if ((joy_buttons & PAD_X) == 0) {
+			if (in_liquid || !try_move(0, -16, 0, false))
+				vel_y = in_liquid ? 48 : 96;
+		}
+		if (try_move(0, vel_y, 0, true)) {
+			if (vel_y > -192) vel_y -= ((ABS(vel_y) >> 4) + 4) >> (in_liquid ? 2 : 0);
+			if (vel_y < -192) vel_y = -192;
+		} else if (vel_y > 0) {
+			vel_y = 0;
+		} else {
+			vel_y /= 2;
+			while (!try_move(0, vel_y, 0, true)) {
+				if(vel_y == 0) {
+					while (vel_y < 128 && !try_move(0, vel_y, 0, false)) {
+						vel_y += 4;
+					}
+					cam_y += (vel_y>>1)+1;
+					vel_y = 0;
+					break;
+				}
+				vel_y /= 2;
+			}
+		}
+		while (vel_x != 0 && !try_move(vel_x, 0, 0, true)) { vel_x /= 2; }
+		while (vel_z != 0 && !try_move(0, 0, vel_z, true)) { vel_z /= 2; }
+	}
+#endif
+}
+
 int main(void)
 {
 	int i;
@@ -988,7 +1294,6 @@ int main(void)
 	}
 
 	world_init();
-	bool use_dpad = true;
 
 	ticks = movement_ticks = 0;
 	vblank_counter = 0;
@@ -999,309 +1304,14 @@ int main(void)
 			uint32_t frames_to_run = vblank_counter;
 			//vblank_counter -= frames_to_run;
 
-			// Set up GTE parameters
-			asm volatile ("ctc2 %0, $24\nnop\n" : "+r"(gte_ofx) : : );
-			asm volatile ("ctc2 %0, $25\nnop\n" : "+r"(gte_ofy) : : );
-			asm volatile ("ctc2 %0, $26\nnop\n" : "+r"(gte_h) : : );
-			asm volatile ("ctc2 %0, $29\nnop\n" : "+r"(gte_zsf3) : : );
-			asm volatile ("ctc2 %0, $30\nnop\n" : "+r"(gte_zsf4) : : );
-
-			// Set up GTE matrix
-			setup_matrix(true);
-
-			mat_tr_x = -(cam_x*mat_rt11 + cam_y*mat_rt12 + cam_z*mat_rt13 + 0x800)>>12;
-			mat_tr_y = -(cam_x*mat_rt21 + cam_y*mat_rt22 + cam_z*mat_rt23 + 0x800)>>12;
-			mat_tr_z = -(cam_x*mat_rt31 + cam_y*mat_rt32 + cam_z*mat_rt33 + 0x800)>>12;
-
-			uint32_t mat_rtp1 = (mat_rt11&0xFFFF)|(mat_rt12<<16);
-			uint32_t mat_rtp2 = (mat_rt13&0xFFFF)|(mat_rt21<<16);
-			uint32_t mat_rtp3 = (mat_rt22&0xFFFF)|(mat_rt23<<16);
-			uint32_t mat_rtp4 = (mat_rt31&0xFFFF)|(mat_rt32<<16);
-			uint32_t mat_rtp5 = (mat_rt33);
-
-			asm volatile ("ctc2 %0, $0\n" : "+r"(mat_rtp1) : : );
-			asm volatile ("ctc2 %0, $1\n" : "+r"(mat_rtp2) : : );
-			asm volatile ("ctc2 %0, $2\n" : "+r"(mat_rtp3) : : );
-			asm volatile ("ctc2 %0, $3\n" : "+r"(mat_rtp4) : : );
-			asm volatile ("ctc2 %0, $4\n" : "+r"(mat_rtp5) : : );
-			asm volatile ("ctc2 %0, $5\n" : "+r"(mat_tr_x) : : );
-			asm volatile ("ctc2 %0, $6\n" : "+r"(mat_tr_y) : : );
-			asm volatile ("ctc2 %0, $7\n" : "+r"(mat_tr_z) : : );
-
-			// Set up DMA buffer
-
-			if(dma_pos_start >= sizeof(dma_buffer)*2/sizeof(dma_buffer[0])/3) {
-				dma_pos = 0;
-			}
-			dma_pos_start = dma_pos;
-			dma_buffer_current += 1;
-			dma_buffer_current &= 3;
-			dma_start_ptr = 0x00FFFFFF&(uint32_t)&dma_order_table[dma_buffer_current][DMA_ORDER_MAX-1];
-			for(int i = 0; i < DMA_ORDER_MAX; i++) {
-				dma_order_table[dma_buffer_current][i] = (i == 0
-					? 0x00FFFFFF
-					: ((uint32_t)&dma_order_table[dma_buffer_current][i-1])&0xFFFFFF);
-			}
-
-			// Clear screen
-#if 1
-			// Sky gradient
-			DMA_PUSH(8, DMA_ORDER_MAX-1);
-			dma_buffer[dma_pos++] = 0x38FFCB7F;
-			dma_buffer[dma_pos++] = ((-160)&0xFFFF)|((-120)<<16);
-			dma_buffer[dma_pos++] = 0x00FFCB7F;
-			dma_buffer[dma_pos++] = ((+160)&0xFFFF)|((-120)<<16);
-			dma_buffer[dma_pos++] = 0x00FFF0E1;
-			dma_buffer[dma_pos++] = ((-160)&0xFFFF)|((+120)<<16);
-			dma_buffer[dma_pos++] = 0x00FFF0E1;
-			dma_buffer[dma_pos++] = ((+160)&0xFFFF)|((+120)<<16);
-#else
-			// Solid colour
-			DMA_PUSH(4, DMA_ORDER_MAX-1);
-			dma_buffer[dma_pos++] = 0x01000000;
-			//dma_buffer[dma_pos++] = 0x02FFCF9F;
-			dma_buffer[dma_pos++] = 0x02FFCB7F;
-			dma_buffer[dma_pos++] = ((frame_x+0)&0xFFFF)|((frame_y+0)<<16); // X/Y
-			dma_buffer[dma_pos++] = ((320)&0xFFFF)|((240)<<16); // W/H
-#endif
-
-			// Send VERY FIRST COMMANDS
-			DMA_PUSH(3, DMA_ORDER_MAX-1);
-			dma_buffer[dma_pos++] = 0xE3000000 | ((frame_x+0)<<0) | ((frame_y+0)<<10); // XY1 draw range
-			dma_buffer[dma_pos++] = 0xE4000000 | ((frame_x+320-1)<<0) | ((frame_y+240-1)<<10); // XY2 draw range
-			dma_buffer[dma_pos++] = 0xE5000000 | ((frame_x+320/2)<<0) | ((frame_y+240/2)<<11); // Draw offset
-
-			// Load mesh data into GTE
-			draw_world();
-
-			int32_t cam_cx = cam_x >> 8;
-			int32_t cam_cy = cam_y >> 8;
-			int32_t cam_cz = cam_z >> 8;
-
-			// Draw other things
-			draw_current_block();
-			draw_hotbar();
-			draw_crosshair();
-			draw_liquid_overlay();
-
-			DMA_PUSH(1, 0);
-			dma_buffer[dma_pos++] = 0x00000000;
-
-			/*
-			gp0_command(0x720000FF);
-			gp0_data_xy(rx1-8/2, ry1-8/2);
-			gp0_command(0x72FFFFFF);
-			gp0_data_xy(rx0-8/2, ry0-8/2);
-			*/
-
-			// DMA the data
-			if(dma_pos != dma_pos_start) {
-				while((DMA_n_CHCR(2) & (1<<24)) != 0) {
-					//
-				}
-				DMA_n_CHCR(2) = 0x00000401;
-				DMA_DICR = 0;
-				DMA_DPCR = 0x07654321;
-				DMA_n_MADR(2) = dma_start_ptr;
-				DMA_n_BCR(2)  = 0;
-				DMA_n_CHCR(2) |= 0x01000000;
-				DMA_DPCR |= (0x8<<(4*2)); // Enable DMA
-			}
+			draw_everything();
 
 			// count the vblanks and reset counter
 			vblank_counter = 0;
 			int mmul = ticks - movement_ticks;
 			movement_ticks = ticks;
 
-			int jx0 = (int)(int8_t)(joy_axes[2]);
-			int jy0 = (int)(int8_t)(joy_axes[3]);
-			int jx1 = (int)(int8_t)(joy_axes[0]);
-			int jy1 = (int)(int8_t)(joy_axes[1]);
-			if (use_dpad == true) {
-				jx0 = jy0 = 0;
-				if ((joy_buttons & PAD_UP) == 0) jy0 = -0x7F;
-				if ((joy_buttons & PAD_DOWN) == 0) jy0 = 0x7F;
-				if ((joy_buttons & PAD_LEFT) == 0) jx0 = -0x7F;
-				if ((joy_buttons & PAD_RIGHT) == 0) jx0 = 0x7F;
-			}
-
-			cam_ry += (jx1<<3) * mmul;
-			cam_rx += (jy1<<3) * mmul;
-			if (cam_ry < -0x8000) cam_ry += 0x10000;
-			if (cam_ry > 0x8000) cam_ry -= 0x10000;
-			if (cam_rx < -0x4000) cam_rx = -0x4000;
-			if (cam_rx > 0x4000) cam_rx = 0x4000;
-
-			int joy_pressed = (~joy_buttons_old) & ~joy_buttons;
-			joy_buttons_old = ~joy_buttons;
-
-			if ((joy_pressed & PAD_SELECT) != 0)
-				use_dpad = !use_dpad;
-
-			if ((joy_pressed & PAD_L2) != 0) {
-				int32_t sel_cx = -1;
-				int32_t sel_cy = -1;
-				int32_t sel_cz = -1;
-				bool sel_valid = world_cast_ray(
-					cam_x, cam_y, cam_z,
-					mat_rt31, mat_rt32, mat_rt33,
-					&sel_cx, &sel_cy, &sel_cz,
-					10, false);
-
-				if (sel_valid && world_get_block(sel_cx, sel_cy, sel_cz) != 0) {
-					int32_t bl = world_get_block(sel_cx, sel_cy, sel_cz);
-					if (bl == 46) {
-						for (int32_t cdx = -2; cdx <= 2; cdx++)
-						for (int32_t cdy = -2; cdy <= 2; cdy++)
-						for (int32_t cdz = -2; cdz <= 2; cdz++)
-							world_set_block(sel_cx+cdx, sel_cy+cdy, sel_cz+cdz, 0, 1);
-					} else {
-						world_set_block(sel_cx, sel_cy, sel_cz, 0, 1);
-					}
-				}
-			}
-
-			if ((joy_pressed & PAD_O) != 0) {
-				int32_t sel_cx = -1;
-				int32_t sel_cy = -1;
-				int32_t sel_cz = -1;
-				bool sel_valid = world_cast_ray(
-					cam_x, cam_y, cam_z,
-					mat_rt31, mat_rt32, mat_rt33,
-					&sel_cx, &sel_cy, &sel_cz,
-					10, false);
-
-				if (sel_valid) {
-					int32_t sel_block = world_get_block(sel_cx, sel_cy, sel_cz);
-					for (int i = 0; i <= 9; i++) {
-						if (i == 9)
-							current_block[hotbar_pos] = world_get_block(sel_cx, sel_cy, sel_cz);
-						else if (current_block[i] == sel_block) {
-							hotbar_pos = i;
-							break;
-						}
-
-					}
-				}
-			}
-
-			if ((joy_pressed & PAD_R2) != 0) {
-				int32_t sel_cx = -1;
-				int32_t sel_cy = -1;
-				int32_t sel_cz = -1;
-				bool sel_valid = world_cast_ray(
-					cam_x, cam_y, cam_z,
-					mat_rt31, mat_rt32, mat_rt33,
-					&sel_cx, &sel_cy, &sel_cz,
-					10, true);
-
-				if (sel_valid && try_move(0, 0, 0, false)) {
-					world_set_block(sel_cx, sel_cy, sel_cz, current_block[hotbar_pos], 1);
-				}
-			}
-
-			if ((joy_pressed & PAD_T) != 0) current_block[hotbar_pos] = current_block[hotbar_pos] == 0 ? (BLOCK_MAX-1) : (current_block[hotbar_pos] - 1);
-			if ((joy_pressed & PAD_S) != 0) current_block[hotbar_pos] = (current_block[hotbar_pos] + 1) % BLOCK_MAX;
-
-			if ((joy_pressed & PAD_L1) != 0) { hotbar_pos--; if (hotbar_pos < 0) hotbar_pos = 8; }
-			if ((joy_pressed & PAD_R1) != 0) hotbar_pos = (hotbar_pos + 1) % 9;
-
-			setup_matrix(false);
-			int32_t lvx = jx0 >> 1;
-			int32_t lvy = 0;
-			int32_t lvz = -(jy0 >> 1);
-
-			if ((joy_buttons & PAD_R3) == 0) { } else { lvx >>= 1; lvz >>= 1; }
-
-#if 0
-			int32_t gvx = 0;
-			int32_t gvy = 0;
-			int32_t gvz = 0;
-			gvx = (lvx*mat_rt11 + lvy*mat_rt21 + lvz*mat_rt31 + 0x800)>>12;
-			gvy = (lvx*mat_rt12 + lvy*mat_rt22 + lvz*mat_rt32 + 0x800)>>12;
-			gvz = (lvx*mat_rt13 + lvy*mat_rt23 + lvz*mat_rt33 + 0x800)>>12;
-			cam_x += gvx;
-			cam_y += gvy;
-			cam_z += gvz;
-#else
-			int32_t gvx = 0;
-			int32_t gvz = 0;
-			gvx = (lvx*mat_hr11 + lvz*mat_hr31 + 0x800)>>12;
-			gvz = (lvx*mat_hr13 + lvz*mat_hr33 + 0x800)>>12;
-#if 1
-			int acc_x = gvx;
-			int acc_z = gvz;
-
-			// Get normalised accel vector
-			int nacc_x = acc_x;
-			int nacc_z = acc_z;
-			int nacc_len = 1;
-			while(nacc_len*nacc_len < nacc_x*nacc_x + nacc_z*nacc_z) {
-				nacc_len <<= 1;
-			}
-			nacc_len >>= 1;
-			while(nacc_len*nacc_len < nacc_x*nacc_x + nacc_z*nacc_z) {
-				nacc_len++;
-			}
-			nacc_len--;
-			nacc_x = (nacc_x<<12) / nacc_len;
-			nacc_z = (nacc_z<<12) / nacc_len;
-
-			// Cap acceleration
-			if(nacc_len > (0x1000>>6)) {
-				acc_x = (nacc_x+(1<<5))>>6;
-				acc_z = (nacc_z+(1<<5))>>6;
-			}
-
-			// Apply friction
-			if (!try_move(0, -16, 0, false)) {
-				vel_x -= ((vel_x+1)>>1) + (vel_x>>31);
-				vel_z -= ((vel_z+1)>>1) + (vel_z>>31);
-			}
-
-			// Get speed cap
-			int speed_cap_dot = vel_x*nacc_x + vel_z*nacc_z;
-
-			int speed_cap = 0x100;
-			if(speed_cap_dot < speed_cap*speed_cap) {
-				vel_x += acc_x;
-				vel_z += acc_z;
-			}
-#else
-			vel_x = (vel_x + gvx) / 2;
-			vel_z = (vel_z + gvz) / 2;
-#endif
-
-			bool in_liquid = player_is_in_liquid();
-
-			for (int i = 0; i < mmul; i++) {
-				if ((joy_buttons & PAD_X) == 0) {
-					if (in_liquid || !try_move(0, -16, 0, false))
-						vel_y = in_liquid ? 48 : 96;
-				}
-				if (try_move(0, vel_y, 0, true)) {
-					if (vel_y > -192) vel_y -= ((ABS(vel_y) >> 4) + 4) >> (in_liquid ? 2 : 0);
-					if (vel_y < -192) vel_y = -192;
-				} else if (vel_y > 0) {
-					vel_y = 0;
-				} else {
-					vel_y /= 2;
-					while (!try_move(0, vel_y, 0, true)) {
-						if(vel_y == 0) {
-							while (vel_y < 128 && !try_move(0, vel_y, 0, false)) {
-								vel_y += 4;
-							}
-							cam_y += (vel_y>>1)+1;
-							vel_y = 0;
-							break;
-						}
-						vel_y /= 2;
-					}
-				}
-				while (vel_x != 0 && !try_move(vel_x, 0, 0, true)) { vel_x /= 2; }
-				while (vel_z != 0 && !try_move(0, 0, vel_z, true)) { vel_z /= 2; }
-			}
-#endif
+			player_update(mmul);
 
 			world_update(ticks);
 			// FIXME: if vsync is disabled,
