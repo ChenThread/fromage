@@ -30,9 +30,11 @@ void draw_current_block(void)
 
 void draw_hotbar(void)
 {
+	const int bw = 20;
+	const int bh = 20;
+	const int by = 108;
 	for (int i = 0; i < HOTBAR_MAX; i++) {
-		int bx = 8 + (-10*HOTBAR_MAX) + (i*20);
-		int by = 108;
+		int bx = -((bw*(HOTBAR_MAX-1))/2) + (i*bw);
 		if (current_block[i] > 0 && current_block[i] < BLOCK_MAX) {
 			DMA_PUSH(3, 1);
 			uint16_t* bi = block_info[current_block[i]][2];
@@ -44,18 +46,18 @@ void draw_hotbar(void)
 			DMA_PUSH(3, 1);
 			dma_buffer[dma_pos++] = 0x60080808;
 			dma_buffer[dma_pos++] = ((by-9) << 16) | ((bx-9) & 0xFFFF);
-			dma_buffer[dma_pos++] = (18 << 16) | (18 << 0);
+			dma_buffer[dma_pos++] = ((bh-2) << 16) | ((bw-2) & 0xFFFF);
 			DMA_PUSH(3, 1);
 			dma_buffer[dma_pos++] = 0x60C0C0C0;
 			dma_buffer[dma_pos++] = ((by-11) << 16) | ((bx-11) & 0xFFFF);
-			dma_buffer[dma_pos++] = (22 << 16) | (22 << 0);
+			dma_buffer[dma_pos++] = ((bh+2) << 16) | ((bw+2) & 0xFFFF);
 		}
 	}
 
 	DMA_PUSH(3, 1);
 	dma_buffer[dma_pos++] = 0x60202020;
-	dma_buffer[dma_pos++] = (98 << 16) | ((0 - 10*HOTBAR_MAX) & 0xFFFF);
-	dma_buffer[dma_pos++] = (20 << 16) | ((20*HOTBAR_MAX) << 0);
+	dma_buffer[dma_pos++] = ((by-bh/2) << 16) | ((0 - (bw*HOTBAR_MAX)/2) & 0xFFFF);
+	dma_buffer[dma_pos++] = (bh << 16) | ((bw*HOTBAR_MAX) & 0xFFFF);
 }
 
 void draw_crosshair(void)
