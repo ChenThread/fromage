@@ -122,7 +122,7 @@ void aaa_start(void)
 
 void yield(void)
 {
-	// TODO: halt 
+	// TODO: halt
 }
 
 extern char _end[];
@@ -211,7 +211,7 @@ uint32_t *isr_handler_c(uint32_t *epc)
 		vblank_counter++;
 		ticks++;
 
-		// 
+		//
 		I_STAT = ~(1<<0);
 		joy_has_ack++;
 	}
@@ -503,7 +503,7 @@ inline void draw_blocks_in_range(int32_t cam_cx, int32_t cam_cy, int32_t cam_cz,
 	}
 }
 
-void draw_world()
+void draw_world(void)
 {
 	int cam_cx = cam_x >> 8;
 	int cam_cy = cam_y >> 8;
@@ -733,6 +733,125 @@ int joy_buttons_old = 0;
 int current_block[9] = {0, 1, 4, 45, 18, 4, 3, 20, 8};
 int hotbar_pos = 0;
 
+void draw_current_block(void)
+{
+	int32_t cam_cx = cam_x >> 8;
+	int32_t cam_cy = cam_y >> 8;
+	int32_t cam_cz = cam_z >> 8;
+
+	if (current_block[hotbar_pos] > 0)
+	{
+		int32_t sel_cx = -1;
+		int32_t sel_cy = -1;
+		int32_t sel_cz = -1;
+		bool sel_valid = world_cast_ray(
+			cam_x, cam_y, cam_z,
+			mat_rt31, mat_rt32, mat_rt33,
+			&sel_cx, &sel_cy, &sel_cz,
+			10, true);
+
+		if(sel_valid) {
+			int32_t fmask = 0x00;
+			fmask |= (cam_cx < sel_cx ? 0x04 : cam_cx > sel_cx ? 0x08 : 0);
+			fmask |= (cam_cy < sel_cy ? 0x10 : cam_cy > sel_cy ? 0x20 : 0);
+			fmask |= (cam_cz < sel_cz ? 0x01 : cam_cz > sel_cz ? 0x02 : 0);
+			int di = ABS(sel_cx - cam_cx) + ABS(sel_cy - cam_cy) + ABS(sel_cz - cam_cz);
+			draw_block(sel_cx, sel_cy, sel_cz, di, current_block[hotbar_pos], fmask, true);
+		}
+	}
+}
+
+void draw_hotbar(void)
+{
+	for (int i = 0; i < 9; i++) {
+		if (current_block[i] > 0 && current_block[i] < BLOCK_MAX) {
+			DMA_PUSH(3, 1);
+			uint16_t* bi = block_info[current_block[i]][2];
+			dma_buffer[dma_pos++] = 0x7D000000;
+			dma_buffer[dma_pos++] = (100 << 16) | ((-88 + (i*20)) & 0xFFFF);
+			dma_buffer[dma_pos++] = (bi[2] << 16) | bi[0];
+		}
+		if (i == hotbar_pos) {
+			DMA_PUSH(3, 1);
+			dma_buffer[dma_pos++] = 0x60080808;
+			dma_buffer[dma_pos++] = (99 << 16) | ((-89 + (i * 20)) & 0xFFFF);
+			dma_buffer[dma_pos++] = (18 << 16) | (18 << 0);
+			DMA_PUSH(3, 1);
+			dma_buffer[dma_pos++] = 0x60C0C0C0;
+			dma_buffer[dma_pos++] = (97 << 16) | ((-91 + (i * 20)) & 0xFFFF);
+			dma_buffer[dma_pos++] = (22 << 16) | (22 << 0);
+		}
+	}
+	DMA_PUSH(3, 1);
+	dma_buffer[dma_pos++] = 0x60202020;
+	dma_buffer[dma_pos++] = (98 << 16) | ((-90) & 0xFFFF);
+	dma_buffer[dma_pos++] = (20 << 16) | ((20*9) << 0);
+}
+
+void draw_crosshair(void)
+{
+	DMA_PUSH(3, 1);
+	dma_buffer[dma_pos++] = 0x60FFFFFF;
+	dma_buffer[dma_pos++] = (((-3) & 0xFFFF) << 16) | ((0) & 0xFFFF);
+	dma_buffer[dma_pos++] = (7 << 16) | 1;
+	DMA_PUSH(3, 1);
+	dma_buffer[dma_pos++] = 0x60FFFFFF;
+	dma_buffer[dma_pos++] = (((0) & 0xFFFF) << 16) | ((-3) & 0xFFFF);
+	dma_buffer[dma_pos++] = (1 << 16) | 7;
+}
+
+bool block_is_in_liquid(int cx, int cy, int cz)
+{
+	int32_t cb = world_get_block(cx, cy, cz);
+	if (cb >= 8 && cb <= 11) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+bool player_is_in_liquid(void)
+{
+	int32_t cam_cx = cam_x >> 8;
+	int32_t cam_cy = cam_y >> 8;
+	int32_t cam_cz = cam_z >> 8;
+
+	if(block_is_in_liquid(cam_cx, cam_cy-1, cam_cz)) {
+		return true;
+	} else if(block_is_in_liquid(cam_cx, cam_cy, cam_cz)) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+void draw_liquid_overlay(void)
+{
+	int32_t cam_cx = cam_x >> 8;
+	int32_t cam_cy = cam_y >> 8;
+	int32_t cam_cz = cam_z >> 8;
+
+	int32_t cam_cb = world_get_block(cam_cx, cam_cy, cam_cz);
+
+	if ((cam_cb & (~1)) == 8) {
+		DMA_PUSH(6, 1);
+		for (int i = 0; i < 2; i++) {
+			dma_buffer[dma_pos++] = 0x62501000;
+			dma_buffer[dma_pos++] = (((-120)&0xFFFF) << 16) | ((-160)&0xFFFF);
+			dma_buffer[dma_pos++] = (240 << 16) | (320 << 0);
+		}
+	} else if ((cam_cb & (~1)) == 10) {
+		DMA_PUSH(9, 1);
+		for (int i = 0; i < 3; i++) {
+			dma_buffer[dma_pos++] = 0x62081CB0;
+			dma_buffer[dma_pos++] = (((-120)&0xFFFF) << 16) | ((-160)&0xFFFF);
+			dma_buffer[dma_pos++] = (240 << 16) | (320 << 0);
+		}
+	}
+
+
+}
+
 int main(void)
 {
 	int i;
@@ -886,7 +1005,7 @@ int main(void)
 			asm volatile ("ctc2 %0, $26\nnop\n" : "+r"(gte_h) : : );
 			asm volatile ("ctc2 %0, $29\nnop\n" : "+r"(gte_zsf3) : : );
 			asm volatile ("ctc2 %0, $30\nnop\n" : "+r"(gte_zsf4) : : );
-			
+
 			// Set up GTE matrix
 			setup_matrix(true);
 
@@ -955,93 +1074,15 @@ int main(void)
 			// Load mesh data into GTE
 			draw_world();
 
-			// Draw current block
 			int32_t cam_cx = cam_x >> 8;
 			int32_t cam_cy = cam_y >> 8;
 			int32_t cam_cz = cam_z >> 8;
 
-			if (current_block[hotbar_pos] > 0)
-			{
-				int32_t sel_cx = -1;
-				int32_t sel_cy = -1;
-				int32_t sel_cz = -1;
-				bool sel_valid = world_cast_ray(
-					cam_x, cam_y, cam_z,
-					mat_rt31, mat_rt32, mat_rt33,
-					&sel_cx, &sel_cy, &sel_cz,
-					10, true);
-
-				if(sel_valid) {
-					int32_t fmask = 0x00;
-					fmask |= (cam_cx < sel_cx ? 0x04 : cam_cx > sel_cx ? 0x08 : 0);
-					fmask |= (cam_cy < sel_cy ? 0x10 : cam_cy > sel_cy ? 0x20 : 0);
-					fmask |= (cam_cz < sel_cz ? 0x01 : cam_cz > sel_cz ? 0x02 : 0);
-					int di = ABS(sel_cx - cam_cx) + ABS(sel_cy - cam_cy) + ABS(sel_cz - cam_cz);
-					draw_block(sel_cx, sel_cy, sel_cz, di, current_block[hotbar_pos], fmask, true);
-				}
-			}
-
-			// Draw hotbar
-			for (int i = 0; i < 9; i++) {
-				if (current_block[i] > 0 && current_block[i] < BLOCK_MAX) {
-					DMA_PUSH(3, 1);
-					uint16_t* bi = block_info[current_block[i]][2];
-					dma_buffer[dma_pos++] = 0x7D000000;
-					dma_buffer[dma_pos++] = (100 << 16) | ((-88 + (i*20)) & 0xFFFF);
-					dma_buffer[dma_pos++] = (bi[2] << 16) | bi[0];
-				}	
-				if (i == hotbar_pos) {
-					DMA_PUSH(3, 1);
-					dma_buffer[dma_pos++] = 0x60080808;
-					dma_buffer[dma_pos++] = (99 << 16) | ((-89 + (i * 20)) & 0xFFFF);
-					dma_buffer[dma_pos++] = (18 << 16) | (18 << 0);
-					DMA_PUSH(3, 1);
-					dma_buffer[dma_pos++] = 0x60C0C0C0;
-					dma_buffer[dma_pos++] = (97 << 16) | ((-91 + (i * 20)) & 0xFFFF);
-					dma_buffer[dma_pos++] = (22 << 16) | (22 << 0);
-				}
-			}
-			DMA_PUSH(3, 1);
-			dma_buffer[dma_pos++] = 0x60202020;
-			dma_buffer[dma_pos++] = (98 << 16) | ((-90) & 0xFFFF);
-			dma_buffer[dma_pos++] = (20 << 16) | ((20*9) << 0);
-
-			// Draw crosshair
-			DMA_PUSH(3, 1);
-			dma_buffer[dma_pos++] = 0x60FFFFFF;
-			dma_buffer[dma_pos++] = (((-3) & 0xFFFF) << 16) | ((0) & 0xFFFF);
-			dma_buffer[dma_pos++] = (7 << 16) | 1;
-			DMA_PUSH(3, 1);
-			dma_buffer[dma_pos++] = 0x60FFFFFF;
-			dma_buffer[dma_pos++] = (((0) & 0xFFFF) << 16) | ((-3) & 0xFFFF);
-			dma_buffer[dma_pos++] = (1 << 16) | 7;
-
-			// Draw water/lava overlay
-			bool in_liquid = false;
-
-			int32_t cam_cb = world_get_block(cam_cx, cam_cy-1, cam_cz);
-			if (cam_cb >= 8 && cam_cb <= 11)
-				in_liquid = true;
-			cam_cb = world_get_block(cam_cx, cam_cy, cam_cz);
-
-			if ((cam_cb & (~1)) == 8) {
-				in_liquid = true;
-				DMA_PUSH(6, 1);
-				for (int i = 0; i < 2; i++) {
-					dma_buffer[dma_pos++] = 0x62501000;
-					dma_buffer[dma_pos++] = (((-120)&0xFFFF) << 16) | ((-160)&0xFFFF);
-					dma_buffer[dma_pos++] = (240 << 16) | (320 << 0);
-				}
-			} else if ((cam_cb & (~1)) == 10) {
-				in_liquid = true;
-				DMA_PUSH(9, 1);
-				for (int i = 0; i < 3; i++) {
-					dma_buffer[dma_pos++] = 0x62081CB0;
-					dma_buffer[dma_pos++] = (((-120)&0xFFFF) << 16) | ((-160)&0xFFFF);
-					dma_buffer[dma_pos++] = (240 << 16) | (320 << 0);
-				}
-			}
-
+			// Draw other things
+			draw_current_block();
+			draw_hotbar();
+			draw_crosshair();
+			draw_liquid_overlay();
 
 			DMA_PUSH(1, 0);
 			dma_buffer[dma_pos++] = 0x00000000;
@@ -1230,6 +1271,9 @@ int main(void)
 			vel_x = (vel_x + gvx) / 2;
 			vel_z = (vel_z + gvz) / 2;
 #endif
+
+			bool in_liquid = player_is_in_liquid();
+
 			for (int i = 0; i < mmul; i++) {
 				if ((joy_buttons & PAD_X) == 0) {
 					if (in_liquid || !try_move(0, -16, 0, false))
