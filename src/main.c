@@ -899,10 +899,10 @@ void blocksel_update(void)
 
 void player_update(int mmul)
 {
-	int jx0, jy0, jx1, jy1;
-
-	jx1 = (int)(int8_t)(sawpads_axes[0]);
-	jy1 = (int)(int8_t)(sawpads_axes[1]);
+	int jx0 = 0x00;
+	int jy0 = 0x00;
+	int jx1 = (int)(int8_t)(sawpads_axes[0]);
+	int jy1 = (int)(int8_t)(sawpads_axes[1]);
 
 	if (joy_delay > 0) {
 		joy_delay--;
@@ -1202,13 +1202,14 @@ int main(void)
 	gpu_dma_init();
 	draw_status_window("Generating level");
 	gpu_dma_finish();
+	wait_for_next_vblank();
 
 	// Display enable: ON (1)
 	gp1_command(0x03000000);
+	wait_for_next_vblank();
 
         // Generate a world
 	for(int y = 0; y < LEVEL_LY/2; y++) {
-
 		uint8_t bid = 1;
 		if (y == (LEVEL_LY/2) - 1) bid = 2;
 		else if (y >= (LEVEL_LY/2) - 4) bid = 3;
@@ -1221,8 +1222,10 @@ int main(void)
 	gpu_dma_init();
 	draw_status_window("Loading");
 	gpu_dma_finish();
+	wait_for_next_vblank();
 
 	world_init();
+	wait_for_next_vblank();
 
 	ticks = movement_ticks = 0;
 	for(;;) {

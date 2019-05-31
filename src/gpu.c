@@ -2,6 +2,15 @@
 
 volatile uint32_t vblank_counter = 0;
 
+void wait_for_next_vblank(void)
+{
+	uint32_t last_counter = vblank_counter;
+
+	while(last_counter == vblank_counter) {
+		// do nothing
+	}
+}
+
 void gpu_dma_load(uint32_t *buffer, int x, int y, int width, int height)
 {
 #if 0
