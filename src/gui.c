@@ -41,18 +41,18 @@ static void draw_text_buffer(int x, int y, int color, char *buffer)
 	for (int i = 0; i < strlen(buffer); i++) {
 		uint8_t c = buffer[i];
 		int width = CHAR_WIDTH(c);
-		int pos = (x & 0xFFFF) + ((y & 0xFFFF) << 16);
+		int pos = ((x << 1) & 0xFFFF) + ((y & 0xFFFF) << 16);
 		int texcoord = (((c & 15) << 3) + 64) | ((c >> 4) << 11);
 
 		DMA_PUSH(9, 1);
 		dma_buffer[dma_pos++] = 0x2C000000 | color;
 		dma_buffer[dma_pos++] = pos;
-		dma_buffer[dma_pos++] = (384 << 22) | (5 << 16) | texcoord;
-		dma_buffer[dma_pos++] = pos + width;
-		dma_buffer[dma_pos++] = (0x11 << 16) | (texcoord + width);
+		dma_buffer[dma_pos++] = (384 << 22) | (0x35 << 16) | texcoord;
+		dma_buffer[dma_pos++] = pos + width * 2 + 1;
+		dma_buffer[dma_pos++] = (0x1D << 16) | (texcoord + width);
 		dma_buffer[dma_pos++] = pos + 0x80000;
 		dma_buffer[dma_pos++] = texcoord + 0x800;
-		dma_buffer[dma_pos++] = pos + 0x80000 + width;
+		dma_buffer[dma_pos++] = pos + 0x80000 + width * 2 + 1;
 		dma_buffer[dma_pos++] = texcoord + 0x800 + width;
 
 		pos += 0x10001;
@@ -60,12 +60,12 @@ static void draw_text_buffer(int x, int y, int color, char *buffer)
 		DMA_PUSH(9, 1);
 		dma_buffer[dma_pos++] = 0x2E000000;
 		dma_buffer[dma_pos++] = pos;
-		dma_buffer[dma_pos++] = (384 << 22) | (5 << 16) | texcoord;
-		dma_buffer[dma_pos++] = pos + width;
-		dma_buffer[dma_pos++] = (0x11 << 16) | (texcoord + width);
+		dma_buffer[dma_pos++] = (384 << 22) | (0x35 << 16) | texcoord;
+		dma_buffer[dma_pos++] = pos + width * 2 + 1;
+		dma_buffer[dma_pos++] = (0x1D << 16) | (texcoord + width);
 		dma_buffer[dma_pos++] = pos + 0x80000;
 		dma_buffer[dma_pos++] = texcoord + 0x800;
-		dma_buffer[dma_pos++] = pos + 0x80000 + width;
+		dma_buffer[dma_pos++] = pos + 0x80000 + width * 2 + 1;
 		dma_buffer[dma_pos++] = texcoord + 0x800 + width;
 
 		x += width + 1;
@@ -184,16 +184,16 @@ void draw_status_window(char *format, ...)
 	// Draw fancy dirt background
 	DMA_PUSH(3, 1);
 	dma_buffer[dma_pos++] = 0x62000000;
-	dma_buffer[dma_pos++] = (-120 << 16) | (-160 & 0xFFFF);
-	dma_buffer[dma_pos++] = ((240) << 16) | ((320) & 0xFFFF);
+	dma_buffer[dma_pos++] = (-120 << 16) | (-320 & 0xFFFF);
+	dma_buffer[dma_pos++] = ((240) << 16) | ((640) & 0xFFFF);
 	DMA_PUSH(3, 1);
 	dma_buffer[dma_pos++] = 0x62000000;
-	dma_buffer[dma_pos++] = (-120 << 16) | (-160 & 0xFFFF);
-	dma_buffer[dma_pos++] = ((240) << 16) | ((320) & 0xFFFF);
+	dma_buffer[dma_pos++] = (-120 << 16) | (-320 & 0xFFFF);
+	dma_buffer[dma_pos++] = ((240) << 16) | ((640) & 0xFFFF);
 
 	for (int y = 0; y < 240; y += 16) {
 		for (int x = 0; x < 320; x += 16) {
-			draw_block_icon_flat(x - 160 + 8, y - 120 + 8, 16, 16, bi);
+			draw_block_icon_flat((x - 160 + 8) * 2, y - 120 + 8, 32, 16, bi);
 		}
 	}
 
@@ -218,15 +218,15 @@ void draw_block_sel_menu(int selected_block)
 		y_center += (25 * y) + 8;
 
 		if (id == selected_block) {
-			draw_block_icon(x_center - 160, y_center - 120, 32, 32, id);
+			draw_block_icon((x_center - 160) * 2, y_center - 120, 64, 32, id);
 
 			// background
 			DMA_PUSH(3, 1);
 			dma_buffer[dma_pos++] = 0x62FFFFFF;
-			dma_buffer[dma_pos++] = ((y_center - 120 - 16) << 16) | ((x_center - 160 - 16) & 0xFFFF);
-			dma_buffer[dma_pos++] = ((32) << 16) | ((32) & 0xFFFF);
+			dma_buffer[dma_pos++] = ((y_center - 120 - 16) << 16) | (((x_center - 160 - 16) * 2) & 0xFFFF);
+			dma_buffer[dma_pos++] = ((32) << 16) | ((64) & 0xFFFF);
 		} else {
-			draw_block_icon(x_center - 160, y_center - 120, 16, 16, id);
+			draw_block_icon((x_center - 160) * 2, y_center - 120, 32, 16, id);
 		}
 
 		if ((++x) == 9) { y++; x = 0; }
@@ -239,8 +239,8 @@ void draw_block_sel_menu(int selected_block)
 	// background
 	DMA_PUSH(3, 1);
 	dma_buffer[dma_pos++] = 0x62080808;
-	dma_buffer[dma_pos++] = ((-bg_h/2) << 16) | ((-bg_w/2) & 0xFFFF);
-	dma_buffer[dma_pos++] = ((bg_h) << 16) | ((bg_w) & 0xFFFF);
+	dma_buffer[dma_pos++] = ((-bg_h/2) << 16) | ((-bg_w) & 0xFFFF);
+	dma_buffer[dma_pos++] = ((bg_h) << 16) | ((bg_w*2) & 0xFFFF);
 }
 
 void draw_current_block(void)
@@ -273,7 +273,7 @@ void draw_current_block(void)
 
 void draw_hotbar(void)
 {
-	const int bw = 16;
+	const int bw = 32;
 	const int bh = 16;
 	const int by = 103 + 8;
 
@@ -289,12 +289,12 @@ void draw_hotbar(void)
 		dma_buffer[dma_pos++] = ((2) << 16) | ((bw+2) & 0xFFFF);
 		DMA_PUSH(3, 1);
 		dma_buffer[dma_pos++] = 0x60C0C0C0;
-		dma_buffer[dma_pos++] = ((by-(bh/2)-1) << 16) | ((bx-(bw/2)-1) & 0xFFFF);
-		dma_buffer[dma_pos++] = ((bh+2) << 16) | ((2) & 0xFFFF);
+		dma_buffer[dma_pos++] = ((by-(bh/2)-1) << 16) | ((bx-(bw/2)-2) & 0xFFFF);
+		dma_buffer[dma_pos++] = ((bh+2) << 16) | ((4) & 0xFFFF);
 		DMA_PUSH(3, 1);
 		dma_buffer[dma_pos++] = 0x60C0C0C0;
-		dma_buffer[dma_pos++] = ((by-(bh/2)-1) << 16) | ((bx+(bw/2)-1) & 0xFFFF);
-		dma_buffer[dma_pos++] = ((bh+2) << 16) | ((2) & 0xFFFF);
+		dma_buffer[dma_pos++] = ((by-(bh/2)-1) << 16) | ((bx+(bw/2)-2) & 0xFFFF);
+		dma_buffer[dma_pos++] = ((bh+2) << 16) | ((4) & 0xFFFF);
 	}
 
 	for (int i = 0; i < HOTBAR_MAX; i++) {
@@ -313,11 +313,11 @@ void draw_crosshair(void)
 	DMA_PUSH(3, 1);
 	dma_buffer[dma_pos++] = 0x60FFFFFF;
 	dma_buffer[dma_pos++] = (((-3) & 0xFFFF) << 16) | ((0) & 0xFFFF);
-	dma_buffer[dma_pos++] = (7 << 16) | 1;
+	dma_buffer[dma_pos++] = (7 << 16) | 2;
 	DMA_PUSH(3, 1);
 	dma_buffer[dma_pos++] = 0x60FFFFFF;
-	dma_buffer[dma_pos++] = (((0) & 0xFFFF) << 16) | ((-3) & 0xFFFF);
-	dma_buffer[dma_pos++] = (1 << 16) | 7;
+	dma_buffer[dma_pos++] = (((0) & 0xFFFF) << 16) | ((-6) & 0xFFFF);
+	dma_buffer[dma_pos++] = (1 << 16) | 14;
 }
 
 void draw_liquid_overlay(void)

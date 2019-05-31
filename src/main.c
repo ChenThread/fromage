@@ -22,8 +22,6 @@ void yield(void);
 extern volatile uint8_t _BSS_START[];
 extern volatile uint8_t _BSS_END[];
 
-extern void aaa_nop_sled_cache_clearer(void);
-
 const int16_t sintab[256] = {
 0,101,201,301,401,501,601,700,799,897,995,1092,1189,1285,1380,1474,1567,1660,1751,1842,1931,2019,2106,2191,2276,2359,2440,2520,2598,2675,2751,2824,2896,2967,3035,3102,3166,3229,3290,3349,3406,3461,3513,3564,3612,3659,3703,3745,3784,3822,3857,3889,3920,3948,3973,3996,4017,4036,4052,4065,4076,4085,4091,4095,4096,4095,4091,4085,4076,4065,4052,4036,4017,3996,3973,3948,3920,3889,3857,3822,3784,3745,3703,3659,3612,3564,3513,3461,3406,3349,3290,3229,3166,3102,3035,2967,2896,2824,2751,2675,2598,2520,2440,2359,2276,2191,2106,2019,1931,1842,1751,1660,1567,1474,1380,1285,1189,1092,995,897,799,700,601,501,401,301,201,101,0,-101,-201,-301,-401,-501,-601,-700,-799,-897,-995,-1092,-1189,-1285,-1380,-1474,-1567,-1660,-1751,-1842,-1931,-2019,-2106,-2191,-2276,-2359,-2440,-2520,-2598,-2675,-2751,-2824,-2896,-2967,-3035,-3102,-3166,-3229,-3290,-3349,-3406,-3461,-3513,-3564,-3612,-3659,-3703,-3745,-3784,-3822,-3857,-3889,-3920,-3948,-3973,-3996,-4017,-4036,-4052,-4065,-4076,-4085,-4091,-4095,-4096,-4095,-4091,-4085,-4076,-4065,-4052,-4036,-4017,-3996,-3973,-3948,-3920,-3889,-3857,-3822,-3784,-3745,-3703,-3659,-3612,-3564,-3513,-3461,-3406,-3349,-3290,-3229,-3166,-3102,-3035,-2967,-2896,-2824,-2751,-2675,-2598,-2520,-2440,-2359,-2276,-2191,-2106,-2019,-1931,-1842,-1751,-1660,-1567,-1474,-1380,-1285,-1189,-1092,-995,-897,-799,-700,-601,-501,-401,-301,-201,-101,
 };
@@ -183,13 +181,17 @@ int joy_buttons_old = 0;
 int current_block[HOTBAR_MAX] = {0, 1, 4, 45, 18, 4, 3, 20, 8};
 int hotbar_pos = 0;
 
+int32_t fps_frames = 0;
+int32_t fps_vblanks = 0;
+int32_t fps_val = 0;
+
 volatile uint32_t frame_x = 0;
 volatile uint32_t frame_y = 0;
 volatile uint32_t vis_frame_x = 0;
 volatile uint32_t vis_frame_y = 0;
 void frame_flip(void)
 {
-	frame_x = 320 - vis_frame_x;
+	frame_y = 256 - vis_frame_y;
 }
 
 // ISR handler
@@ -338,6 +340,12 @@ static inline void draw_one_quad(
 		continue;
 	}
 #endif
+
+	// TODO: can this be done faster?
+	sxy00 = (sxy00 & 0xFFFF0000) | ((sxy00 << 1) & 0xFFFF);
+	sxy01 = (sxy01 & 0xFFFF0000) | ((sxy01 << 1) & 0xFFFF);
+	sxy10 = (sxy10 & 0xFFFF0000) | ((sxy10 << 1) & 0xFFFF);
+	sxy11 = (sxy11 & 0xFFFF0000) | ((sxy11 << 1) & 0xFFFF);
 
 	// Draw a quad
 	DMA_PUSH(9, OT_WORLD + di);
@@ -816,13 +824,13 @@ void draw_everything(void)
 	// Sky gradient
 	DMA_PUSH(8, DMA_ORDER_MAX-1);
 	dma_buffer[dma_pos++] = 0x38FFCB7F;
-	dma_buffer[dma_pos++] = ((-160)&0xFFFF)|((-120)<<16);
+	dma_buffer[dma_pos++] = ((-320)&0xFFFF)|((-120)<<16);
 	dma_buffer[dma_pos++] = 0x00FFCB7F;
-	dma_buffer[dma_pos++] = ((+160)&0xFFFF)|((-120)<<16);
+	dma_buffer[dma_pos++] = ((+320)&0xFFFF)|((-120)<<16);
 	dma_buffer[dma_pos++] = 0x00FFF0E1;
-	dma_buffer[dma_pos++] = ((-160)&0xFFFF)|((+120)<<16);
+	dma_buffer[dma_pos++] = ((-320)&0xFFFF)|((+120)<<16);
 	dma_buffer[dma_pos++] = 0x00FFF0E1;
-	dma_buffer[dma_pos++] = ((+160)&0xFFFF)|((+120)<<16);
+	dma_buffer[dma_pos++] = ((+320)&0xFFFF)|((+120)<<16);
 #else
 	// Solid colour
 	DMA_PUSH(4, DMA_ORDER_MAX-1);
@@ -830,14 +838,14 @@ void draw_everything(void)
 	//dma_buffer[dma_pos++] = 0x02FFCF9F;
 	dma_buffer[dma_pos++] = 0x02FFCB7F;
 	dma_buffer[dma_pos++] = ((frame_x+0)&0xFFFF)|((frame_y+0)<<16); // X/Y
-	dma_buffer[dma_pos++] = ((320)&0xFFFF)|((240)<<16); // W/H
+	dma_buffer[dma_pos++] = ((640)&0xFFFF)|((240)<<16); // W/H
 #endif
 
 	// Send VERY FIRST COMMANDS
 	DMA_PUSH(3, DMA_ORDER_MAX-1);
 	dma_buffer[dma_pos++] = 0xE3000000 | ((frame_x+0)<<0) | ((frame_y+0)<<10); // XY1 draw range
-	dma_buffer[dma_pos++] = 0xE4000000 | ((frame_x+320-1)<<0) | ((frame_y+240-1)<<10); // XY2 draw range
-	dma_buffer[dma_pos++] = 0xE5000000 | ((frame_x+320/2)<<0) | ((frame_y+240/2)<<11); // Draw offset
+	dma_buffer[dma_pos++] = 0xE4000000 | ((frame_x+640-1)<<0) | ((frame_y+240-1)<<10); // XY2 draw range
+	dma_buffer[dma_pos++] = 0xE5000000 | ((frame_x+640/2)<<0) | ((frame_y+240/2)<<11); // Draw offset
 
 	// Load mesh data into GTE
 	draw_world();
@@ -859,6 +867,7 @@ void draw_everything(void)
 	draw_hotbar();
 	draw_liquid_overlay();
 	draw_text(1, 1, 0xFFFFFF, "0.30");
+	draw_text(1, 11, 0xFFFFFF, "%d FPS", fps_val);
 
 	/*
 	gp0_command(0x720000FF);
@@ -1130,7 +1139,7 @@ int main(void)
 
 	// Set display mode
 	gp1_command(0x08000000
-		| (1<<0) | (0<<6) // X resolution (320)
+		| (3<<0) | (0<<6) // X resolution (640)
 		| (0<<2) | (0<<5) // Y resolution / interlace (240/OFF)
 #ifdef TV_PAL
 		| (1<<3) // TV standard (PAL)
@@ -1144,8 +1153,8 @@ int main(void)
 	gp0_command(0xE1000600); // Texpage
 	gp0_command(0xE2000000); // Texwindow
 	gp0_command(0xE3000000 | ((0)<<0) | ((0)<<10)); // XY1 draw range
-	gp0_command(0xE4000000 | ((320-1)<<0) | ((240-1)<<10)); // XY2 draw range
-	gp0_command(0xE5000000 | ((320/2)<<0) | ((240/2)<<11)); // Draw offset
+	gp0_command(0xE4000000 | ((640-1)<<0) | ((240-1)<<10)); // XY2 draw range
+	gp0_command(0xE5000000 | ((640/2)<<0) | ((240/2)<<11)); // Draw offset
 	//gp0_command(0xE5000000 | ((0)<<0) | ((0)<<10)); // Draw offset
 	gp0_command(0xE6000000); // Mask bit setting
 
@@ -1156,12 +1165,7 @@ int main(void)
 	gp0_command(0x01000000);
 	gp0_command(0x02000000);
 	gp0_data(((0)<<0) | ((0)<<16)); // X/Y
-	gp0_data(((320)<<0) | ((240)<<16)); // W/H
-
-	// Draw a rectangle
-	gp0_command(0x60FFFFFF);
-	gp0_data(((0)<<0) | ((0)<<16));
-	gp0_data(((5)<<0) | ((5)<<16));
+	gp0_data(((640)<<0) | ((240)<<16)); // W/H
 
 	// Enable VBLANK interrupt
 	vblank_counter = 0;
@@ -1182,13 +1186,13 @@ int main(void)
 	cdrom_init();
 
 	// DMA a texture
-	gpu_dma_load(atlas_raw, 0, 256, 320/4, 256);
-	gpu_dma_load((uint32_t*) (&font_raw[64]), 320/4, 256, 128/4, 64);
+	gpu_dma_load(atlas_raw, 768, 256, 320/4, 256);
+	gpu_dma_load((uint32_t*) (&font_raw[64]), 768 + 320/4, 256, 128/4, 64);
 
 	// Write font CLUT
 	gp1_command(0x04000001); // DMA mode: FIFO (1)
 	gp0_command(0xA0000000);
-	gp0_data_xy(320/4, 384);
+	gp0_data_xy(768 + 320/4, 384);
 	gp0_data_xy(2, 1);
 	gp0_data(0xFFFF0000); // semi-transparency toggled via command
 	gp0_command(0x01000000);
@@ -1230,6 +1234,15 @@ int main(void)
 			//vblank_counter -= frames_to_run;
 
 			draw_everything();
+
+			// fps (TODO ntsc)
+			fps_frames++;
+			fps_vblanks += vblank_counter;
+			if (fps_vblanks >= 50) {
+				fps_val = fps_frames * 50 / fps_vblanks;
+				fps_frames = 0;
+				fps_vblanks = 0;
+			}
 
 			// count the vblanks and reset counter
 			vblank_counter = 0;
