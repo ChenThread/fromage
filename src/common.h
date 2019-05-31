@@ -13,6 +13,8 @@
 #define ABS(x) ((x)>=0 ? (x) : -(x))
 
 #define TV_PAL
+#define VID_WIDTH 640
+#define VID_HEIGHT 240
 
 typedef int32_t fixed;
 typedef int64_t fixed64;

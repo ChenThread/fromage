@@ -341,12 +341,6 @@ static inline void draw_one_quad(
 	}
 #endif
 
-	// TODO: can this be done faster?
-	sxy00 = (sxy00 & 0xFFFF0000) | ((sxy00 << 1) & 0xFFFF);
-	sxy01 = (sxy01 & 0xFFFF0000) | ((sxy01 << 1) & 0xFFFF);
-	sxy10 = (sxy10 & 0xFFFF0000) | ((sxy10 << 1) & 0xFFFF);
-	sxy11 = (sxy11 & 0xFFFF0000) | ((sxy11 << 1) & 0xFFFF);
-
 	// Draw a quad
 	DMA_PUSH(9, OT_WORLD + di);
 	dma_buffer[dma_pos++] = command;
@@ -575,9 +569,9 @@ void draw_world(void)
 
 	// Frustum cull planes
 	int xmul = gte_h;
-	int xdiv = 160;
+	int xdiv = VID_WIDTH/2;
 	int ymul = gte_h;
-	int ydiv = 120;
+	int ydiv = VID_HEIGHT/2;
 	int cull0xstep_raw = mat_rt31+mat_rt21*ymul/ydiv;
 	int cull0ystep_raw = mat_rt32+mat_rt22*ymul/ydiv;
 	int cull0zstep_raw = mat_rt33+mat_rt23*ymul/ydiv;
@@ -750,9 +744,16 @@ static void setup_matrix(bool with_y) {
 	mat_rt21 =  -((rys*rxs+0x800)>>12);
 	mat_rt22 =  -(rxc);
 	mat_rt23 =  -((ryc*rxs+0x800)>>12);
-	mat_rt31 =  (rys*rxc+0x800)>>12;
+	mat_rt31 =  ((rys*rxc+0x800)>>12);
 	mat_rt32 = -rxs;
-	mat_rt33 =  (ryc*rxc+0x800)>>12;
+	mat_rt33 =  ((ryc*rxc+0x800)>>12);
+
+	// Adjust pixel ratio
+#if VID_WIDTH != 320
+	mat_rt11 = (mat_rt11*VID_WIDTH + 320/2)/320;
+	mat_rt12 = (mat_rt12*VID_WIDTH + 320/2)/320;
+	mat_rt13 = (mat_rt13*VID_WIDTH + 320/2)/320;
+#endif
 
 	mat_hr11 =  ryc;
 	mat_hr13 = -rys;
