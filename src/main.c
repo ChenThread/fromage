@@ -200,19 +200,19 @@ chenboot_exception_frame_t *isr_handler_c(chenboot_exception_frame_t *sp)
 	while((sp->cause & 0x3C) != 0x00) {
 	}
 
-	if((I_STAT & (1<<0)) != 0) {
+	if((PSXREG_I_STAT & (1<<0)) != 0) {
 		// VBLANK
 		vblank_counter++;
 		ticks++;
 
 		//
-		I_STAT = ~(1<<0);
+		PSXREG_I_STAT = ~(1<<0);
 		sawpads_isr_vblank();
 	}
 
-	if((I_STAT & (1<<7)) != 0) {
+	if((PSXREG_I_STAT & (1<<7)) != 0) {
 		// JOY
-		I_STAT = ~(1<<7);
+		PSXREG_I_STAT = ~(1<<7);
 		sawpads_isr_joy();
 	}
 
@@ -1089,8 +1089,8 @@ int main(void)
 
 	// Configure ISR
 	chenboot_isr_disable();
-	I_MASK = 0;
-	I_STAT = 0;
+	PSXREG_I_MASK = 0;
+	PSXREG_I_STAT = 0;
 	chenboot_isr_install(isr_handler_c);
 	chenboot_isr_enable();
 
@@ -1153,16 +1153,16 @@ int main(void)
 	gp1_command(0x03000000); // Display enable: ON (1)
 
 	// Enable VBLANK interrupt
-	I_MASK |= (1<<0);
+	PSXREG_I_MASK |= (1<<0);
 
 	// Prepare joypad
-	JOY_CTRL = 0x0010;
-	JOY_MODE = 0x000D;
-	JOY_BAUD = 0x0088;
+	PSXREG_JOY_CTRL = 0x0010;
+	PSXREG_JOY_MODE = 0x000D;
+	PSXREG_JOY_BAUD = 0x0088;
 
 	// Enable joypad ISR
-	I_STAT = ~(1<<7);
-	I_MASK |= (1<<7);
+	PSXREG_I_STAT = ~(1<<7);
+	PSXREG_I_MASK |= (1<<7);
 
 	sawpads_unlock_dualshock();
 
