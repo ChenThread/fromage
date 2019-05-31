@@ -51,6 +51,7 @@ INCLUDES = src/block_info.h src/common.h src/psx.h
 OBJS =	$(OBJDIR)/cdrom.o \
 	$(OBJDIR)/gui.o \
 	$(OBJDIR)/gpu.o \
+	$(OBJDIR)/gpu_dma.o \
 	$(OBJDIR)/world.o \
 	\
 	$(OBJDIR)/atlas.o \

@@ -273,9 +273,9 @@ void draw_current_block(void)
 
 void draw_hotbar(void)
 {
-	const int bw = 32;
-	const int bh = 32;
-	const int by = 103;
+	const int bw = 16;
+	const int bh = 16;
+	const int by = 103 + 8;
 
 	{
 		int bx = -((bw*(HOTBAR_MAX-1))/2) + (hotbar_pos*bw);
@@ -299,19 +299,11 @@ void draw_hotbar(void)
 
 	for (int i = 0; i < HOTBAR_MAX; i++) {
 		int bx = -((bw*(HOTBAR_MAX-1))/2) + (i*bw);
-		draw_block_icon(bx, by, 32, 32, current_block[i]);
-	}
-
-	{
-		int bx = -((bw*(HOTBAR_MAX-1))/2) + (hotbar_pos*bw);
-		DMA_PUSH(3, 1);
-		dma_buffer[dma_pos++] = 0x60080808;
-		dma_buffer[dma_pos++] = ((by-(bh/2)+1) << 16) | ((bx-(bw/2)+1) & 0xFFFF);
-		dma_buffer[dma_pos++] = ((bh-2) << 16) | ((bw-2) & 0xFFFF);
+		draw_block_icon(bx, by, bw, bh, current_block[i]);
 	}
 
 	DMA_PUSH(3, 1);
-	dma_buffer[dma_pos++] = 0x60202020;
+	dma_buffer[dma_pos++] = 0x62000000;
 	dma_buffer[dma_pos++] = ((by-bh/2) << 16) | ((0 - (bw*HOTBAR_MAX)/2) & 0xFFFF);
 	dma_buffer[dma_pos++] = (bh << 16) | ((bw*HOTBAR_MAX) & 0xFFFF);
 }
