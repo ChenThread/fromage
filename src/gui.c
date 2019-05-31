@@ -38,7 +38,7 @@ void draw_hotbar(void)
 
 	for (int i = 0; i < HOTBAR_MAX; i++) {
 		int bx = -((bw*(HOTBAR_MAX-1))/2) + (i*bw);
-		uint16_t *bi0 = block_info[current_block[i]][0];
+		uint16_t *bi0 = block_info[current_block[i]][5];
 		uint16_t *bi1 = block_info[current_block[i]][2];
 
 		if (current_block[i] == 6 || (current_block[i] >= 37 && current_block[i] <= 40)) {
@@ -46,13 +46,13 @@ void draw_hotbar(void)
 			DMA_PUSH(9, 1);
 			dma_buffer[dma_pos++] = 0x2C808080;
 			dma_buffer[dma_pos++] = ((by-16) << 16) | ((bx-16) & 0xFFFF);
-			dma_buffer[dma_pos++] = (bi0[2] << 16) | (bi0[0] + (0x0000));
+			dma_buffer[dma_pos++] = (bi1[2] << 16) | (bi1[0] + (0x0000));
 			dma_buffer[dma_pos++] = ((by-16) << 16) | ((bx+16) & 0xFFFF);
-			dma_buffer[dma_pos++] = (bi0[1] << 16) | (bi0[0] + (0x000F));
+			dma_buffer[dma_pos++] = (bi1[1] << 16) | (bi1[0] + (0x000F));
 			dma_buffer[dma_pos++] = ((by+16) << 16) | ((bx-16) & 0xFFFF);
-			dma_buffer[dma_pos++] = (0 << 16) | (bi0[0] + (0x0F00));
+			dma_buffer[dma_pos++] = (0 << 16) | (bi1[0] + (0x0F00));
 			dma_buffer[dma_pos++] = ((by+16) << 16) | ((bx+16) & 0xFFFF);
-			dma_buffer[dma_pos++] = (0 << 16) | (bi0[0] + (0x0F0F));
+			dma_buffer[dma_pos++] = (0 << 16) | (bi1[0] + (0x0F0F));
 		} else if (current_block[i] > 0 && current_block[i] < BLOCK_MAX) {
 			// Isometric cube
 			// Positions:
@@ -89,9 +89,9 @@ void draw_hotbar(void)
 			dma_buffer[dma_pos++] = cc;
 			dma_buffer[dma_pos++] = (bi1[1] << 16) | (bi1[0] + (0x000F));
 			dma_buffer[dma_pos++] = ld;
-			dma_buffer[dma_pos++] = (0 << 16) | (bi0[0] + (0x0F00));
+			dma_buffer[dma_pos++] = (0 << 16) | (bi1[0] + (0x0F00));
 			dma_buffer[dma_pos++] = cd;
-			dma_buffer[dma_pos++] = (0 << 16) | (bi0[0] + (0x0F0F));
+			dma_buffer[dma_pos++] = (0 << 16) | (bi1[0] + (0x0F0F));
 
 			DMA_PUSH(9, 1);
 			dma_buffer[dma_pos++] = 0x2C000000 | block_lighting[2];
@@ -100,9 +100,9 @@ void draw_hotbar(void)
 			dma_buffer[dma_pos++] = ru;
 			dma_buffer[dma_pos++] = (bi1[1] << 16) | (bi1[0] + (0x000F));
 			dma_buffer[dma_pos++] = cd;
-			dma_buffer[dma_pos++] = (0 << 16) | (bi0[0] + (0x0F00));
+			dma_buffer[dma_pos++] = (0 << 16) | (bi1[0] + (0x0F00));
 			dma_buffer[dma_pos++] = rd;
-			dma_buffer[dma_pos++] = (0 << 16) | (bi0[0] + (0x0F0F));
+			dma_buffer[dma_pos++] = (0 << 16) | (bi1[0] + (0x0F0F));
 		}
 	}
 
