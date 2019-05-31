@@ -15,12 +15,12 @@ def find_width(fch, offx, offy):
 				return ix+1
 	return 1
 
-for fch in xrange(0, 256, 2):
+for fch in xrange(0, 128, 2):
 	offx = (fch & 15) * 8
 	offy = (fch >> 4) * 8
 	fp.write(struct.pack("<B", find_width(fch, offx, offy) | (find_width(fch + 1, offx + 8, offy) << 4)))
 
-for iy in xrange(128):
+for iy in xrange(64):
 	for ix in xrange(0, 128, 2):
 		v = 0
 		impc = im.getpixel((ix, iy))

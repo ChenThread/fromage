@@ -909,7 +909,7 @@ void blocksel_update(void)
 	int joy_pressed = (~joy_buttons_old) & ~sawpads_buttons;
 	joy_buttons_old = ~sawpads_buttons;
 
-	if ((joy_pressed & PAD_O) != 0) {
+	if ((joy_pressed & (PAD_T | PAD_S | PAD_O | PAD_X)) != 0) {
 		mode = MODE_INGAME;
 		return;
 	}
@@ -1216,14 +1216,14 @@ int main(void)
 
 	// DMA a texture
 	gpu_dma_load(atlas_raw, 0, 256, 320/4, 256);
-	gpu_dma_load((uint32_t*) (&font_raw[128]), 320/4, 256, 128/4, 128);
+	gpu_dma_load((uint32_t*) (&font_raw[64]), 320/4, 256, 128/4, 64);
 
 	// Write font CLUT
 	gp1_command(0x04000001); // DMA mode: FIFO (1)
 	gp0_command(0xA0000000);
 	gp0_data_xy(320/4, 384);
 	gp0_data_xy(2, 1);
-	gp0_data(0x7FFF0000);
+	gp0_data(0xFFFF0000); // semi-transparency toggled via command
 	gp0_command(0x01000000);
 	gp1_command(0x04000002); // DMA mode: DMA to GPU (2)
 

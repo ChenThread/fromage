@@ -42,7 +42,7 @@ void draw_text(int x, int y, int color, char *format, ...)
 		int texcoord = (((c & 15) << 3) + 64) | ((c >> 4) << 11);
 
 		DMA_PUSH(9, 1);
-		dma_buffer[dma_pos++] = 0x2E000000 | color;
+		dma_buffer[dma_pos++] = 0x2C000000 | color;
 		dma_buffer[dma_pos++] = pos;
 		dma_buffer[dma_pos++] = (384 << 22) | (5 << 16) | texcoord;
 		dma_buffer[dma_pos++] = pos + width;
@@ -166,6 +166,12 @@ void draw_block_sel_menu(int selected_block)
 
 		if (id == selected_block) {
 			draw_block_icon(x_center - 160, y_center - 120, 32, 32, id);
+
+			// background
+			DMA_PUSH(3, 1);
+			dma_buffer[dma_pos++] = 0x62FFFFFF;
+			dma_buffer[dma_pos++] = ((y_center - 120 - 16) << 16) | ((x_center - 160 - 16) & 0xFFFF);
+			dma_buffer[dma_pos++] = ((32) << 16) | ((32) & 0xFFFF);
 		} else {
 			draw_block_icon(x_center - 160, y_center - 120, 16, 16, id);
 		}
