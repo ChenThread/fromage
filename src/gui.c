@@ -1,6 +1,188 @@
+#include <stdarg.h>
+#include <stdio.h>
 #include "common.h"
 
 extern uint32_t block_lighting[6];
+
+#define CHAR_WIDTH(c) ((font_raw[(uint8_t)(c) >> 1] >> (((uint8_t)(c) & 1) << 2)) & 0x0F)
+
+int get_text_width(char *format, ...)
+{
+	char buffer[256];
+	int len;
+
+	va_list args;
+	va_start(args, format);
+	vsnprintf(buffer, sizeof(buffer), format, args);
+
+	for (int i = 0; i < strlen(buffer); i++) {
+		len += (CHAR_WIDTH(buffer[i])) + 1;
+	}
+	return len;
+}
+
+void draw_text(int x, int y, int color, char *format, ...)
+{
+	char buffer[256];
+
+	va_list args;
+	va_start(args, format);
+	vsnprintf(buffer, sizeof(buffer), format, args);
+
+	x -= 160;
+	y -= 120;
+
+	// TODO: Couldn't figure out how to set TexPage with E1
+	// and have it work... maybe we can't just keep using one buffer
+
+	for (int i = 0; i < strlen(buffer); i++) {
+		uint8_t c = buffer[i];
+		int width = CHAR_WIDTH(c);
+		int pos = (x & 0xFFFF) + ((y & 0xFFFF) << 16);
+		int texcoord = (((c & 15) << 3) + 64) | ((c >> 4) << 11);
+
+		DMA_PUSH(9, 1);
+		dma_buffer[dma_pos++] = 0x2E000000 | color;
+		dma_buffer[dma_pos++] = pos;
+		dma_buffer[dma_pos++] = (384 << 22) | (5 << 16) | texcoord;
+		dma_buffer[dma_pos++] = pos + width;
+		dma_buffer[dma_pos++] = (0x11 << 16) | (texcoord + width);
+		dma_buffer[dma_pos++] = pos + 0x80000;
+		dma_buffer[dma_pos++] = texcoord + 0x800;
+		dma_buffer[dma_pos++] = pos + 0x80000 + width;
+		dma_buffer[dma_pos++] = texcoord + 0x800 + width;
+
+		pos += 0x10001;
+
+		DMA_PUSH(9, 1);
+		dma_buffer[dma_pos++] = 0x2E000000;
+		dma_buffer[dma_pos++] = pos;
+		dma_buffer[dma_pos++] = (384 << 22) | (5 << 16) | texcoord;
+		dma_buffer[dma_pos++] = pos + width;
+		dma_buffer[dma_pos++] = (0x11 << 16) | (texcoord + width);
+		dma_buffer[dma_pos++] = pos + 0x80000;
+		dma_buffer[dma_pos++] = texcoord + 0x800;
+		dma_buffer[dma_pos++] = pos + 0x80000 + width;
+		dma_buffer[dma_pos++] = texcoord + 0x800 + width;
+
+		x += width + 1;
+	}
+
+	va_end(args);
+}
+
+void draw_block_icon(int bx, int by, int bw, int bh, int block_id) {
+	block_info_t *bi0 = &block_info[block_id][5];
+	block_info_t *bi1 = &block_info[block_id][2];
+
+	if (block_id == 6 || (block_id >= 37 && block_id <= 40)) {
+		int bwh = bw/2;
+		int bhh = bh/2;
+
+		// Flat texture
+		DMA_PUSH(9, 1);
+		dma_buffer[dma_pos++] = 0x2C808080;
+		dma_buffer[dma_pos++] = ((by-bhh) << 16) | ((bx-bwh) & 0xFFFF);
+		dma_buffer[dma_pos++] = (bi1->cl << 16) | (bi1->tc + (0x0000));
+		dma_buffer[dma_pos++] = ((by-bhh) << 16) | ((bx+bwh) & 0xFFFF);
+		dma_buffer[dma_pos++] = (bi1->tp << 16) | (bi1->tc + (0x000F));
+		dma_buffer[dma_pos++] = ((by+bhh) << 16) | ((bx-bwh) & 0xFFFF);
+		dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (0x0F00));
+		dma_buffer[dma_pos++] = ((by+bhh) << 16) | ((bx+bwh) & 0xFFFF);
+		dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (0x0F0F));
+	} else if (block_id > 0 && block_id < BLOCK_MAX) {
+		int bh8 = 8 * bh / 32;
+		int bw14 = 14 * bw / 32;
+		int bh16 = 16 * bh / 32;
+
+		// Isometric cube
+		// Positions:
+		//
+		// left, centre, right
+		// up, down
+		//     cu
+		//  lu    ru
+		//     cc
+		//  ld    rd
+		//     cd
+		uint32_t lu = ((by-bh8) << 16) | ((bx-bw14) & 0xFFFF);
+		uint32_t ld = ((by+bh8) << 16) | ((bx-bw14) & 0xFFFF);
+		uint32_t cu = ((by-bh16) << 16) | ((bx) & 0xFFFF);
+		uint32_t cc = ((by+0) << 16) | ((bx) & 0xFFFF);
+		uint32_t cd = ((by+bh16) << 16) | ((bx) & 0xFFFF);
+		uint32_t ru = ((by-bh8) << 16) | ((bx+bw14) & 0xFFFF);
+		uint32_t rd = ((by+bh8) << 16) | ((bx+bw14) & 0xFFFF);
+		DMA_PUSH(9, 1);
+		dma_buffer[dma_pos++] = 0x2C000000 | block_lighting[5];
+		dma_buffer[dma_pos++] = lu;
+		dma_buffer[dma_pos++] = (bi0->cl << 16) | (bi0->tc + (0x0000));
+		dma_buffer[dma_pos++] = cu;
+		dma_buffer[dma_pos++] = (bi0->tp << 16) | (bi0->tc + (0x000F));
+		dma_buffer[dma_pos++] = cc;
+		dma_buffer[dma_pos++] = (0 << 16) | (bi0->tc + (0x0F00));
+		dma_buffer[dma_pos++] = ru;
+		dma_buffer[dma_pos++] = (0 << 16) | (bi0->tc + (0x0F0F));
+
+		DMA_PUSH(9, 1);
+		dma_buffer[dma_pos++] = 0x2C000000 | block_lighting[0];
+		dma_buffer[dma_pos++] = lu;
+		dma_buffer[dma_pos++] = (bi1->cl << 16) | (bi1->tc + (0x0000));
+		dma_buffer[dma_pos++] = cc;
+		dma_buffer[dma_pos++] = (bi1->tp << 16) | (bi1->tc + (0x000F));
+		dma_buffer[dma_pos++] = ld;
+		dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (0x0F00));
+		dma_buffer[dma_pos++] = cd;
+		dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (0x0F0F));
+
+		DMA_PUSH(9, 1);
+		dma_buffer[dma_pos++] = 0x2C000000 | block_lighting[2];
+		dma_buffer[dma_pos++] = cc;
+		dma_buffer[dma_pos++] = (bi1->cl << 16) | (bi1->tc + (0x0000));
+		dma_buffer[dma_pos++] = ru;
+		dma_buffer[dma_pos++] = (bi1->tp << 16) | (bi1->tc + (0x000F));
+		dma_buffer[dma_pos++] = cd;
+		dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (0x0F00));
+		dma_buffer[dma_pos++] = rd;
+		dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (0x0F0F));
+	}
+}
+
+void draw_block_sel_menu(int selected_block)
+{
+	// 34x34 slots
+	int bg_w = 216 + 18 + 4;
+	int bg_h = 141 + 18 + 13;
+
+	int y = 0;
+	int x = 0;
+
+	// blocks
+	for (int id = 1; id <= 49; id++) {
+		int x_center = ((320 - bg_w) / 2) + 2 + 9;
+		int y_center = ((240 - bg_h) / 2) + 12 + 9;
+
+		x_center += (25 * x) + 8;
+		y_center += (25 * y) + 8;
+
+		if (id == selected_block) {
+			draw_block_icon(x_center - 160, y_center - 120, 32, 32, id);
+		} else {
+			draw_block_icon(x_center - 160, y_center - 120, 16, 16, id);
+		}
+
+		if ((++x) == 9) { y++; x = 0; }
+	}
+
+	// text
+	int text_w = get_text_width("Select block");
+	draw_text((320 - text_w) / 2, ((240 - bg_h) / 2) + 2, 0xFFFFFF, "Select block");
+
+	// background
+	DMA_PUSH(3, 1);
+	dma_buffer[dma_pos++] = 0x62080808;
+	dma_buffer[dma_pos++] = ((-bg_h/2) << 16) | ((-bg_w/2) & 0xFFFF);
+	dma_buffer[dma_pos++] = ((bg_h) << 16) | ((bg_w) & 0xFFFF);
+}
 
 void draw_current_block(void)
 {
@@ -32,91 +214,41 @@ void draw_current_block(void)
 
 void draw_hotbar(void)
 {
-	const int bw = 30;
-	const int bh = 30;
+	const int bw = 32;
+	const int bh = 32;
 	const int by = 103;
+
+	{
+		int bx = -((bw*(HOTBAR_MAX-1))/2) + (hotbar_pos*bw);
+		DMA_PUSH(3, 1);
+		dma_buffer[dma_pos++] = 0x60C0C0C0;
+		dma_buffer[dma_pos++] = ((by-(bh/2)-1) << 16) | ((bx-(bw/2)-1) & 0xFFFF);
+		dma_buffer[dma_pos++] = ((2) << 16) | ((bw+2) & 0xFFFF);
+		DMA_PUSH(3, 1);
+		dma_buffer[dma_pos++] = 0x60C0C0C0;
+		dma_buffer[dma_pos++] = ((by+(bh/2)-1) << 16) | ((bx-(bw/2)-1) & 0xFFFF);
+		dma_buffer[dma_pos++] = ((2) << 16) | ((bw+2) & 0xFFFF);
+		DMA_PUSH(3, 1);
+		dma_buffer[dma_pos++] = 0x60C0C0C0;
+		dma_buffer[dma_pos++] = ((by-(bh/2)-1) << 16) | ((bx-(bw/2)-1) & 0xFFFF);
+		dma_buffer[dma_pos++] = ((bh+2) << 16) | ((2) & 0xFFFF);
+		DMA_PUSH(3, 1);
+		dma_buffer[dma_pos++] = 0x60C0C0C0;
+		dma_buffer[dma_pos++] = ((by-(bh/2)-1) << 16) | ((bx+(bw/2)-1) & 0xFFFF);
+		dma_buffer[dma_pos++] = ((bh+2) << 16) | ((2) & 0xFFFF);
+	}
 
 	for (int i = 0; i < HOTBAR_MAX; i++) {
 		int bx = -((bw*(HOTBAR_MAX-1))/2) + (i*bw);
-		block_info_t *bi0 = &block_info[current_block[i]][5];
-		block_info_t *bi1 = &block_info[current_block[i]][2];
-
-		if (current_block[i] == 6 || (current_block[i] >= 37 && current_block[i] <= 40)) {
-			// Flat texture
-			DMA_PUSH(9, 1);
-			dma_buffer[dma_pos++] = 0x2C808080;
-			dma_buffer[dma_pos++] = ((by-16) << 16) | ((bx-16) & 0xFFFF);
-			dma_buffer[dma_pos++] = (bi1->cl << 16) | (bi1->tc + (0x0000));
-			dma_buffer[dma_pos++] = ((by-16) << 16) | ((bx+16) & 0xFFFF);
-			dma_buffer[dma_pos++] = (bi1->tp << 16) | (bi1->tc + (0x000F));
-			dma_buffer[dma_pos++] = ((by+16) << 16) | ((bx-16) & 0xFFFF);
-			dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (0x0F00));
-			dma_buffer[dma_pos++] = ((by+16) << 16) | ((bx+16) & 0xFFFF);
-			dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (0x0F0F));
-		} else if (current_block[i] > 0 && current_block[i] < BLOCK_MAX) {
-			// Isometric cube
-			// Positions:
-			//
-			// left, centre, right
-			// up, down
-			//     cu
-			//  lu    ru
-			//     cc
-			//  ld    rd
-			//     cd
-			uint32_t lu = ((by-8) << 16) | ((bx-14) & 0xFFFF);
-			uint32_t ld = ((by+8) << 16) | ((bx-14) & 0xFFFF);
-			uint32_t cu = ((by-16) << 16) | ((bx) & 0xFFFF);
-			uint32_t cc = ((by+0) << 16) | ((bx) & 0xFFFF);
-			uint32_t cd = ((by+16) << 16) | ((bx) & 0xFFFF);
-			uint32_t ru = ((by-8) << 16) | ((bx+14) & 0xFFFF);
-			uint32_t rd = ((by+8) << 16) | ((bx+14) & 0xFFFF);
-			DMA_PUSH(9, 1);
-			dma_buffer[dma_pos++] = 0x2C000000 | block_lighting[5];
-			dma_buffer[dma_pos++] = lu;
-			dma_buffer[dma_pos++] = (bi0->cl << 16) | (bi0->tc + (0x0000));
-			dma_buffer[dma_pos++] = cu;
-			dma_buffer[dma_pos++] = (bi0->tp << 16) | (bi0->tc + (0x000F));
-			dma_buffer[dma_pos++] = cc;
-			dma_buffer[dma_pos++] = (0 << 16) | (bi0->tc + (0x0F00));
-			dma_buffer[dma_pos++] = ru;
-			dma_buffer[dma_pos++] = (0 << 16) | (bi0->tc + (0x0F0F));
-
-			DMA_PUSH(9, 1);
-			dma_buffer[dma_pos++] = 0x2C000000 | block_lighting[0];
-			dma_buffer[dma_pos++] = lu;
-			dma_buffer[dma_pos++] = (bi1->cl << 16) | (bi1->tc + (0x0000));
-			dma_buffer[dma_pos++] = cc;
-			dma_buffer[dma_pos++] = (bi1->tp << 16) | (bi1->tc + (0x000F));
-			dma_buffer[dma_pos++] = ld;
-			dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (0x0F00));
-			dma_buffer[dma_pos++] = cd;
-			dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (0x0F0F));
-
-			DMA_PUSH(9, 1);
-			dma_buffer[dma_pos++] = 0x2C000000 | block_lighting[2];
-			dma_buffer[dma_pos++] = cc;
-			dma_buffer[dma_pos++] = (bi1->cl << 16) | (bi1->tc + (0x0000));
-			dma_buffer[dma_pos++] = ru;
-			dma_buffer[dma_pos++] = (bi1->tp << 16) | (bi1->tc + (0x000F));
-			dma_buffer[dma_pos++] = cd;
-			dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (0x0F00));
-			dma_buffer[dma_pos++] = rd;
-			dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (0x0F0F));
-		}
+		draw_block_icon(bx, by, 32, 32, current_block[i]);
 	}
 
-	// Box around current hotbar item
 	{
 		int bx = -((bw*(HOTBAR_MAX-1))/2) + (hotbar_pos*bw);
 		DMA_PUSH(3, 1);
 		dma_buffer[dma_pos++] = 0x60080808;
 		dma_buffer[dma_pos++] = ((by-(bh/2)+1) << 16) | ((bx-(bw/2)+1) & 0xFFFF);
 		dma_buffer[dma_pos++] = ((bh-2) << 16) | ((bw-2) & 0xFFFF);
-		DMA_PUSH(3, 1);
-		dma_buffer[dma_pos++] = 0x60C0C0C0;
-		dma_buffer[dma_pos++] = ((by-(bh/2)-1) << 16) | ((bx-(bw/2)-1) & 0xFFFF);
-		dma_buffer[dma_pos++] = ((bh+2) << 16) | ((bw+2) & 0xFFFF);
 	}
 
 	DMA_PUSH(3, 1);

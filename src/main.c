@@ -167,6 +167,13 @@ int32_t vel_y = 0;
 int32_t vel_z = 0;
 bool use_dpad = true;
 
+#define MODE_INGAME 1
+#define MODE_BLOCKSEL 2
+
+int32_t joy_delay = 5;
+int32_t mode = MODE_INGAME;
+int16_t blocksel_id = 1;
+
 uint32_t ticks = 0;
 uint32_t movement_ticks = 0;
 uint32_t dma_pos = 0;
@@ -208,6 +215,12 @@ chenboot_exception_frame_t *isr_handler_c(chenboot_exception_frame_t *sp)
 		//
 		PSXREG_I_STAT = ~(1<<0);
 		sawpads_isr_vblank();
+	}
+
+	if((PSXREG_I_STAT & (1<<2)) != 0) {
+		// CDROM
+		PSXREG_I_STAT = ~(1<<2);
+		cdrom_isr();
 	}
 
 	if((PSXREG_I_STAT & (1<<7)) != 0) {
@@ -852,11 +865,19 @@ void draw_everything(void)
 	int32_t cam_cy = cam_y >> 8;
 	int32_t cam_cz = cam_z >> 8;
 
-	// Draw other things
-	draw_current_block();
+	switch (mode) {
+		case MODE_BLOCKSEL:
+			draw_block_sel_menu(blocksel_id);
+			break;
+		case MODE_INGAME:
+			draw_current_block();
+			draw_crosshair();
+			break;
+	}
+
 	draw_hotbar();
-	draw_crosshair();
 	draw_liquid_overlay();
+	draw_text(1, 1, 0xFFFFFF, "0.30");
 
 	DMA_PUSH(1, 0);
 	dma_buffer[dma_pos++] = 0x00000000;
@@ -883,12 +904,35 @@ void draw_everything(void)
 	}
 }
 
+void blocksel_update(void)
+{
+	int joy_pressed = (~joy_buttons_old) & ~sawpads_buttons;
+	joy_buttons_old = ~sawpads_buttons;
+
+	if ((joy_pressed & PAD_O) != 0) {
+		mode = MODE_INGAME;
+		return;
+	}
+
+	if ((joy_pressed & PAD_UP) != 0) if (blocksel_id >= 10) blocksel_id -= 9;
+	if ((joy_pressed & PAD_LEFT) != 0) if (blocksel_id >= 2) blocksel_id--;
+	if ((joy_pressed & PAD_RIGHT) != 0) if (blocksel_id < 49) blocksel_id++;
+	if ((joy_pressed & PAD_DOWN) != 0) if (blocksel_id <= 40) blocksel_id += 9;
+
+	current_block[hotbar_pos] = blocksel_id;
+}
+
 void player_update(int mmul)
 {
 	int jx0, jy0, jx1, jy1;
 
 	jx1 = (int)(int8_t)(sawpads_axes[0]);
 	jy1 = (int)(int8_t)(sawpads_axes[1]);
+
+	if (joy_delay > 0) {
+		joy_delay--;
+		return;
+	}
 
 	if (use_dpad == true) {
 		if ((sawpads_buttons & PAD_UP) == 0) jy0 = -0x7F;
@@ -899,7 +943,7 @@ void player_update(int mmul)
 		jx0 = (int)(int8_t)(sawpads_axes[2]);
 		jy0 = (int)(int8_t)(sawpads_axes[3]);
 	}
- 
+
 	cam_ry += (jx1<<3) * mmul;
 	cam_rx += (jy1<<3) * mmul;
 	if (cam_ry < -0x8000) cam_ry += 0x10000;
@@ -975,12 +1019,13 @@ void player_update(int mmul)
 		}
 	}
 
-	if ((joy_pressed & PAD_T) != 0) current_block[hotbar_pos] = current_block[hotbar_pos] == 0 ? (BLOCK_MAX-1) : (current_block[hotbar_pos] - 1);
-	if ((joy_pressed & PAD_S) != 0) current_block[hotbar_pos] = (current_block[hotbar_pos] + 1) % BLOCK_MAX;
+	if ((joy_pressed & PAD_S) != 0) {
+		blocksel_id = current_block[hotbar_pos];
+		mode = MODE_BLOCKSEL;
+	}
 
 	if ((joy_pressed & PAD_L1) != 0) { hotbar_pos--; if (hotbar_pos < 0) hotbar_pos = HOTBAR_MAX-1; }
 	if ((joy_pressed & PAD_R1) != 0) hotbar_pos = (hotbar_pos + 1) % HOTBAR_MAX;
-
 	setup_matrix(false);
 	int32_t lvx = jx0 >> 1;
 	int32_t lvy = 0;
@@ -1166,46 +1211,21 @@ int main(void)
 
 	sawpads_unlock_dualshock();
 
-	// Generate a texture
-	for(int y = 0; y < 32; y++) {
-		for(int x = 0; x < 32; x++) {
-			uint32_t v = (x^y);
-			v *= 0x421;
-			v += 0x8000;
-			//v = 0x7FFF;
-			((uint16_t *)dma_buffer)[y*32+x] = v;
-		}
-	}
+	// Enable CD-ROM
+	cdrom_init();
 
 	// DMA a texture
-#if 0
-	// TODO: Actually use DMA
+	gpu_dma_load(atlas_raw, 0, 256, 320/4, 256);
+	gpu_dma_load((uint32_t*) (&font_raw[128]), 320/4, 256, 128/4, 128);
+
+	// Write font CLUT
 	gp1_command(0x04000001); // DMA mode: FIFO (1)
 	gp0_command(0xA0000000);
-	gp0_data_xy(0,256);
-	gp0_data_xy(256/1,256);
-	for(int i = 0; i < 256*256/2; i++) {
-		gp0_data(atlas_raw[i]);
-	}
+	gp0_data_xy(320/4, 384);
+	gp0_data_xy(2, 1);
+	gp0_data(0x7FFF0000);
 	gp0_command(0x01000000);
 	gp1_command(0x04000002); // DMA mode: DMA to GPU (2)
-#else
-	DMA_n_CHCR(2) = 1;
-	DMA_DICR = 0;
-	DMA_DPCR = 0x07654321;
-	DMA_n_MADR(2) = ((uint32_t)atlas_raw)&0x00FFFFFF;
-	DMA_n_BCR(2)  = ((320*(256/8))<<13)|0x08;
-	gp0_command(0xA0000000);
-	gp0_data_xy(0,256);
-	gp0_data_xy(320/4,256);
-	DMA_DPCR |= (0x8<<(4*2)); // Enable DMA
-	DMA_n_CHCR(2) = 0x01000201;
-	while((DMA_n_CHCR(2) & (1<<24)) != 0) {
-		//
-	}
-	//DMA_n_CHCR(2) = 1;
-	//gp0_command(0x01000000);
-#endif
 
         // Generate a world
 	for(int y = 0; y < LEVEL_LY/2; y++) {
@@ -1236,7 +1256,14 @@ int main(void)
 			int mmul = ticks - movement_ticks;
 			movement_ticks = ticks;
 
-			player_update(mmul);
+			switch (mode) {
+				case MODE_INGAME:
+					player_update(mmul);
+					break;
+				case MODE_BLOCKSEL:
+					blocksel_update();
+					break;
+			}
 
 			world_update(ticks);
 			// FIXME: if vsync is disabled,

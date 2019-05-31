@@ -27,6 +27,7 @@ typedef vec4 mat4[4];
 #define LEVEL_LY 64
 #define LEVEL_LZ 64
 extern uint32_t atlas_raw[];
+extern uint8_t font_raw[];
 extern uint8_t fsys_level[LEVEL_LY][LEVEL_LZ][LEVEL_LX];
 
 // block_info.h
@@ -37,6 +38,10 @@ typedef struct block_info {
 } block_info_t;
 
 extern block_info_t block_info[BLOCK_MAX][QUAD_MAX];
+
+// cdrom.c
+void cdrom_isr(void);
+void cdrom_init(void);
 
 // main.c
 extern int32_t cam_x;
@@ -70,12 +75,18 @@ void draw_block(int32_t cx, int32_t cy, int32_t cz, int di, int block, uint32_t 
 
 // gpu.c
 extern volatile uint32_t vblank_counter;
+
+void gpu_dma_load(uint32_t *buffer, int x, int y, int width, int height);
 void gp0_command(uint32_t v);
 void gp0_data(uint32_t v);
 void gp0_data_xy(uint32_t x, uint32_t y);
 void gp1_command(uint32_t v);
 
 // gui.c
+int get_text_width(char *format, ...);
+void draw_text(int x, int y, int color, char *format, ...);
+void draw_block_icon(int bx, int by, int bw, int bh, int bid);
+void draw_block_sel_menu(int selected_block);
 void draw_current_block(void);
 void draw_hotbar(void);
 void draw_crosshair(void);

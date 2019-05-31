@@ -48,11 +48,13 @@ SRCDIR = src
 
 INCLUDES = src/block_info.h src/common.h src/psx.h
 
-OBJS =	$(OBJDIR)/gui.o \
+OBJS =	$(OBJDIR)/cdrom.o \
+	$(OBJDIR)/gui.o \
 	$(OBJDIR)/gpu.o \
 	$(OBJDIR)/world.o \
 	\
 	$(OBJDIR)/atlas.o \
+	$(OBJDIR)/font.o \
 	\
 	$(OBJDIR)/main.o
 
@@ -60,7 +62,7 @@ OBJS =	$(OBJDIR)/gui.o \
 all: $(EXE_NAME).exe $(ISO_NAME).cue
 
 clean:
-	$(RM_F) $(OBJS) $(OBJDIR)/$(EXE_NAME).elf $(ISO_NAME).bin $(ISO_NAME).cue $(OBJDIR)/atlas.s
+	$(RM_F) $(OBJS) $(OBJDIR)/$(EXE_NAME).elf $(ISO_NAME).bin $(ISO_NAME).cue $(OBJDIR)/atlas.s $(OBJDIR)/font.s
 
 $(ISO_NAME).cue: $(ISO_NAME) manifest.txt
 	$(CANDYK)/bin/pscd-new manifest.txt
@@ -80,4 +82,8 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c $(INCLUDES)
 $(OBJDIR)/atlas.o: $(DATDIR)/atlas.raw tools/bin2s.py $(INCLUDES)
 	$(PYTHON3) tools/bin2s.py $(DATDIR)/atlas.raw > $(OBJDIR)/atlas.s
 	$(CROSS_AS) -o $@ $(ASFLAGS) $(OBJDIR)/atlas.s
+
+$(OBJDIR)/font.o: $(DATDIR)/font.raw tools/bin2s.py $(INCLUDES)
+	$(PYTHON3) tools/bin2s.py $(DATDIR)/font.raw > $(OBJDIR)/font.s
+	$(CROSS_AS) -o $@ $(ASFLAGS) $(OBJDIR)/font.s
 
