@@ -46,48 +46,78 @@ uint32_t block_lighting[6] = {
 
 #include "block_info.h"
 
+typedef struct mesh_data {
+	int16_t x, y, z;
+	int16_t tc;
+	uint8_t face;
+	uint8_t _unused1[7];
+} mesh_data_t;
+
 #define FACE_N 0x0000
 #define FACE_P 0x0100
-const int16_t mesh_data_block[] = {
+const mesh_data_t mesh_data_block[] = {
 	// -Z
-	FACE_N, FACE_N, FACE_N, 0x0F00,
-	FACE_P, FACE_N, FACE_N, 0x0F0F,
-	FACE_N, FACE_P, FACE_N, 0x0000,
-	FACE_P, FACE_P, FACE_N, 0x000F,
+	{FACE_N, FACE_N, FACE_N, 0x0F00, .face = 0,},
+	{FACE_P, FACE_N, FACE_N, 0x0F0F, .face = 0,},
+	{FACE_N, FACE_P, FACE_N, 0x0000, .face = 0,},
+	{FACE_P, FACE_P, FACE_N, 0x000F, .face = 0,},
 
 	// +Z
-	FACE_N, FACE_N, FACE_P, 0x0F0F,
-	FACE_N, FACE_P, FACE_P, 0x000F,
-	FACE_P, FACE_N, FACE_P, 0x0F00,
-	FACE_P, FACE_P, FACE_P, 0x0000,
+	{FACE_N, FACE_N, FACE_P, 0x0F0F, .face = 1,},
+	{FACE_N, FACE_P, FACE_P, 0x000F, .face = 1,},
+	{FACE_P, FACE_N, FACE_P, 0x0F00, .face = 1,},
+	{FACE_P, FACE_P, FACE_P, 0x0000, .face = 1,},
 
 	// -X
-	FACE_N, FACE_N, FACE_N, 0x0F0F,
-	FACE_N, FACE_P, FACE_N, 0x000F,
-	FACE_N, FACE_N, FACE_P, 0x0F00,
-	FACE_N, FACE_P, FACE_P, 0x0000,
+	{FACE_N, FACE_N, FACE_N, 0x0F0F, .face = 2,},
+	{FACE_N, FACE_P, FACE_N, 0x000F, .face = 2,},
+	{FACE_N, FACE_N, FACE_P, 0x0F00, .face = 2,},
+	{FACE_N, FACE_P, FACE_P, 0x0000, .face = 2,},
 
 	// +X
-	FACE_P, FACE_N, FACE_N, 0x0F00,
-	FACE_P, FACE_N, FACE_P, 0x0F0F,
-	FACE_P, FACE_P, FACE_N, 0x0000,
-	FACE_P, FACE_P, FACE_P, 0x000F,
+	{FACE_P, FACE_N, FACE_N, 0x0F00, .face = 3,},
+	{FACE_P, FACE_N, FACE_P, 0x0F0F, .face = 3,},
+	{FACE_P, FACE_P, FACE_N, 0x0000, .face = 3,},
+	{FACE_P, FACE_P, FACE_P, 0x000F, .face = 3,},
 
 	// -Y
-	FACE_N, FACE_N, FACE_N, 0x0000,
-	FACE_N, FACE_N, FACE_P, 0x0F00,
-	FACE_P, FACE_N, FACE_N, 0x000F,
-	FACE_P, FACE_N, FACE_P, 0x0F0F,
+	{FACE_N, FACE_N, FACE_N, 0x0000, .face = 4,},
+	{FACE_N, FACE_N, FACE_P, 0x0F00, .face = 4,},
+	{FACE_P, FACE_N, FACE_N, 0x000F, .face = 4,},
+	{FACE_P, FACE_N, FACE_P, 0x0F0F, .face = 4,},
 
 	// +Y
-	FACE_N, FACE_P, FACE_N, 0x0000,
-	FACE_P, FACE_P, FACE_N, 0x000F,
-	FACE_N, FACE_P, FACE_P, 0x0F00,
-	FACE_P, FACE_P, FACE_P, 0x0F0F,
+	{FACE_N, FACE_P, FACE_N, 0x0000, .face = 5,},
+	{FACE_P, FACE_P, FACE_N, 0x000F, .face = 5,},
+	{FACE_N, FACE_P, FACE_P, 0x0F00, .face = 5,},
+	{FACE_P, FACE_P, FACE_P, 0x0F0F, .face = 5,},
 };
 
-const int16_t mesh_data_plant[] = {
+const mesh_data_t mesh_data_plant[] = {
 	// TODO
+	// X-Z=0 front
+	{FACE_N, FACE_N, FACE_N, 0x0F00, .face = 0,},
+	{FACE_P, FACE_N, FACE_P, 0x0F0F, .face = 0,},
+	{FACE_N, FACE_P, FACE_N, 0x0000, .face = 0,},
+	{FACE_P, FACE_P, FACE_P, 0x000F, .face = 0,},
+
+	// X-Z=0 back
+	{FACE_P, FACE_P, FACE_P, 0x000F, .face = 1,},
+	{FACE_N, FACE_P, FACE_N, 0x0000, .face = 1,},
+	{FACE_P, FACE_N, FACE_P, 0x0F0F, .face = 1,},
+	{FACE_N, FACE_N, FACE_N, 0x0F00, .face = 1,},
+
+	// X+Z=0 front
+	{FACE_N, FACE_N, FACE_P, 0x0F00, .face = 2,},
+	{FACE_P, FACE_N, FACE_N, 0x0F0F, .face = 2,},
+	{FACE_N, FACE_P, FACE_P, 0x0000, .face = 2,},
+	{FACE_P, FACE_P, FACE_N, 0x000F, .face = 2,},
+
+	// X+Z=0 back
+	{FACE_P, FACE_P, FACE_N, 0x000F, .face = 3,},
+	{FACE_N, FACE_P, FACE_P, 0x0000, .face = 3,},
+	{FACE_P, FACE_N, FACE_N, 0x0F0F, .face = 3,},
+	{FACE_N, FACE_N, FACE_P, 0x0F00, .face = 3,},
 };
 
 void yield(void)
@@ -206,7 +236,118 @@ static inline bool is_face_lit(int32_t cx, int32_t cy, int32_t cz, uint32_t i) {
 	}
 }
 
-void draw_quads(int32_t cx, int32_t cy, int32_t cz, int di, const int16_t* mesh_data, const uint16_t bi[6][4], int face_count, uint32_t facemask, bool semitrans)
+static inline void draw_one_quad(
+	uint32_t command, int di,
+	int32_t x00, int32_t y00, int32_t z00, int32_t t00,
+	int32_t x01, int32_t y01, int32_t z01, int32_t t01,
+	int32_t x10, int32_t y10, int32_t z10, int32_t t10,
+	int32_t x11, int32_t y11, int32_t z11, int32_t t11,
+	int32_t cl, int32_t tp)
+{
+	int32_t xy00 = ((x00&0xFFFF)|(y00<<16));
+	int32_t xy01 = ((x01&0xFFFF)|(y01<<16));
+	int32_t xy10 = ((x10&0xFFFF)|(y10<<16));
+
+	asm volatile ("mtc2 %0, $0\n" : "+r"(xy00) : : );
+	asm volatile ("mtc2 %0, $1\n" : "+r"(z00) : : );
+	asm volatile ("mtc2 %0, $2\n" : "+r"(xy01) : : );
+	asm volatile ("mtc2 %0, $3\n" : "+r"(z01) : : );
+	asm volatile ("mtc2 %0, $4\n" : "+r"(xy10) : : );
+	asm volatile ("mtc2 %0, $5\n" : "+r"(z10) : : );
+
+	// Apply transformation
+	asm volatile ("cop2 0x00280030\n" :::); // RTPT
+
+	uint32_t sxy00;
+	uint32_t sxy01;
+	uint32_t sxy10;
+	uint32_t sxy11;
+	asm volatile ("mfc2 %0, $12\nnop\n" : "=r"(sxy00) : : );
+	asm volatile ("mfc2 %0, $13\nnop\n" : "=r"(sxy01) : : );
+	asm volatile ("mfc2 %0, $14\nnop\n" : "=r"(sxy10) : : );
+
+#if 0
+	// Clamp oversize polys
+	if(((int16_t)(sxy0>>16)) < -512) { continue; }
+	if(((int16_t)(sxy0>>16)) > 512) { continue; }
+	if(((int16_t)(sxy0&0xFFFF)) < -512) { continue; }
+	if(((int16_t)(sxy0&0xFFFF)) > 512) { continue; }
+	if(((int16_t)(sxy1>>16)) < -512) { continue; }
+	if(((int16_t)(sxy1>>16)) > 512) { continue; }
+	if(((int16_t)(sxy1&0xFFFF)) < -512) { continue; }
+	if(((int16_t)(sxy1&0xFFFF)) > 512) { continue; }
+	if(((int16_t)(sxy2>>16)) < -512) { continue; }
+	if(((int16_t)(sxy2>>16)) > 512) { continue; }
+	if(((int16_t)(sxy2&0xFFFF)) < -512) { continue; }
+	if(((int16_t)(sxy2&0xFFFF)) > 512) { continue; }
+#endif
+
+#if 1
+	// Back plane cull, flag edition
+	int32_t gte_flags;
+	asm volatile ("cfc2 %0, $31\nnop\n" : "=r"(gte_flags) : : );
+
+	if((gte_flags & (1<<18)) != 0) {
+		return;
+	}
+#endif
+
+#if 0
+	// Determine face
+	asm volatile ("cop2 0x01400006\nnop\n" :::); // NCLIP
+	int32_t backface_mac0;
+	asm volatile ("mfc2 %0, $24\nnop\n" : "=r"(backface_mac0) : : );
+	// Backface cull
+	if(backface_mac0 < 2) { continue; }
+#endif
+
+	// Apply 4th point
+	int32_t xy11 = ((x11&0xFFFF)|(y11<<16));
+	asm volatile ("mtc2 %0, $0\n" : "+r"(xy11) : : );
+	asm volatile ("mtc2 %0, $1\n" : "+r"(z11) : : );
+	asm volatile ("nop\n");
+	asm volatile ("cop2 0x00180001\nnop\n" :::); // RTPS
+	asm volatile ("nop\n");
+	asm volatile ("nop\n");
+	asm volatile ("nop\n");
+	asm volatile ("nop\n");
+	asm volatile ("nop\n");
+	asm volatile ("mfc2 %0, $14\nnop\n" : "=r"(sxy11) : : );
+
+#if 0
+	if(((int16_t)(sxy3>>16)) < -512) { continue; }
+	if(((int16_t)(sxy3>>16)) > 512) { continue; }
+	if(((int16_t)(sxy3&0xFFFF)) < -512) { continue; }
+	if(((int16_t)(sxy3&0xFFFF)) > 512) { continue; }
+#endif
+
+#if 0
+	// Back plane cull, Z edition
+	int32_t average_z;
+	//asm volatile ("cop2 0x0158002D\nnop\n" ::: ); // AVSZ3
+	asm volatile ("cop2 0x0168002E\nnop\n" ::: ); // AVSZ4
+	asm volatile ("mfc2 %0, $24\nnop\n" : "=r"(average_z) : : );
+
+	if(average_z <= 4) {
+		continue;
+	}
+#endif
+
+	// Draw a quad
+	DMA_PUSH(9, OT_WORLD + di);
+	dma_buffer[dma_pos++] = command;
+	dma_buffer[dma_pos++] = (sxy00);
+	dma_buffer[dma_pos++] = (t00) | (cl<<16);
+	dma_buffer[dma_pos++] = (sxy01);
+	dma_buffer[dma_pos++] = (t01) | (tp<<16);
+	dma_buffer[dma_pos++] = (sxy10);
+	dma_buffer[dma_pos++] = (t10);
+	dma_buffer[dma_pos++] = (sxy11);
+	dma_buffer[dma_pos++] = (t11);
+
+}
+
+void draw_quads(int32_t cx, int32_t cy, int32_t cz, int di, const mesh_data_t* mesh_data, const uint16_t bi[6][4], int face_count, uint32_t facemask, bool semitrans)
 {
 	int32_t ox = cx*0x0100;
 	int32_t oy = cy*0x0100;
@@ -217,138 +358,50 @@ void draw_quads(int32_t cx, int32_t cy, int32_t cz, int di, const int16_t* mesh_
 			continue;
 		}
 
-		const uint16_t* block_data = bi[i];
-		int mi = i << 4;
+		int mi = i*4;
+		const uint16_t* block_data = bi[mesh_data[mi+0].face];
 
-		int32_t x0 = ox+mesh_data[mi+0];
-		int32_t y0 = oy+mesh_data[mi+1];
-		int32_t z0 = oz+mesh_data[mi+2];
-		int32_t t0 = mesh_data[mi+3]+block_data[0];
+		int32_t x00 = ox+mesh_data[mi+0].x;
+		int32_t y00 = oy+mesh_data[mi+0].y;
+		int32_t z00 = oz+mesh_data[mi+0].z;
+		int32_t t00 = mesh_data[mi+0].tc+block_data[0];
 		int32_t cl = block_data[2];
-		int32_t x1 = ox+mesh_data[mi+4];
-		int32_t y1 = oy+mesh_data[mi+5];
-		int32_t z1 = oz+mesh_data[mi+6];
-		int32_t t1 = mesh_data[mi+7]+block_data[0];
+		int32_t x01 = ox+mesh_data[mi+1].x;
+		int32_t y01 = oy+mesh_data[mi+1].y;
+		int32_t z01 = oz+mesh_data[mi+1].z;
+		int32_t t01 = mesh_data[mi+1].tc+block_data[0];
 		int32_t tp = block_data[1];
-		int32_t x2 = ox+mesh_data[mi+8];
-		int32_t y2 = oy+mesh_data[mi+9];
-		int32_t z2 = oz+mesh_data[mi+10];
-		int32_t t2 = mesh_data[mi+11]+block_data[0];
-		int32_t x3 = ox+mesh_data[mi+12];
-		int32_t y3 = oy+mesh_data[mi+13];
-		int32_t z3 = oz+mesh_data[mi+14];
-		int32_t t3 = mesh_data[mi+15]+block_data[0];
+		int32_t x10 = ox+mesh_data[mi+2].x;
+		int32_t y10 = oy+mesh_data[mi+2].y;
+		int32_t z10 = oz+mesh_data[mi+2].z;
+		int32_t t10 = mesh_data[mi+2].tc+block_data[0];
+		int32_t x11 = ox+mesh_data[mi+3].x;
+		int32_t y11 = oy+mesh_data[mi+3].y;
+		int32_t z11 = oz+mesh_data[mi+3].z;
+		int32_t t11 = mesh_data[mi+3].tc+block_data[0];
 
-		int32_t xy0 = ((x0&0xFFFF)|(y0<<16));
-		int32_t xy1 = ((x1&0xFFFF)|(y1<<16));
-		int32_t xy2 = ((x2&0xFFFF)|(y2<<16));
-
-		asm volatile ("mtc2 %0, $0\n" : "+r"(xy0) : : );
-		asm volatile ("mtc2 %0, $1\n" : "+r"(z0) : : );
-		asm volatile ("mtc2 %0, $2\n" : "+r"(xy1) : : );
-		asm volatile ("mtc2 %0, $3\n" : "+r"(z1) : : );
-		asm volatile ("mtc2 %0, $4\n" : "+r"(xy2) : : );
-		asm volatile ("mtc2 %0, $5\n" : "+r"(z2) : : );
-
-		// Apply transformation
-		asm volatile ("cop2 0x00280030\n" :::); // RTPT
-
-		uint32_t sxy0;
-		uint32_t sxy1;
-		uint32_t sxy2;
-		asm volatile ("mfc2 %0, $12\nnop\n" : "=r"(sxy0) : : );
-		asm volatile ("mfc2 %0, $13\nnop\n" : "=r"(sxy1) : : );
-		asm volatile ("mfc2 %0, $14\nnop\n" : "=r"(sxy2) : : );
-
-#if 0
-		// Clamp oversize polys
-		if(((int16_t)(sxy0>>16)) < -512) { continue; }
-		if(((int16_t)(sxy0>>16)) > 512) { continue; }
-		if(((int16_t)(sxy0&0xFFFF)) < -512) { continue; }
-		if(((int16_t)(sxy0&0xFFFF)) > 512) { continue; }
-		if(((int16_t)(sxy1>>16)) < -512) { continue; }
-		if(((int16_t)(sxy1>>16)) > 512) { continue; }
-		if(((int16_t)(sxy1&0xFFFF)) < -512) { continue; }
-		if(((int16_t)(sxy1&0xFFFF)) > 512) { continue; }
-		if(((int16_t)(sxy2>>16)) < -512) { continue; }
-		if(((int16_t)(sxy2>>16)) > 512) { continue; }
-		if(((int16_t)(sxy2&0xFFFF)) < -512) { continue; }
-		if(((int16_t)(sxy2&0xFFFF)) > 512) { continue; }
-#endif
-
-#if 1
-		// Back plane cull, flag edition
-		int32_t gte_flags;
-		asm volatile ("cfc2 %0, $31\nnop\n" : "=r"(gte_flags) : : );
-
-		if((gte_flags & (1<<18)) != 0) {
-			continue;
-			//return;
-		}
-#endif
-
-#if 0
-		// Determine face
-		asm volatile ("cop2 0x01400006\nnop\n" :::); // NCLIP
-		int32_t backface_mac0;
-		asm volatile ("mfc2 %0, $24\nnop\n" : "=r"(backface_mac0) : : );
-		// Backface cull
-		if(backface_mac0 < 2) { continue; }
-#endif
-
-		// Apply 4th point
-		int32_t xy3 = ((x3&0xFFFF)|(y3<<16));
-		asm volatile ("mtc2 %0, $0\n" : "+r"(xy3) : : );
-		asm volatile ("mtc2 %0, $1\n" : "+r"(z3) : : );
-		asm volatile ("nop\n");
-		asm volatile ("cop2 0x00180001\nnop\n" :::); // RTPS
-		asm volatile ("nop\n");
-		asm volatile ("nop\n");
-		asm volatile ("nop\n");
-		asm volatile ("nop\n");
-		asm volatile ("nop\n");
-		uint32_t sxy3;
-		asm volatile ("mfc2 %0, $14\nnop\n" : "=r"(sxy3) : : );
-
-#if 0
-		if(((int16_t)(sxy3>>16)) < -512) { continue; }
-		if(((int16_t)(sxy3>>16)) > 512) { continue; }
-		if(((int16_t)(sxy3&0xFFFF)) < -512) { continue; }
-		if(((int16_t)(sxy3&0xFFFF)) > 512) { continue; }
-#endif
-
-#if 0
-		// Back plane cull, Z edition
-		int32_t average_z;
-		//asm volatile ("cop2 0x0158002D\nnop\n" ::: ); // AVSZ3
-		asm volatile ("cop2 0x0168002E\nnop\n" ::: ); // AVSZ4
-		asm volatile ("mfc2 %0, $24\nnop\n" : "=r"(average_z) : : );
-
-		if(average_z <= 4) {
-			continue;
-		}
-#endif
-
-		// Draw a quad
-		DMA_PUSH(9, OT_WORLD + di);
 		uint32_t lighting = block_lighting[i];
 		if(!is_face_lit(cx, cy, cz, i)) {
 			lighting >>= 1;
 			lighting &= 0x7F7F7F;
-		}
-		if(semitrans) {
-			dma_buffer[dma_pos++] = 0x2E000000 + (0x00FFFFFF&lighting);
 		} else {
-			dma_buffer[dma_pos++] = 0x2C000000 + (0x00FFFFFF&lighting);
+			lighting &= 0xFFFFFF;
 		}
-		dma_buffer[dma_pos++] = (sxy0);
-		dma_buffer[dma_pos++] = (t0) | (cl<<16);
-		dma_buffer[dma_pos++] = (sxy1);
-		dma_buffer[dma_pos++] = (t1) | (tp<<16);
-		dma_buffer[dma_pos++] = (sxy2);
-		dma_buffer[dma_pos++] = (t2);
-		dma_buffer[dma_pos++] = (sxy3);
-		dma_buffer[dma_pos++] = (t3);
+
+		uint32_t command;
+		if(semitrans) {
+			command = 0x2E000000 | lighting;
+		} else {
+			command = 0x2C000000 | lighting;
+		}
+
+		draw_one_quad(
+			command, di,
+			x00, y00, z00, t00,
+			x01, y01, z01, t01,
+			x10, y10, z10, t10,
+			x11, y11, z11, t11,
+			cl, tp);
 	}
 }
 
@@ -362,10 +415,11 @@ void draw_block(int32_t cx, int32_t cy, int32_t cz, int di, int block, uint32_t 
 		return;
 	}
 
-	if (get_model(block) == 1)
-		draw_quads(cx, cy, cz, di, /* mesh_data_plant */mesh_data_block, block_info[block], 4, facemask, false);
-	else
+	if (get_model(block) == 1) {
+		draw_quads(cx, cy, cz, di, mesh_data_plant, block_info[block], 4, facemask, false);
+	} else {
 		draw_quads(cx, cy, cz, di, mesh_data_block, block_info[block], 6, facemask, transparent || ((block&(~1)) == 8));
+	}
 }
 
 static inline uint32_t should_render(int32_t b, int32_t nx, int32_t ny, int32_t nz) {
