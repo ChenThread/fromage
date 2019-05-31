@@ -6,6 +6,7 @@ CROSS_OBJCOPY=$(CROSSPREFIX)objcopy
 
 RM_F=rm -f
 MKISOFS=mkisofs
+PYTHON3=python3
 
 ASFLAGS = -g -msoft-float
 
@@ -78,7 +79,7 @@ $(OBJDIR)/$(EXE_NAME).elf: $(OBJS)
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(INCLUDES)
 	$(CROSS_CC) -c -o $@ $(CFLAGS) $<
 
-$(OBJDIR)/atlas.o: $(DATDIR)/atlas.raw $(INCLUDES)
-	bin2s $(DATDIR)/atlas.raw > $(OBJDIR)/atlas.s
+$(OBJDIR)/atlas.o: $(DATDIR)/atlas.raw tools/bin2s.py $(INCLUDES)
+	$(PYTHON3) tools/bin2s.py $(DATDIR)/atlas.raw > $(OBJDIR)/atlas.s
 	$(CROSS_AS) -o $@ $(ASFLAGS) $(OBJDIR)/atlas.s
 

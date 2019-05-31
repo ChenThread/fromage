@@ -10,6 +10,11 @@ boot.exe
 fromage.bin
 fromage.cue
 
+# Python
+*.pyc
+*.pyo
+__pycache__
+.mypy_cache
 
 # VIM
 .sw?
