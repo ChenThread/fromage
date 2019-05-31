@@ -890,10 +890,10 @@ void blocksel_update(void)
 
 void player_update(int mmul)
 {
-	int jx0, jy0, jx1, jy1;
-
-	jx1 = (int)(int8_t)(sawpads_axes[0]);
-	jy1 = (int)(int8_t)(sawpads_axes[1]);
+	int jx0 = 0x00;
+	int jy0 = 0x00;
+	int jx1 = (int)(int8_t)(sawpads_axes[0]);
+	int jy1 = (int)(int8_t)(sawpads_axes[1]);
 
 	if (joy_delay > 0) {
 		joy_delay--;
