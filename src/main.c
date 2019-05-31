@@ -1203,12 +1203,11 @@ int main(void)
 	draw_status_window("Generating level");
 	gpu_dma_finish();
 
+	// Display enable: ON (1)
+	gp1_command(0x03000000);
+
         // Generate a world
 	for(int y = 0; y < LEVEL_LY/2; y++) {
-		if (vblank_counter > 0) {
-			// Display enable: ON (1)
-			gp1_command(0x03000000);
-		}
 
 		uint8_t bid = 1;
 		if (y == (LEVEL_LY/2) - 1) bid = 2;
