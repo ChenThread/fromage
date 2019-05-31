@@ -82,10 +82,15 @@ void gp0_data(uint32_t v);
 void gp0_data_xy(uint32_t x, uint32_t y);
 void gp1_command(uint32_t v);
 
+// gpu_dma.c
+void gpu_dma_init(void);
+void gpu_dma_finish(void);
+
 // gui.c
 int get_text_width(char *format, ...);
 void draw_text(int x, int y, int color, char *format, ...);
 void draw_block_icon(int bx, int by, int bw, int bh, int bid);
+void draw_status_window(char *format, ...);
 void draw_block_sel_menu(int selected_block);
 void draw_current_block(void);
 void draw_hotbar(void);

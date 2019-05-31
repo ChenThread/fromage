@@ -6,6 +6,15 @@ extern uint32_t block_lighting[6];
 
 #define CHAR_WIDTH(c) ((font_raw[(uint8_t)(c) >> 1] >> (((uint8_t)(c) & 1) << 2)) & 0x0F)
 
+static int get_text_width_buffer(char *buffer)
+{
+	int len = 0;
+	for (int i = 0; i < strlen(buffer); i++) {
+		len += (CHAR_WIDTH(buffer[i])) + 1;
+	}
+	return len;
+}
+
 int get_text_width(char *format, ...)
 {
 	char buffer[256];
@@ -15,20 +24,14 @@ int get_text_width(char *format, ...)
 	va_start(args, format);
 	vsnprintf(buffer, sizeof(buffer), format, args);
 
-	for (int i = 0; i < strlen(buffer); i++) {
-		len += (CHAR_WIDTH(buffer[i])) + 1;
-	}
+	len = get_text_width_buffer(buffer);
+
+	va_end(args);
 	return len;
 }
 
-void draw_text(int x, int y, int color, char *format, ...)
+static void draw_text_buffer(int x, int y, int color, char *buffer)
 {
-	char buffer[256];
-
-	va_list args;
-	va_start(args, format);
-	vsnprintf(buffer, sizeof(buffer), format, args);
-
 	x -= 160;
 	y -= 120;
 
@@ -67,29 +70,46 @@ void draw_text(int x, int y, int color, char *format, ...)
 
 		x += width + 1;
 	}
+}
+
+void draw_text(int x, int y, int color, char *format, ...)
+{
+	char buffer[256];
+
+	va_list args;
+	va_start(args, format);
+	vsnprintf(buffer, sizeof(buffer), format, args);
+
+	draw_text_buffer(x, y, color, buffer);
 
 	va_end(args);
 }
 
-void draw_block_icon(int bx, int by, int bw, int bh, int block_id) {
+static void draw_block_icon_flat(int bx, int by, int bw, int bh, block_info_t *bi1)
+{
+	int bwh = bw/2;
+	int bhh = bh/2;
+
+	// Flat texture
+	DMA_PUSH(9, 1);
+	dma_buffer[dma_pos++] = 0x2C808080;
+	dma_buffer[dma_pos++] = ((by-bhh) << 16) | ((bx-bwh) & 0xFFFF);
+	dma_buffer[dma_pos++] = (bi1->cl << 16) | (bi1->tc + (0x0000));
+	dma_buffer[dma_pos++] = ((by-bhh) << 16) | ((bx+bwh) & 0xFFFF);
+	dma_buffer[dma_pos++] = (bi1->tp << 16) | (bi1->tc + (0x000F));
+	dma_buffer[dma_pos++] = ((by+bhh) << 16) | ((bx-bwh) & 0xFFFF);
+	dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (0x0F00));
+	dma_buffer[dma_pos++] = ((by+bhh) << 16) | ((bx+bwh) & 0xFFFF);
+	dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (0x0F0F));
+}
+
+void draw_block_icon(int bx, int by, int bw, int bh, int block_id)
+{
 	block_info_t *bi0 = &block_info[block_id][5];
 	block_info_t *bi1 = &block_info[block_id][2];
 
 	if (block_id == 6 || (block_id >= 37 && block_id <= 40)) {
-		int bwh = bw/2;
-		int bhh = bh/2;
-
-		// Flat texture
-		DMA_PUSH(9, 1);
-		dma_buffer[dma_pos++] = 0x2C808080;
-		dma_buffer[dma_pos++] = ((by-bhh) << 16) | ((bx-bwh) & 0xFFFF);
-		dma_buffer[dma_pos++] = (bi1->cl << 16) | (bi1->tc + (0x0000));
-		dma_buffer[dma_pos++] = ((by-bhh) << 16) | ((bx+bwh) & 0xFFFF);
-		dma_buffer[dma_pos++] = (bi1->tp << 16) | (bi1->tc + (0x000F));
-		dma_buffer[dma_pos++] = ((by+bhh) << 16) | ((bx-bwh) & 0xFFFF);
-		dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (0x0F00));
-		dma_buffer[dma_pos++] = ((by+bhh) << 16) | ((bx+bwh) & 0xFFFF);
-		dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (0x0F0F));
+		draw_block_icon_flat(bx, by, bw, bh, bi1);
 	} else if (block_id > 0 && block_id < BLOCK_MAX) {
 		int bh8 = 8 * bh / 32;
 		int bw14 = 14 * bw / 32;
@@ -145,6 +165,39 @@ void draw_block_icon(int bx, int by, int bw, int bh, int block_id) {
 		dma_buffer[dma_pos++] = rd;
 		dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (0x0F0F));
 	}
+}
+
+void draw_status_window(char *format, ...)
+{
+	char buffer[256];
+
+	va_list args;
+	va_start(args, format);
+	vsnprintf(buffer, sizeof(buffer), format, args);
+
+	// Draw text
+	int width = get_text_width_buffer(buffer);
+	draw_text_buffer((320 - width) / 2, (240 - 8) / 2, 0xFFFFFF, buffer);
+
+	block_info_t *bi = &block_info[3][5];
+
+	// Draw fancy dirt background
+	DMA_PUSH(3, 1);
+	dma_buffer[dma_pos++] = 0x62000000;
+	dma_buffer[dma_pos++] = (-120 << 16) | (-160 & 0xFFFF);
+	dma_buffer[dma_pos++] = ((240) << 16) | ((320) & 0xFFFF);
+	DMA_PUSH(3, 1);
+	dma_buffer[dma_pos++] = 0x62000000;
+	dma_buffer[dma_pos++] = (-120 << 16) | (-160 & 0xFFFF);
+	dma_buffer[dma_pos++] = ((240) << 16) | ((320) & 0xFFFF);
+
+	for (int y = 0; y < 240; y += 16) {
+		for (int x = 0; x < 320; x += 16) {
+			draw_block_icon_flat(x - 160 + 8, y - 120 + 8, 16, 16, bi);
+		}
+	}
+
+	va_end(args);
 }
 
 void draw_block_sel_menu(int selected_block)

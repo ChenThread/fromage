@@ -176,14 +176,7 @@ int16_t blocksel_id = 1;
 
 uint32_t ticks = 0;
 uint32_t movement_ticks = 0;
-uint32_t dma_pos = 0;
-uint32_t dma_pos_start = 0;
-uint32_t dma_start_ptr;
 
-volatile uint32_t dma_next_start = 0;
-uint32_t dma_buffer[256*512];
-uint32_t dma_order_table[4][DMA_ORDER_MAX];
-uint32_t dma_buffer_current = 0;
 #define OT_WORLD 2
 
 int joy_buttons_old = 0;
@@ -816,19 +809,7 @@ void draw_everything(void)
 	asm volatile ("ctc2 %0, $7\n" : "+r"(mat_tr_z) : : );
 
 	// Set up DMA buffer
-
-	if(dma_pos_start >= sizeof(dma_buffer)*2/sizeof(dma_buffer[0])/3) {
-		dma_pos = 0;
-	}
-	dma_pos_start = dma_pos;
-	dma_buffer_current += 1;
-	dma_buffer_current &= 3;
-	dma_start_ptr = 0x00FFFFFF&(uint32_t)&dma_order_table[dma_buffer_current][DMA_ORDER_MAX-1];
-	for(int i = 0; i < DMA_ORDER_MAX; i++) {
-		dma_order_table[dma_buffer_current][i] = (i == 0
-			? 0x00FFFFFF
-			: ((uint32_t)&dma_order_table[dma_buffer_current][i-1])&0xFFFFFF);
-	}
+	gpu_dma_init();
 
 	// Clear screen
 #if 1
@@ -879,9 +860,6 @@ void draw_everything(void)
 	draw_liquid_overlay();
 	draw_text(1, 1, 0xFFFFFF, "0.30");
 
-	DMA_PUSH(1, 0);
-	dma_buffer[dma_pos++] = 0x00000000;
-
 	/*
 	gp0_command(0x720000FF);
 	gp0_data_xy(rx1-8/2, ry1-8/2);
@@ -889,19 +867,7 @@ void draw_everything(void)
 	gp0_data_xy(rx0-8/2, ry0-8/2);
 	*/
 
-	// DMA the data
-	if(dma_pos != dma_pos_start) {
-		while((DMA_n_CHCR(2) & (1<<24)) != 0) {
-			//
-		}
-		DMA_n_CHCR(2) = 0x00000401;
-		DMA_DICR = 0;
-		DMA_DPCR = 0x07654321;
-		DMA_n_MADR(2) = dma_start_ptr;
-		DMA_n_BCR(2)  = 0;
-		DMA_n_CHCR(2) |= 0x01000000;
-		DMA_DPCR |= (0x8<<(4*2)); // Enable DMA
-	}
+	gpu_dma_finish();
 }
 
 void blocksel_update(void)
@@ -1183,6 +1149,9 @@ int main(void)
 	//gp0_command(0xE5000000 | ((0)<<0) | ((0)<<10)); // Draw offset
 	gp0_command(0xE6000000); // Mask bit setting
 
+	// Display enable: OFF (1)
+	gp1_command(0x03000001);
+
 	// Clear screen
 	gp0_command(0x01000000);
 	gp0_command(0x02000000);
@@ -1194,10 +1163,8 @@ int main(void)
 	gp0_data(((0)<<0) | ((0)<<16));
 	gp0_data(((5)<<0) | ((5)<<16));
 
-	// Enable display
-	gp1_command(0x03000000); // Display enable: ON (1)
-
 	// Enable VBLANK interrupt
+	vblank_counter = 0;
 	PSXREG_I_MASK |= (1<<0);
 
 	// Prepare joypad
@@ -1227,8 +1194,18 @@ int main(void)
 	gp0_command(0x01000000);
 	gp1_command(0x04000002); // DMA mode: DMA to GPU (2)
 
+	// Draw status window
+	gpu_dma_init();
+	draw_status_window("Generating level");
+	gpu_dma_finish();
+
         // Generate a world
 	for(int y = 0; y < LEVEL_LY/2; y++) {
+		if (vblank_counter > 0) {
+			// Display enable: ON (1)
+			gp1_command(0x03000000);
+		}
+
 		uint8_t bid = 1;
 		if (y == (LEVEL_LY/2) - 1) bid = 2;
 		else if (y >= (LEVEL_LY/2) - 4) bid = 3;
@@ -1238,10 +1215,13 @@ int main(void)
 		}
 	}
 
+	gpu_dma_init();
+	draw_status_window("Loading");
+	gpu_dma_finish();
+
 	world_init();
 
 	ticks = movement_ticks = 0;
-	vblank_counter = 0;
 	for(;;) {
 		yield();
 
