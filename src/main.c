@@ -347,7 +347,7 @@ static inline void draw_one_quad(
 
 }
 
-void draw_quads(int32_t cx, int32_t cy, int32_t cz, int di, const mesh_data_t* mesh_data, const uint16_t bi[6][4], int face_count, uint32_t facemask, bool semitrans)
+void draw_quads(int32_t cx, int32_t cy, int32_t cz, int di, const mesh_data_t *mesh_data, const block_info_t *bi, int face_count, uint32_t facemask, bool semitrans)
 {
 	int32_t ox = cx*0x0100;
 	int32_t oy = cy*0x0100;
@@ -359,26 +359,26 @@ void draw_quads(int32_t cx, int32_t cy, int32_t cz, int di, const mesh_data_t* m
 		}
 
 		int mi = i*4;
-		const uint16_t* block_data = bi[mesh_data[mi+0].face];
+		const block_info_t *block_data = &bi[mesh_data[mi+0].face];
 
 		int32_t x00 = ox+mesh_data[mi+0].x;
 		int32_t y00 = oy+mesh_data[mi+0].y;
 		int32_t z00 = oz+mesh_data[mi+0].z;
-		int32_t t00 = mesh_data[mi+0].tc+block_data[0];
-		int32_t cl = block_data[2];
+		int32_t t00 = mesh_data[mi+0].tc+block_data->tc;
+		int32_t cl = block_data->cl;
 		int32_t x01 = ox+mesh_data[mi+1].x;
 		int32_t y01 = oy+mesh_data[mi+1].y;
 		int32_t z01 = oz+mesh_data[mi+1].z;
-		int32_t t01 = mesh_data[mi+1].tc+block_data[0];
-		int32_t tp = block_data[1];
+		int32_t t01 = mesh_data[mi+1].tc+block_data->tc;
+		int32_t tp = block_data->tp;
 		int32_t x10 = ox+mesh_data[mi+2].x;
 		int32_t y10 = oy+mesh_data[mi+2].y;
 		int32_t z10 = oz+mesh_data[mi+2].z;
-		int32_t t10 = mesh_data[mi+2].tc+block_data[0];
+		int32_t t10 = mesh_data[mi+2].tc+block_data->tc;
 		int32_t x11 = ox+mesh_data[mi+3].x;
 		int32_t y11 = oy+mesh_data[mi+3].y;
 		int32_t z11 = oz+mesh_data[mi+3].z;
-		int32_t t11 = mesh_data[mi+3].tc+block_data[0];
+		int32_t t11 = mesh_data[mi+3].tc+block_data->tc;
 
 		uint32_t lighting = block_lighting[i];
 		if(!is_face_lit(cx, cy, cz, i)) {

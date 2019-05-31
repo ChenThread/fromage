@@ -5,7 +5,7 @@
 #define INFO_BLOCK_PLANT(x,y) {QUAD(x,y),QUAD(x,y),QUAD(x,y),QUAD(x,y)}
 #define INFO_BLOCK_WOOL(i) INFO_BLOCK_CUBE(i,4)
 
-uint16_t block_info[BLOCK_MAX][QUAD_MAX][4] = {
+block_info_t block_info[BLOCK_MAX][QUAD_MAX] = {
 	{}, // 0: Air
 	INFO_BLOCK_CUBE(1, 0), // 1: Stone
 	INFO_BLOCK_CUBE_TB(3, 0, 0, 0, 2, 0), // 2: Grass
