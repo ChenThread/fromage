@@ -46,9 +46,7 @@ DATDIR = dat
 OBJDIR = obj
 SRCDIR = src
 
-INCLUDES = src/psx.h src/common.h
-# $(OBJDIR)/head.o \
-#	\
+INCLUDES = src/block_info.h src/common.h src/psx.h
 
 OBJS =	$(OBJDIR)/gui.o \
 	$(OBJDIR)/gpu.o \
@@ -64,7 +62,7 @@ all: $(EXE_NAME).exe $(ISO_NAME).cue
 clean:
 	$(RM_F) $(OBJS) $(OBJDIR)/$(EXE_NAME).elf $(ISO_NAME).bin $(ISO_NAME).cue $(OBJDIR)/atlas.s
 
-$(ISO_NAME).cue: $(ISO_NAME)
+$(ISO_NAME).cue: $(ISO_NAME) manifest.txt
 	$(CANDYK)/bin/pscd-new manifest.txt
 
 $(ISO_NAME): $(EXE_NAME).exe

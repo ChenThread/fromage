@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <math.h>
 
+#include <psxregs.h>
+#include <psxdefs/joy.h>
 #include "psx.h"
 
 #define ASSERT(x) if(!(x)) { for(;;) {} }
