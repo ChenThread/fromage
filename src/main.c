@@ -1198,14 +1198,14 @@ int main(void)
 	gpu_dma_init();
 	draw_status_window("Generating level");
 	gpu_dma_finish();
+	wait_for_next_vblank();
+
+	// Display enable: ON (1)
+	gp1_command(0x03000000);
+	wait_for_next_vblank();
 
         // Generate a world
 	for(int y = 0; y < LEVEL_LY/2; y++) {
-		if (vblank_counter > 0) {
-			// Display enable: ON (1)
-			gp1_command(0x03000000);
-		}
-
 		uint8_t bid = 1;
 		if (y == (LEVEL_LY/2) - 1) bid = 2;
 		else if (y >= (LEVEL_LY/2) - 4) bid = 3;
@@ -1218,8 +1218,10 @@ int main(void)
 	gpu_dma_init();
 	draw_status_window("Loading");
 	gpu_dma_finish();
+	wait_for_next_vblank();
 
 	world_init();
+	wait_for_next_vblank();
 
 	ticks = movement_ticks = 0;
 	for(;;) {

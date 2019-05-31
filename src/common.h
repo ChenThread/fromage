@@ -76,6 +76,7 @@ void draw_block(int32_t cx, int32_t cy, int32_t cz, int di, int block, uint32_t 
 // gpu.c
 extern volatile uint32_t vblank_counter;
 
+void wait_for_next_vblank(void);
 void gpu_dma_load(uint32_t *buffer, int x, int y, int width, int height);
 void gp0_command(uint32_t v);
 void gp0_data(uint32_t v);
