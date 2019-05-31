@@ -1040,6 +1040,17 @@ int main(void)
 	chenboot_isr_install(isr_handler_c);
 	chenboot_isr_enable();
 
+	// Enable GTE
+	asm volatile (
+		"\tmfc0 $t0, $12\n"
+		"\tlui $t1, 0x4000\n"
+		"\tori $t1, $t1, 0x7F01\n"
+		"\tor $t0, $t0, $t1\n"
+		"\tmtc0 $t0, $12\n"
+
+		:::"t0","t1"
+	);
+
 	// Reset GPU
 	gp1_command(0x00000000); // Reset
 	//gp1_command(0x04000001); // DMA mode: FIFO (1)
