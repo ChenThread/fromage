@@ -11,6 +11,15 @@ void wait_for_next_vblank(void)
 	}
 }
 
+void wait_for_vblanks(uint32_t count)
+{
+	uint32_t last_counter = vblank_counter + count;
+
+	while(last_counter > vblank_counter) {
+		// do nothing
+	}
+}
+
 void gpu_dma_load(uint32_t *buffer, int x, int y, int width, int height)
 {
 #if 0

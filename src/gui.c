@@ -12,7 +12,7 @@ static int get_text_width_buffer(char *buffer)
 	for (size_t i = 0; i < strlen(buffer); i++) {
 		len += (CHAR_WIDTH(buffer[i])) + 1;
 	}
-	return len;
+	return len * VID_WIDTH_MULTIPLIER;
 }
 
 int get_text_width(char *format, ...)
@@ -27,7 +27,7 @@ int get_text_width(char *format, ...)
 	len = get_text_width_buffer(buffer);
 
 	va_end(args);
-	return len * VID_WIDTH_MULTIPLIER;
+	return len;
 }
 
 static void draw_text_buffer(int x, int y, int color, char *buffer)
@@ -106,6 +106,21 @@ static void draw_text_buffer(int x, int y, int color, char *buffer)
 	dma_buffer[dma_pos++] = 0xE100061D;
 #endif
 
+}
+
+void draw_status_progress(int progress, int max)
+{
+	int width = VID_WIDTH / 2;
+
+	DMA_PUSH(3, 1);
+	dma_buffer[dma_pos++] = 0x6020F020;
+	dma_buffer[dma_pos++] = (10 << 16) | (-(width/2) & 0xFFFF);
+	dma_buffer[dma_pos++] = ((2*VID_HEIGHT_MULTIPLIER) << 16) | ((width * progress / max) & 0xFFFF);
+
+	DMA_PUSH(3, 1);
+	dma_buffer[dma_pos++] = 0x60181818;
+	dma_buffer[dma_pos++] = (10 << 16) | (-(width/2) & 0xFFFF);
+	dma_buffer[dma_pos++] = ((2*VID_HEIGHT_MULTIPLIER) << 16) | ((width) & 0xFFFF);
 }
 
 void draw_text(int x, int y, int color, char *format, ...)
@@ -215,6 +230,34 @@ void draw_block_icon(int bx, int by, int bw, int bh, int block_id)
 	}
 }
 
+void draw_block_background(block_info_t *bi)
+{
+	DMA_PUSH(3, 1);
+	dma_buffer[dma_pos++] = 0x62000000;
+	dma_buffer[dma_pos++] = (-(VID_HEIGHT/2) << 16) | (-(VID_WIDTH/2) & 0xFFFF);
+	dma_buffer[dma_pos++] = ((VID_HEIGHT) << 16) | ((VID_WIDTH) & 0xFFFF);
+	DMA_PUSH(3, 1);
+	dma_buffer[dma_pos++] = 0x62000000;
+	dma_buffer[dma_pos++] = (-(VID_HEIGHT/2) << 16) | (-(VID_WIDTH/2) & 0xFFFF);
+	dma_buffer[dma_pos++] = ((VID_HEIGHT) << 16) | ((VID_WIDTH) & 0xFFFF);
+
+	for (int y = 0; y < VID_HEIGHT; y += 16 * VID_HEIGHT_MULTIPLIER) {
+		for (int x = 0; x < VID_WIDTH; x += 16 * VID_WIDTH_MULTIPLIER) {
+			draw_block_icon_flat(
+				x - (VID_WIDTH/2) + 8 * VID_WIDTH_MULTIPLIER,
+				y - (VID_HEIGHT/2) + 8,
+				16 * VID_WIDTH_MULTIPLIER,
+				16 * VID_HEIGHT_MULTIPLIER,
+				bi);
+		}
+	}
+}
+
+void draw_dirt_background(void)
+{
+	draw_block_background(&block_info[3][5]);
+}
+
 void draw_status_window(char *format, ...)
 {
 	char buffer[256];
@@ -227,28 +270,7 @@ void draw_status_window(char *format, ...)
 	int width = get_text_width_buffer(buffer);
 	draw_text_buffer((VID_WIDTH - width) / 2, (VID_HEIGHT - 8) / 2, 0xFFFFFF, buffer);
 
-	block_info_t *bi = &block_info[3][5];
-
-	// Draw fancy dirt background
-	DMA_PUSH(3, 1);
-	dma_buffer[dma_pos++] = 0x62000000;
-	dma_buffer[dma_pos++] = (-(VID_HEIGHT/2) << 16) | (-(VID_WIDTH/2) & 0xFFFF);
-	dma_buffer[dma_pos++] = ((VID_HEIGHT) << 16) | ((VID_WIDTH) & 0xFFFF);
-	DMA_PUSH(3, 1);
-	dma_buffer[dma_pos++] = 0x62000000;
-	dma_buffer[dma_pos++] = (-(VID_HEIGHT/2) << 16) | (-(VID_WIDTH/2) & 0xFFFF);
-	dma_buffer[dma_pos++] = ((VID_HEIGHT) << 16) | ((VID_WIDTH) & 0xFFFF);
-
-	for (int y = 0; y < VID_HEIGHT; y += 16) {
-		for (int x = 0; x < VID_WIDTH; x += 16 * VID_WIDTH_MULTIPLIER) {
-			draw_block_icon_flat(
-				x - (VID_WIDTH/2) + 8 * VID_WIDTH_MULTIPLIER,
-				y - (VID_HEIGHT/2) + 8,
-				16 * VID_WIDTH_MULTIPLIER,
-				16,
-				bi);
-		}
-	}
+	draw_dirt_background();
 
 	va_end(args);
 }

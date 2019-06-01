@@ -19,9 +19,6 @@ eyes: 1.7
 int main(void);
 void yield(void);
 
-extern volatile uint8_t _BSS_START[];
-extern volatile uint8_t _BSS_END[];
-
 const int16_t sintab[256] = {
 0,101,201,301,401,501,601,700,799,897,995,1092,1189,1285,1380,1474,1567,1660,1751,1842,1931,2019,2106,2191,2276,2359,2440,2520,2598,2675,2751,2824,2896,2967,3035,3102,3166,3229,3290,3349,3406,3461,3513,3564,3612,3659,3703,3745,3784,3822,3857,3889,3920,3948,3973,3996,4017,4036,4052,4065,4076,4085,4091,4095,4096,4095,4091,4085,4076,4065,4052,4036,4017,3996,3973,3948,3920,3889,3857,3822,3784,3745,3703,3659,3612,3564,3513,3461,3406,3349,3290,3229,3166,3102,3035,2967,2896,2824,2751,2675,2598,2520,2440,2359,2276,2191,2106,2019,1931,1842,1751,1660,1567,1474,1380,1285,1189,1092,995,897,799,700,601,501,401,301,201,101,0,-101,-201,-301,-401,-501,-601,-700,-799,-897,-995,-1092,-1189,-1285,-1380,-1474,-1567,-1660,-1751,-1842,-1931,-2019,-2106,-2191,-2276,-2359,-2440,-2520,-2598,-2675,-2751,-2824,-2896,-2967,-3035,-3102,-3166,-3229,-3290,-3349,-3406,-3461,-3513,-3564,-3612,-3659,-3703,-3745,-3784,-3822,-3857,-3889,-3920,-3948,-3973,-3996,-4017,-4036,-4052,-4065,-4076,-4085,-4091,-4095,-4096,-4095,-4091,-4085,-4076,-4065,-4052,-4036,-4017,-3996,-3973,-3948,-3920,-3889,-3857,-3822,-3784,-3745,-3703,-3659,-3612,-3564,-3513,-3461,-3406,-3349,-3290,-3229,-3166,-3102,-3035,-2967,-2896,-2824,-2751,-2675,-2598,-2520,-2440,-2359,-2276,-2191,-2106,-2019,-1931,-1842,-1751,-1660,-1567,-1474,-1380,-1285,-1189,-1092,-995,-897,-799,-700,-601,-501,-401,-301,-201,-101,
 };
@@ -1053,6 +1050,13 @@ void player_update(int mmul)
 #endif
 }
 
+void draw_status_prog_frame(int progress, int max) {
+	gpu_dma_init();
+	draw_status_progress(progress, max);
+	gpu_dma_finish();
+	wait_for_next_vblank();
+}
+
 int main(void)
 {
 	int i;
@@ -1171,7 +1175,7 @@ int main(void)
 
 	// Draw status window
 	gpu_dma_init();
-	draw_status_window("Generating level");
+	draw_status_window("Loading level");
 	gpu_dma_finish();
 	wait_for_next_vblank();
 
@@ -1190,13 +1194,41 @@ int main(void)
 		}
 	}
 
+	// Load level
+/*	level_info info;
+	int ret = load_level(1, &info, fsys_level, LEVEL_LX*LEVEL_LY*LEVEL_LZ, draw_status_prog_frame);
+	if (ret >= 0) {
+		cam_x = info.cam_x;
+		cam_y = info.cam_y;
+		cam_z = info.cam_z;
+		cam_rx = info.cam_rx;
+		cam_ry = info.cam_ry;
+		memcpy(current_block, info.hotbar_blocks, HOTBAR_MAX);
+		hotbar_pos = info.hotbar_pos;
+	} */
+
 	gpu_dma_init();
-	draw_status_window("Loading");
+	draw_status_window("Preparing");
 	gpu_dma_finish();
 	wait_for_next_vblank();
 
 	world_init();
 	wait_for_next_vblank();
+
+	// Save level
+/*	level_info info;
+	info.xsize = LEVEL_LX;
+	info.ysize = LEVEL_LY;
+	info.zsize = LEVEL_LZ;
+	info.cam_x = cam_x;
+	info.cam_y = cam_y;
+	info.cam_z = cam_z;
+	info.cam_rx = cam_rx;
+	info.cam_ry = cam_ry;
+	memcpy(info.hotbar_blocks, current_block, HOTBAR_MAX);
+	info.hotbar_pos = hotbar_pos;
+
+	int ret = save_level(1, &info, fsys_level, draw_status_prog_frame); */
 
 	ticks = movement_ticks = 0;
 	for(;;) {

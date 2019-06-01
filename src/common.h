@@ -21,6 +21,7 @@
 #define VID_WIDTH_MULTIPLIER 1
 #endif
 #define VID_HEIGHT 240
+#define VID_HEIGHT_MULTIPLIER 1
 
 typedef int32_t fixed;
 typedef int64_t fixed64;
@@ -85,6 +86,7 @@ void draw_block(int32_t cx, int32_t cy, int32_t cz, int di, int block, uint32_t 
 extern volatile uint32_t vblank_counter;
 
 void wait_for_next_vblank(void);
+void wait_for_vblanks(uint32_t count);
 void gpu_dma_load(uint32_t *buffer, int x, int y, int width, int height);
 void gp0_command(uint32_t v);
 void gp0_data(uint32_t v);
@@ -98,7 +100,10 @@ void gpu_dma_finish(void);
 // gui.c
 int get_text_width(char *format, ...);
 void draw_text(int x, int y, int color, char *format, ...);
+void draw_status_progress(int progress, int max);
 void draw_block_icon(int bx, int by, int bw, int bh, int bid);
+void draw_block_background(block_info_t *bi);
+void draw_dirt_background(void);
 void draw_status_window(char *format, ...);
 void draw_block_sel_menu(int selected_block);
 void draw_current_block(void);
@@ -106,17 +111,17 @@ void draw_hotbar(void);
 void draw_crosshair(void);
 void draw_liquid_overlay(void);
 
-// joy.c
-extern volatile uint8_t joy_id;
-extern volatile uint8_t joy_hid;
-extern volatile uint16_t joy_buttons;
-extern volatile uint8_t joy_axes[4];
-extern volatile uint32_t joy_read_counter;
-extern volatile uint8_t joy_has_ack;
-extern volatile uint8_t joy_rumble0; // small
-extern volatile uint8_t joy_rumble1; // large
-void joy_unlock_dualshock(void);
-void joy_do_read(void);
+// save.c
+typedef void save_progress_callback(int progress, int max);
+typedef struct {
+	int16_t xsize, ysize, zsize;
+	int32_t cam_x, cam_y, cam_z, cam_rx, cam_ry;
+	uint8_t hotbar_blocks[HOTBAR_MAX];
+	uint8_t hotbar_pos;
+} level_info;
+
+int load_level(int save_id, level_info *info, char *target, int32_t target_size, save_progress_callback *pc);
+int save_level(int save_id, level_info *info, const char *data, save_progress_callback *pc);
 
 // world.c
 uint8_t world_get_top_opaque(int32_t cx, int32_t cz);

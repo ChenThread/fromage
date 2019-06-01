@@ -16,7 +16,7 @@ CFLAGS = -g -c -O3 -flto -pipe \
 	-fno-stack-protector \
 	-mno-check-zero-division \
 	-msoft-float -nostdlib -mips1 -march=3000 -mtune=3000 \
-	-Isrc -I$(CANDYK)/include -Wall -Wextra \
+	-Isrc -Icontrib/lz4 -I$(CANDYK)/include -Wall -Wextra \
 	-Wno-shift-negative-value \
 	-Wno-unused-variable -Wno-unused-function -Wno-pointer-sign \
 
@@ -52,10 +52,13 @@ OBJS =	$(OBJDIR)/cdrom.o \
 	$(OBJDIR)/gui.o \
 	$(OBJDIR)/gpu.o \
 	$(OBJDIR)/gpu_dma.o \
+	$(OBJDIR)/save.o \
 	$(OBJDIR)/world.o \
 	\
 	$(OBJDIR)/atlas.o \
 	$(OBJDIR)/font.o \
+	\
+	$(OBJDIR)/lz4.o \
 	\
 	$(OBJDIR)/main.o
 
@@ -78,6 +81,9 @@ $(OBJDIR)/$(EXE_NAME).elf: $(OBJS)
 	$(CROSS_CC) -o $(OBJDIR)/$(EXE_NAME).elf $(LDFLAGS) $(OBJS) $(LIBS)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(INCLUDES)
+	$(CROSS_CC) -c -o $@ $(CFLAGS) $<
+
+$(OBJDIR)/lz4.o: contrib/lz4/lz4.c $(INCLUDES)
 	$(CROSS_CC) -c -o $@ $(CFLAGS) $<
 
 $(OBJDIR)/atlas.o: $(DATDIR)/atlas.raw tools/bin2s.py $(INCLUDES)
