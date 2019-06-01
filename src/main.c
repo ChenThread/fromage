@@ -526,6 +526,7 @@ void draw_world(void)
 		int cull##X##xstep4 = cull##X##xstep1*4; \
 		int cull##X##ystep4 = cull##X##ystep1*4; \
 		int cull##X##zstep4 = cull##X##zstep1*4; \
+		int cull##X##xzstep16 = cull##X##xstep1*4 + cull##X##zstep1*16; \
 		int cull##X##xmin = ((cxmin<<8)+0x200-cam_x)*cull##X##xstep_raw; \
 		int cull##X##ymin = ((cymin<<8)+0x200-cam_y)*cull##X##ystep_raw; \
 		int cull##X##zmin = ((czmin<<8)+0x200-cam_z)*cull##X##zstep_raw; \
@@ -594,9 +595,18 @@ void draw_world(void)
 			,bcull3 += cull3ystep1
 			) {
 
+			if((vismask & 15) == 0) {
+				if (vismask == 0) { break; }
+				bcull0 += cull0xzstep16;
+				bcull1 += cull1xzstep16;
+				bcull2 += cull2xzstep16;
+				bcull3 += cull3xzstep16;
+				vismask >>= 4;
+				continue;
+			}
 			uint32_t nfmask = 0;
-			if(bdy > 0) { nfmask |= 0x10; }
-			if(bdy < 0) { nfmask |= 0x20; }
+			if     (bdy > 0) { nfmask |= 0x10; }
+			else if(bdy < 0) { nfmask |= 0x20; }
 			int ady = (bdy < 0 ? -bdy : bdy);
 		for(int biz = 0, bcz = cz, bdz = dz;
 			biz < 4;
@@ -609,6 +619,7 @@ void draw_world(void)
 			) {
 
 			if((vismask & 1) == 0) {
+				if (vismask == 0) { biy = 4; break; }
 				bcull0 += cull0xstep4;
 				bcull1 += cull1xstep4;
 				bcull2 += cull2xstep4;
@@ -616,8 +627,8 @@ void draw_world(void)
 				continue;
 			}
 			nfmask &= ~0x03;
-			if(bdz > 0) { nfmask |= 0x01; }
-			if(bdz < 0) { nfmask |= 0x02; }
+			if     (bdz > 0) { nfmask |= 0x01; }
+			else if(bdz < 0) { nfmask |= 0x02; }
 			int adz = (bdz < 0 ? -bdz : bdz);
 		for(int bix = 0, bcx = cx, bdx = dx;
 			bix < 4;
@@ -635,8 +646,8 @@ void draw_world(void)
 			if(bcull3 < -(0x200<<12)) { continue; }
 
 			nfmask &= ~0x0C;
-			if(bdx > 0) { nfmask |= 0x04; }
-			if(bdx < 0) { nfmask |= 0x08; }
+			if(bdx > 0)      { nfmask |= 0x04; }
+			else if(bdx < 0) { nfmask |= 0x08; }
 			int adx = (bdx < 0 ? -bdx : bdx);
 			draw_block_in_level(bcx, bcy, bcz, adx+ady+adz, nfmask);
 		}
