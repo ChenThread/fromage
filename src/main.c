@@ -124,9 +124,21 @@ volatile uint32_t frame_x = 0;
 volatile uint32_t frame_y = 0;
 volatile uint32_t vis_frame_x = 0;
 volatile uint32_t vis_frame_y = 0;
+
+void frame_start(void)
+{
+	DMA_PUSH(3, DMA_ORDER_MAX-1);
+	dma_buffer[dma_pos++] = 0xE3000000 | ((frame_x+0)<<0) | ((frame_y+0)<<10); // XY1 draw range
+	dma_buffer[dma_pos++] = 0xE4000000 | ((frame_x+VID_WIDTH-1)<<0) | ((frame_y+VID_HEIGHT-1)<<10); // XY2 draw range
+	dma_buffer[dma_pos++] = 0xE5000000 | ((frame_x+VID_WIDTH/2)<<0) | ((frame_y+VID_HEIGHT/2)<<11); // Draw offset
+}
+
 void frame_flip(void)
 {
+	vis_frame_x = frame_x;
+	vis_frame_y = frame_y;
 	frame_y = 256 - vis_frame_y;
+	gp1_command(0x05000000 | ((vis_frame_x)<<0) | ((vis_frame_y)<<10)); // Display start (x,y)
 }
 
 // ISR handler
@@ -786,10 +798,7 @@ void draw_everything(void)
 #endif
 
 	// Send VERY FIRST COMMANDS
-	DMA_PUSH(3, DMA_ORDER_MAX-1);
-	dma_buffer[dma_pos++] = 0xE3000000 | ((frame_x+0)<<0) | ((frame_y+0)<<10); // XY1 draw range
-	dma_buffer[dma_pos++] = 0xE4000000 | ((frame_x+VID_WIDTH-1)<<0) | ((frame_y+VID_HEIGHT-1)<<10); // XY2 draw range
-	dma_buffer[dma_pos++] = 0xE5000000 | ((frame_x+VID_WIDTH/2)<<0) | ((frame_y+VID_HEIGHT/2)<<11); // Draw offset
+	frame_start();
 
 	// Load mesh data into GTE
 	draw_world();
@@ -1058,6 +1067,15 @@ void draw_status_prog_frame(int progress, int max) {
 	gpu_dma_init();
 	draw_status_progress(progress, max);
 	gpu_dma_finish();
+}
+
+void wgen_stage_frame(const char* format) {
+	gpu_dma_init();
+	frame_start();
+	draw_status_progress(0, 1);
+	draw_status_window(format);
+	gpu_dma_finish();
+	frame_flip();
 	wait_for_next_vblank();
 }
 
@@ -1179,24 +1197,18 @@ int main(void)
 
 	// Draw status window
 	gpu_dma_init();
-	draw_status_window("Loading level");
+	frame_start();
+	draw_dirt_background();
 	gpu_dma_finish();
 	wait_for_next_vblank();
+	frame_flip();
 
 	// Display enable: ON (1)
 	gp1_command(0x03000000);
 	wait_for_next_vblank();
 
         // Generate a world
-	for(int y = 0; y < LEVEL_LY/2; y++) {
-		uint8_t bid = 1;
-		if (y == (LEVEL_LY/2) - 1) bid = 2;
-		else if (y >= (LEVEL_LY/2) - 4) bid = 3;
-		for (int z = 0; z < LEVEL_LZ; z++)
-		for (int x = 0; x < LEVEL_LX; x++) {
-			fsys_level[y][z][x] = bid;
-		}
-	}
+	world_generate(fsys_level, LEVEL_LX, LEVEL_LY, LEVEL_LZ, (*(volatile uint32_t *)0x1F801120), wgen_stage_frame, draw_status_prog_frame);
 
 	// Load level
 /*	level_info info;
@@ -1212,9 +1224,11 @@ int main(void)
 	} */
 
 	gpu_dma_init();
+	frame_start();
 	draw_status_window("Preparing");
 	gpu_dma_finish();
 	wait_for_next_vblank();
+	frame_flip();
 
 	world_init();
 	wait_for_next_vblank();
@@ -1289,14 +1303,11 @@ int main(void)
 			world_update(ticks);
 			// FIXME: if vsync is disabled,
 			// joypad reads occasionally glitch
-			vis_frame_x = frame_x;
-			vis_frame_y = frame_y;
-			frame_flip();
 			while((DMA_n_CHCR(2) & (1<<24)) != 0) {
 				//
 			}
 			while(vblank_counter == 0) {}
-			gp1_command(0x05000000 | ((vis_frame_x)<<0) | ((vis_frame_y)<<10)); // Display start (x,y)
+			frame_flip();
 			sawpads_do_read();
 		}
 	}

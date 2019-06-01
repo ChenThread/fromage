@@ -129,3 +129,7 @@ int32_t world_is_colliding_fixed(int32_t x1, int32_t y1, int32_t z1, int32_t x2,
 void world_schedule_block_update(int32_t cx, int32_t cy, int32_t cz, uint32_t delay);
 void world_init();
 void world_update(uint32_t ticks);
+
+// worldgen.c
+typedef void worldgen_stage_callback(const char *message);
+void world_generate(uint8_t *map, int32_t lx, int32_t ly, int32_t lz, uint32_t seed, worldgen_stage_callback *wc, save_progress_callback *pc);

@@ -54,6 +54,7 @@ OBJS =	$(OBJDIR)/cdrom.o \
 	$(OBJDIR)/gpu_dma.o \
 	$(OBJDIR)/save.o \
 	$(OBJDIR)/world.o \
+	$(OBJDIR)/worldgen.o \
 	\
 	$(OBJDIR)/atlas.o \
 	$(OBJDIR)/font.o \
@@ -83,7 +84,7 @@ $(OBJDIR)/$(EXE_NAME).elf: $(OBJS)
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(INCLUDES)
 	$(CROSS_CC) -c -o $@ $(CFLAGS) $<
 
-$(OBJDIR)/lz4.o: contrib/lz4/lz4.c $(INCLUDES)
+$(OBJDIR)/lz4.o: contrib/lz4/lz4.c contrib/lz4/lz4.h
 	$(CROSS_CC) -c -o $@ $(CFLAGS) $<
 
 $(OBJDIR)/atlas.o: $(DATDIR)/atlas.raw tools/bin2s.py $(INCLUDES)
