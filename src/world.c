@@ -50,6 +50,7 @@ inline int32_t world_get_block(int32_t cx, int32_t cy, int32_t cz)
 void world_set_block(int32_t cx, int32_t cy, int32_t cz, uint8_t b, uint8_t flags)
 {
 	if (cx >= 0 && cy >= 0 && cz >= 0 && cx < LEVEL_LX && cy < LEVEL_LY && cz < LEVEL_LZ) {
+		uint8_t old_b = fsys_level[cy][cz][cx];
 		fsys_level[cy][cz][cx] = b;
 		world_update_block_cache(cx, cy, cz);
 		if (cy > 0) world_update_block_cache(cx, cy-1, cz);
@@ -59,6 +60,15 @@ void world_set_block(int32_t cx, int32_t cy, int32_t cz, uint8_t b, uint8_t flag
 		if (cx < LEVEL_LX-1) world_update_block_cache(cx+1, cy, cz);
 		if (cz < LEVEL_LZ-1) world_update_block_cache(cx, cy, cz+1);
 		if ((flags & 1) != 0) {
+			if (old_b == 19) { // sponge
+				for (int dy = -3; dy <= 3; dy++)
+				for (int dz = -3; dz <= 3; dz++)
+				for (int dx = -3; dx <= 3; dx++)
+					if ((world_get_block(cx+dx, cy+dy, cz+dz) & (~1)) == 8) {
+						world_schedule_block_update(cx+dx, cy+dy, cz+dz, 1);
+					}
+			}
+
 			world_schedule_block_update(cx, cy, cz, 1);
 			world_schedule_block_update(cx-1, cy, cz, 1);
 			world_schedule_block_update(cx+1, cy, cz, 1);
