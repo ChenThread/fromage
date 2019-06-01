@@ -90,9 +90,9 @@ int32_t gte_h = VID_HEIGHT/2; // 90 deg
 
 int32_t cam_ry = 0x0000;
 int32_t cam_rx = 0x0000;
-int32_t cam_x = 0x80 + (32<<8);
-int32_t cam_y = 0x80 + (48<<8);
-int32_t cam_z = 0x80 + (32<<8);
+int32_t cam_x = 0;
+int32_t cam_y = 0;
+int32_t cam_z = 0;
 int32_t vel_x = 0;
 int32_t vel_y = 0;
 int32_t vel_z = 0;
@@ -119,27 +119,6 @@ int hotbar_pos = 0;
 int32_t fps_frames = 0;
 int32_t fps_vblanks = 0;
 int32_t fps_val = 0;
-
-volatile uint32_t frame_x = 0;
-volatile uint32_t frame_y = 0;
-volatile uint32_t vis_frame_x = 0;
-volatile uint32_t vis_frame_y = 0;
-
-void frame_start(void)
-{
-	DMA_PUSH(3, DMA_ORDER_MAX-1);
-	dma_buffer[dma_pos++] = 0xE3000000 | ((frame_x+0)<<0) | ((frame_y+0)<<10); // XY1 draw range
-	dma_buffer[dma_pos++] = 0xE4000000 | ((frame_x+VID_WIDTH-1)<<0) | ((frame_y+VID_HEIGHT-1)<<10); // XY2 draw range
-	dma_buffer[dma_pos++] = 0xE5000000 | ((frame_x+VID_WIDTH/2)<<0) | ((frame_y+VID_HEIGHT/2)<<11); // Draw offset
-}
-
-void frame_flip(void)
-{
-	vis_frame_x = frame_x;
-	vis_frame_y = frame_y;
-	frame_y = 256 - vis_frame_y;
-	gp1_command(0x05000000 | ((vis_frame_x)<<0) | ((vis_frame_y)<<10)); // Display start (x,y)
-}
 
 // ISR handler
 
@@ -776,8 +755,6 @@ void draw_everything(void)
 	gpu_dma_init();
 
 	// Clear screen
-#if 1
-	// Sky gradient
 	DMA_PUSH(8, DMA_ORDER_MAX-1);
 	dma_buffer[dma_pos++] = 0x38FFCB7F;
 	dma_buffer[dma_pos++] = ((-(VID_WIDTH/2))&0xFFFF)|((-(VID_HEIGHT/2))<<16);
@@ -787,15 +764,6 @@ void draw_everything(void)
 	dma_buffer[dma_pos++] = ((-(VID_WIDTH/2))&0xFFFF)|((+(VID_HEIGHT/2))<<16);
 	dma_buffer[dma_pos++] = 0x00FFF0E1;
 	dma_buffer[dma_pos++] = ((+(VID_WIDTH/2))&0xFFFF)|((+(VID_HEIGHT/2))<<16);
-#else
-	// Solid colour
-	DMA_PUSH(4, DMA_ORDER_MAX-1);
-	dma_buffer[dma_pos++] = 0x01000000;
-	//dma_buffer[dma_pos++] = 0x02FFCF9F;
-	dma_buffer[dma_pos++] = 0x02FFCB7F;
-	dma_buffer[dma_pos++] = ((frame_x+0)&0xFFFF)|((frame_y+0)<<16); // X/Y
-	dma_buffer[dma_pos++] = ((VID_WIDTH)&0xFFFF)|((240)<<16); // W/H
-#endif
 
 	// Send VERY FIRST COMMANDS
 	frame_start();
@@ -833,10 +801,16 @@ void draw_everything(void)
 	gpu_dma_finish();
 }
 
-void blocksel_update(void)
+int update_joy_pressed(void)
 {
 	int joy_pressed = (~joy_buttons_old) & ~sawpads_buttons;
 	joy_buttons_old = ~sawpads_buttons;
+	return joy_pressed;
+}
+
+void blocksel_update(void)
+{
+	int joy_pressed = update_joy_pressed();
 
 	if ((joy_pressed & (PAD_T | PAD_S | PAD_O | PAD_X)) != 0) {
 		mode = MODE_INGAME;
@@ -851,16 +825,147 @@ void blocksel_update(void)
 	current_block[hotbar_pos] = blocksel_id;
 }
 
+void draw_status_prog_frame(int progress, int max) {
+	gpu_dma_init();
+	draw_status_progress(progress, max);
+	gpu_dma_finish();
+}
+
+void wgen_stage_frame(const char* format) {
+	gpu_dma_init();
+	frame_start();
+	draw_status_progress(0, 1);
+	draw_status_window(format);
+	gpu_dma_finish();
+	wait_for_next_vblank();
+	frame_flip();
+}
+
+void world_main_prepare(void)
+{
+	gpu_dma_init();
+	frame_start();
+	draw_status_window("Reticulating splines..");
+	gpu_dma_finish();
+	wait_for_next_vblank();
+	frame_flip();
+
+	vel_x = vel_y = vel_z = 0;
+	world_init();
+	wait_for_next_vblank();
+}
+
+void world_main_load(int slot)
+{
+	gpu_dma_init();
+	frame_start();
+	draw_status_window("Loading level..");
+	gpu_dma_finish();
+	wait_for_next_vblank();
+	frame_flip();
+
+	level_info info;
+	int ret = load_level(slot, &info, fsys_level, LEVEL_LX*LEVEL_LY*LEVEL_LZ, draw_status_prog_frame);
+	if (ret >= 0) {
+		cam_x = info.cam_x;
+		cam_y = info.cam_y;
+		cam_z = info.cam_z;
+		cam_rx = info.cam_rx;
+		cam_ry = info.cam_ry;
+		memcpy(current_block, info.hotbar_blocks, HOTBAR_MAX);
+		hotbar_pos = info.hotbar_pos;
+		world_main_prepare();
+	} else {
+		// TODO: add error msgs
+		gpu_dma_init();
+		frame_start();
+		draw_status_window("Could not load level!");
+		gpu_dma_finish();
+		wait_for_next_vblank();
+		frame_flip();
+		wait_for_vblanks(90);
+	}
+}
+
+void world_main_save(int slot)
+{
+	gpu_dma_init();
+	frame_start();
+	draw_status_window("Saving level..");
+	gpu_dma_finish();
+	wait_for_next_vblank();
+	frame_flip();
+
+	level_info info;
+	info.xsize = LEVEL_LX;
+	info.ysize = LEVEL_LY;
+	info.zsize = LEVEL_LZ;
+	info.cam_x = cam_x;
+	info.cam_y = cam_y;
+	info.cam_z = cam_z;
+	info.cam_rx = cam_rx;
+	info.cam_ry = cam_ry;
+	memcpy(info.hotbar_blocks, current_block, HOTBAR_MAX);
+	info.hotbar_pos = hotbar_pos;
+
+	int ret = save_level(slot, &info, fsys_level, draw_status_prog_frame);
+	gpu_dma_init();
+	frame_start();
+	draw_status_window(ret >= 0 ? "World saved!" : "Could not save world!");
+	gpu_dma_finish();
+	wait_for_next_vblank();
+	frame_flip();
+	wait_for_vblanks(90);
+}
+
+void world_main_generate(void)
+{
+	memset(fsys_level,0,LEVEL_LX*LEVEL_LY*LEVEL_LZ);
+
+	cam_ry = 0x0000;
+	cam_rx = 0x0000;
+	cam_x = 0x80 + (32<<8);
+	cam_y = 0x80 + (48<<8);
+	cam_z = 0x80 + (32<<8);
+
+	world_generate(fsys_level, LEVEL_LX, LEVEL_LY, LEVEL_LZ, (*(volatile uint32_t *)0x1F801120), wgen_stage_frame, draw_status_prog_frame);
+	world_main_prepare();
+}
+
 void player_update(int mmul)
 {
 	int jx0 = 0x00;
 	int jy0 = 0x00;
 	int jx1 = (int)(int8_t)(sawpads_axes[0]);
 	int jy1 = (int)(int8_t)(sawpads_axes[1]);
+	int joy_pressed = update_joy_pressed();
 
 	if (joy_delay > 0) {
 		joy_delay--;
 		return;
+	}
+
+	if ((joy_pressed & PAD_START) != 0) {
+		switch (gui_menu(4, "Generate new level", "Save level..", "Load level..", "Back to game")) {
+			case 0:
+				world_main_generate();
+				return;
+			case 1: {
+				int slot = gui_menu(5, "Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5");
+				if (slot < 0) break;
+				world_main_save(slot+1);
+				return;
+			}
+			case 2: {
+				int slot = gui_menu(5, "Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5");
+				if (slot < 0) break;
+				world_main_load(slot+1);
+				break;
+			}
+			case 3:
+			default:
+				break;
+		}
 	}
 
 	if (use_dpad == true) {
@@ -879,9 +984,6 @@ void player_update(int mmul)
 	if (cam_ry > 0x8000) cam_ry -= 0x10000;
 	if (cam_rx < -0x4000) cam_rx = -0x4000;
 	if (cam_rx > 0x4000) cam_rx = 0x4000;
-
-	int joy_pressed = (~joy_buttons_old) & ~sawpads_buttons;
-	joy_buttons_old = ~sawpads_buttons;
 
 	if ((joy_pressed & PAD_SELECT) != 0)
 		use_dpad = !use_dpad;
@@ -1063,22 +1165,6 @@ void player_update(int mmul)
 #endif
 }
 
-void draw_status_prog_frame(int progress, int max) {
-	gpu_dma_init();
-	draw_status_progress(progress, max);
-	gpu_dma_finish();
-}
-
-void wgen_stage_frame(const char* format) {
-	gpu_dma_init();
-	frame_start();
-	draw_status_progress(0, 1);
-	draw_status_window(format);
-	gpu_dma_finish();
-	frame_flip();
-	wait_for_next_vblank();
-}
-
 int main(void)
 {
 	int i;
@@ -1208,45 +1294,7 @@ int main(void)
 	wait_for_next_vblank();
 
         // Generate a world
-	world_generate(fsys_level, LEVEL_LX, LEVEL_LY, LEVEL_LZ, (*(volatile uint32_t *)0x1F801120), wgen_stage_frame, draw_status_prog_frame);
-
-	// Load level
-/*	level_info info;
-	int ret = load_level(1, &info, fsys_level, LEVEL_LX*LEVEL_LY*LEVEL_LZ, draw_status_prog_frame);
-	if (ret >= 0) {
-		cam_x = info.cam_x;
-		cam_y = info.cam_y;
-		cam_z = info.cam_z;
-		cam_rx = info.cam_rx;
-		cam_ry = info.cam_ry;
-		memcpy(current_block, info.hotbar_blocks, HOTBAR_MAX);
-		hotbar_pos = info.hotbar_pos;
-	} */
-
-	gpu_dma_init();
-	frame_start();
-	draw_status_window("Preparing");
-	gpu_dma_finish();
-	wait_for_next_vblank();
-	frame_flip();
-
-	world_init();
-	wait_for_next_vblank();
-
-	// Save level
-/*	level_info info;
-	info.xsize = LEVEL_LX;
-	info.ysize = LEVEL_LY;
-	info.zsize = LEVEL_LZ;
-	info.cam_x = cam_x;
-	info.cam_y = cam_y;
-	info.cam_z = cam_z;
-	info.cam_rx = cam_rx;
-	info.cam_ry = cam_ry;
-	memcpy(info.hotbar_blocks, current_block, HOTBAR_MAX);
-	info.hotbar_pos = hotbar_pos;
-
-	int ret = save_level(1, &info, fsys_level, draw_status_prog_frame); */
+	world_main_generate();
 
 	ticks = movement_ticks = 0;
 	for(;;) {

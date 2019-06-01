@@ -5,9 +5,9 @@
 #define DETAIL_MUL 0.15
 
 #define fade(t) ((t)*(t)*(t)*((t)*((t)*6-15)+10))
-#define lerp(t,a,b) ((a)+(t)*((b)-(a)))
+#define lerp(t,a,b) ((a)+((t)*((b)-(a))))
 
-static inline float grad(int hash, float x, float y, float z)
+static inline float grad(uint8_t hash, float x, float y, float z)
 {
 	switch(hash & 0xF)
 	{
@@ -101,27 +101,25 @@ void world_generate(uint8_t *map, int32_t lx, int32_t ly, int32_t lz, uint32_t s
 		else if (height < 1) height = 1;
 
 		heights[z*lx + x] = height;
+		SET(x,0,z,10);
 
 		if (height > ly/2) {
-			for (int y = 0; y < height; y++)
+			for (int y = 1; y < height-4; y++)
 				map[(y * lz + z) * lx + x] = 1;
+			for (int y = height-4; y < height-1; y++)
+				map[(y * lz + z) * lx + x] = 3;
 			map[((height - 1) * lz + z) * lx + x] = 2;
-			map[((height - 2) * lz + z) * lx + x] = 3;
-			map[((height - 3) * lz + z) * lx + x] = 3;
-			map[((height - 4) * lz + z) * lx + x] = 3;
 		} else if (height == ly/2) {
-			for (int y = 0; y < height; y++)
+			for (int y = 1; y < height-3; y++)
 				map[(y * lz + z) * lx + x] = 1;
-			map[((height - 1) * lz + z) * lx + x] = 12;
-			map[((height - 2) * lz + z) * lx + x] = 12;
-			map[((height - 3) * lz + z) * lx + x] = 12;
+			for (int y = height-3; y < height; y++)
+				map[(y * lz + z) * lx + x] = 12;
 		} else {
-			for (int y = 0; y < height; y++)
+			for (int y = 1; y < height; y++)
 				map[(y * lz + z) * lx + x] = 1;
 			for (int y = height; y < ly/2; y++)
 				map[((y) * lz + z) * lx + x] = 8;
 		}
-		SET(x,0,z,10);
 	}
 
 	if (wc != NULL) wc("Growing..");

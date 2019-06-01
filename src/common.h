@@ -52,30 +52,20 @@ extern int32_t mat_rt11, mat_rt12, mat_rt13;
 extern int32_t mat_rt21, mat_rt22, mat_rt23;
 extern int32_t mat_rt31, mat_rt32, mat_rt33;
 
-extern uint32_t dma_pos;
-#define DMA_ORDER_MAX 64
-
-extern uint32_t dma_buffer[256*512];
-extern uint32_t dma_order_table[4][DMA_ORDER_MAX];
-extern uint32_t dma_buffer_current;
 #define OT_WORLD 2
-#define DMA_PUSH(len, ot) \
-	while(dma_pos*4 >= sizeof(dma_buffer)) {} \
-	dma_buffer[dma_pos] = \
-		(dma_order_table[dma_buffer_current][ot] & 0x00FFFFFF) \
-		| ((len)<<24); \
-	dma_order_table[dma_buffer_current][ot] = ((uint32_t)&dma_buffer[dma_pos])&0x00FFFFFF; \
-	dma_pos++; \
 
 extern int hotbar_pos;
 #define HOTBAR_MAX 9
 extern int current_block[HOTBAR_MAX];
 
 void draw_block(int32_t cx, int32_t cy, int32_t cz, int di, int block, uint32_t facemask, bool transparent);
+int update_joy_pressed(void);
 
 // gpu.c
 extern volatile uint32_t vblank_counter;
 
+void frame_start(void);
+void frame_flip(void);
 void wait_for_next_vblank(void);
 void wait_for_vblanks(uint32_t count);
 void gpu_dma_load(uint32_t *buffer, int x, int y, int width, int height);
@@ -85,6 +75,20 @@ void gp0_data_xy(uint32_t x, uint32_t y);
 void gp1_command(uint32_t v);
 
 // gpu_dma.c
+extern uint32_t dma_pos;
+#define DMA_ORDER_MAX 64
+
+extern uint32_t dma_buffer[256*512];
+extern uint32_t dma_order_table[4][DMA_ORDER_MAX];
+extern uint32_t dma_buffer_current;
+#define DMA_PUSH(len, ot) \
+	while(dma_pos*4 >= sizeof(dma_buffer)) {} \
+	dma_buffer[dma_pos] = \
+		(dma_order_table[dma_buffer_current][ot] & 0x00FFFFFF) \
+		| ((len)<<24); \
+	dma_order_table[dma_buffer_current][ot] = ((uint32_t)&dma_buffer[dma_pos])&0x00FFFFFF; \
+	dma_pos++; \
+
 void gpu_dma_init(void);
 void gpu_dma_finish(void);
 
@@ -101,6 +105,7 @@ void draw_current_block(void);
 void draw_hotbar(void);
 void draw_crosshair(void);
 void draw_liquid_overlay(void);
+int gui_menu(int optcount, ...);
 
 // save.c
 typedef void save_progress_callback(int progress, int max);

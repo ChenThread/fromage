@@ -30,7 +30,7 @@ LDFLAGS = -g -O3 -flto -Wl,-Ttext-segment=0x80010000 -pipe \
 	-msoft-float \
 	-L$(CANDYK)/lib
 
-LIBS = -lm -lsawpads -lc -lgcc -lchenboot
+LIBS = -lm -lsawpads -lseedy -lc -lgcc -lchenboot
 
 # stuff omitted:
 # O2:

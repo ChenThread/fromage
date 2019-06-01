@@ -2,6 +2,27 @@
 
 volatile uint32_t vblank_counter = 0;
 
+volatile uint32_t frame_x = 0;
+volatile uint32_t frame_y = 0;
+volatile uint32_t vis_frame_x = 0;
+volatile uint32_t vis_frame_y = 0;
+
+void frame_start(void)
+{
+	DMA_PUSH(3, DMA_ORDER_MAX-1);
+	dma_buffer[dma_pos++] = 0xE3000000 | ((frame_x+0)<<0) | ((frame_y+0)<<10); // XY1 draw range
+	dma_buffer[dma_pos++] = 0xE4000000 | ((frame_x+VID_WIDTH-1)<<0) | ((frame_y+VID_HEIGHT-1)<<10); // XY2 draw range
+	dma_buffer[dma_pos++] = 0xE5000000 | ((frame_x+VID_WIDTH/2)<<0) | ((frame_y+VID_HEIGHT/2)<<11); // Draw offset
+}
+
+void frame_flip(void)
+{
+	vis_frame_x = frame_x;
+	vis_frame_y = frame_y;
+	frame_y = 256 - vis_frame_y;
+	gp1_command(0x05000000 | ((vis_frame_x)<<0) | ((vis_frame_y)<<10)); // Display start (x,y)
+}
+
 void wait_for_next_vblank(void)
 {
 	uint32_t last_counter = vblank_counter;

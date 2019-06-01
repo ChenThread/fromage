@@ -1,5 +1,6 @@
 #include <stdarg.h>
 #include <stdio.h>
+#include <sawpads.h>
 #include "common.h"
 
 extern uint32_t block_lighting[6];
@@ -34,9 +35,6 @@ static void draw_text_buffer(int x, int y, int color, char *buffer)
 {
 	x -= VID_WIDTH/2;
 	y -= VID_HEIGHT/2;
-
-	// TODO: Couldn't figure out how to set TexPage with E1
-	// and have it work... maybe we can't just keep using one buffer
 
 #if VID_WIDTH_MULTIPLIER == 1
 	// Undo texpage
@@ -422,3 +420,53 @@ void draw_liquid_overlay(void)
 	}
 }
 
+int gui_menu(int optcount, ...)
+{
+	char *strs[optcount];
+	int curr_opt = 0;
+
+	va_list args;
+	va_start(args, optcount);
+	for (int i = 0; i < optcount; i++)
+		strs[i] = va_arg(args, char*);
+	va_end(args);
+
+	while (1) {
+		gpu_dma_init();
+		frame_start();
+
+		int opt_height = 20;
+		int opt_width = VID_WIDTH * 3 / 4;
+		int opt_text_y = (opt_height - 8) / 2;
+		int opt_distance = opt_height + 12;
+		int opt_allheight = (opt_distance * (optcount - 1)) + opt_height;
+		int opt_x = (VID_WIDTH - opt_width) / 2;
+		int opt_y = (VID_HEIGHT - opt_allheight) / 2;
+
+		for (int i = 0; i < optcount; i++)
+		{
+			int tw = get_text_width_buffer(strs[i]);
+			int ty = opt_y + (opt_distance * i);
+			draw_text((VID_WIDTH - tw) / 2, ty + opt_text_y, 0xFFFFFF, strs[i]);
+
+			DMA_PUSH(3, 1);
+			dma_buffer[dma_pos++] = i == curr_opt ? 0x62C0C0C0 : 0x62000000;
+			dma_buffer[dma_pos++] = ((ty - (VID_HEIGHT/2)) << 16) | ((opt_x - (VID_WIDTH/2)) & 0xFFFF);
+			dma_buffer[dma_pos++] = ((opt_height) << 16) | ((opt_width) & 0xFFFF);
+		}
+
+		draw_dirt_background();
+		gpu_dma_finish();
+		wait_for_next_vblank();
+		frame_flip();
+		sawpads_do_read();
+
+		int joy_pressed = update_joy_pressed();
+		if ((joy_pressed & PAD_DOWN) != 0) curr_opt = (curr_opt + 1) % optcount;
+		if ((joy_pressed & PAD_UP) != 0) { curr_opt = (curr_opt - 1); if (curr_opt < 0) curr_opt = optcount - 1; }
+		if ((joy_pressed & PAD_O) != 0) { curr_opt = -1; break; }
+		if ((joy_pressed & PAD_X) != 0) break;
+	}
+
+	return curr_opt;
+}
