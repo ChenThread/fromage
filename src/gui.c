@@ -9,7 +9,7 @@ extern uint32_t block_lighting[6];
 static int get_text_width_buffer(char *buffer)
 {
 	int len = 0;
-	for (int i = 0; i < strlen(buffer); i++) {
+	for (size_t i = 0; i < strlen(buffer); i++) {
 		len += (CHAR_WIDTH(buffer[i])) + 1;
 	}
 	return len;
@@ -27,32 +27,58 @@ int get_text_width(char *format, ...)
 	len = get_text_width_buffer(buffer);
 
 	va_end(args);
-	return len;
+	return len * VID_WIDTH_MULTIPLIER;
 }
 
 static void draw_text_buffer(int x, int y, int color, char *buffer)
 {
-	x -= 160;
-	y -= 120;
+	x -= VID_WIDTH/2;
+	y -= VID_HEIGHT/2;
 
 	// TODO: Couldn't figure out how to set TexPage with E1
 	// and have it work... maybe we can't just keep using one buffer
 
-	for (int i = 0; i < strlen(buffer); i++) {
+#if VID_WIDTH_MULTIPLIER == 1
+	// Undo texpage
+	DMA_PUSH(1, 1);
+	dma_buffer[dma_pos++] = 0x00000000;
+	DMA_PUSH(1, 1);
+	dma_buffer[dma_pos++] = 0xE1000600;
+#endif
+
+	for (size_t i = 0; i < strlen(buffer); i++) {
 		uint8_t c = buffer[i];
 		int width = CHAR_WIDTH(c);
-		int pos = ((x << 1) & 0xFFFF) + ((y & 0xFFFF) << 16);
+		int pos = (x & 0xFFFF) + ((y & 0xFFFF) << 16);
 		int texcoord = (((c & 15) << 3) + 64) | ((c >> 4) << 11);
 
+#if VID_WIDTH_MULTIPLIER == 1
+		DMA_PUSH(4, 1);
+		dma_buffer[dma_pos++] = 0x64000000 | color;
+		dma_buffer[dma_pos++] = pos;
+		dma_buffer[dma_pos++] = (384 << 22) | (0x35 << 16) | texcoord;
+		dma_buffer[dma_pos++] = (8 << 16) | (width & 0xFFFF);
+		//dma_buffer[dma_pos++] = (0x1D << 16) | (texcoord + width);
+
+		pos += 0x10001;
+
+		DMA_PUSH(4, 1);
+		dma_buffer[dma_pos++] = 0x66000000;
+		dma_buffer[dma_pos++] = pos;
+		dma_buffer[dma_pos++] = (384 << 22) | (0x35 << 16) | texcoord;
+		dma_buffer[dma_pos++] = (8 << 16) | (width & 0xFFFF);
+		dma_buffer[dma_pos++] = (384 << 22) | (0x35 << 16) | texcoord;
+
+#else
 		DMA_PUSH(9, 1);
 		dma_buffer[dma_pos++] = 0x2C000000 | color;
 		dma_buffer[dma_pos++] = pos;
 		dma_buffer[dma_pos++] = (384 << 22) | (0x35 << 16) | texcoord;
-		dma_buffer[dma_pos++] = pos + width * 2 + 1;
+		dma_buffer[dma_pos++] = pos + width * VID_WIDTH_MULTIPLIER + 1;
 		dma_buffer[dma_pos++] = (0x1D << 16) | (texcoord + width);
 		dma_buffer[dma_pos++] = pos + 0x80000;
 		dma_buffer[dma_pos++] = texcoord + 0x800;
-		dma_buffer[dma_pos++] = pos + 0x80000 + width * 2 + 1;
+		dma_buffer[dma_pos++] = pos + 0x80000 + width * VID_WIDTH_MULTIPLIER + 1;
 		dma_buffer[dma_pos++] = texcoord + 0x800 + width;
 
 		pos += 0x10001;
@@ -61,15 +87,25 @@ static void draw_text_buffer(int x, int y, int color, char *buffer)
 		dma_buffer[dma_pos++] = 0x2E000000;
 		dma_buffer[dma_pos++] = pos;
 		dma_buffer[dma_pos++] = (384 << 22) | (0x35 << 16) | texcoord;
-		dma_buffer[dma_pos++] = pos + width * 2 + 1;
+		dma_buffer[dma_pos++] = pos + width * VID_WIDTH_MULTIPLIER + 1;
 		dma_buffer[dma_pos++] = (0x1D << 16) | (texcoord + width);
 		dma_buffer[dma_pos++] = pos + 0x80000;
 		dma_buffer[dma_pos++] = texcoord + 0x800;
-		dma_buffer[dma_pos++] = pos + 0x80000 + width * 2 + 1;
+		dma_buffer[dma_pos++] = pos + 0x80000 + width * VID_WIDTH_MULTIPLIER + 1;
 		dma_buffer[dma_pos++] = texcoord + 0x800 + width;
+#endif
 
-		x += width + 1;
+		x += (width + 1) * VID_WIDTH_MULTIPLIER;
 	}
+
+#if VID_WIDTH_MULTIPLIER == 1
+	// Do texpage
+	DMA_PUSH(1, 1);
+	dma_buffer[dma_pos++] = 0x00000000;
+	DMA_PUSH(1, 1);
+	dma_buffer[dma_pos++] = 0xE100061D;
+#endif
+
 }
 
 void draw_text(int x, int y, int color, char *format, ...)
@@ -177,23 +213,28 @@ void draw_status_window(char *format, ...)
 
 	// Draw text
 	int width = get_text_width_buffer(buffer);
-	draw_text_buffer((320 - width) / 2, (240 - 8) / 2, 0xFFFFFF, buffer);
+	draw_text_buffer((VID_WIDTH - width) / 2, (VID_HEIGHT - 8) / 2, 0xFFFFFF, buffer);
 
 	block_info_t *bi = &block_info[3][5];
 
 	// Draw fancy dirt background
 	DMA_PUSH(3, 1);
 	dma_buffer[dma_pos++] = 0x62000000;
-	dma_buffer[dma_pos++] = (-120 << 16) | (-320 & 0xFFFF);
-	dma_buffer[dma_pos++] = ((240) << 16) | ((640) & 0xFFFF);
+	dma_buffer[dma_pos++] = (-(VID_HEIGHT/2) << 16) | (-(VID_WIDTH/2) & 0xFFFF);
+	dma_buffer[dma_pos++] = ((VID_HEIGHT) << 16) | ((VID_WIDTH) & 0xFFFF);
 	DMA_PUSH(3, 1);
 	dma_buffer[dma_pos++] = 0x62000000;
-	dma_buffer[dma_pos++] = (-120 << 16) | (-320 & 0xFFFF);
-	dma_buffer[dma_pos++] = ((240) << 16) | ((640) & 0xFFFF);
+	dma_buffer[dma_pos++] = (-(VID_HEIGHT/2) << 16) | (-(VID_WIDTH/2) & 0xFFFF);
+	dma_buffer[dma_pos++] = ((VID_HEIGHT) << 16) | ((VID_WIDTH) & 0xFFFF);
 
-	for (int y = 0; y < 240; y += 16) {
-		for (int x = 0; x < 320; x += 16) {
-			draw_block_icon_flat((x - 160 + 8) * 2, y - 120 + 8, 32, 16, bi);
+	for (int y = 0; y < VID_HEIGHT; y += 16) {
+		for (int x = 0; x < VID_WIDTH; x += 16 * VID_WIDTH_MULTIPLIER) {
+			draw_block_icon_flat(
+				x - (VID_WIDTH/2) + 8 * VID_WIDTH_MULTIPLIER,
+				y - (VID_HEIGHT/2) + 8,
+				16 * VID_WIDTH_MULTIPLIER,
+				16,
+				bi);
 		}
 	}
 
@@ -203,7 +244,7 @@ void draw_status_window(char *format, ...)
 void draw_block_sel_menu(int selected_block)
 {
 	// 34x34 slots
-	int bg_w = 216 + 18 + 4;
+	int bg_w = ((25 * 9) + 18 + 4) * VID_WIDTH_MULTIPLIER;
 	int bg_h = 141 + 18 + 13;
 
 	int y = 0;
@@ -211,22 +252,24 @@ void draw_block_sel_menu(int selected_block)
 
 	// blocks
 	for (int id = 1; id <= 49; id++) {
-		int x_center = ((320 - bg_w) / 2) + 2 + 9;
-		int y_center = ((240 - bg_h) / 2) + 12 + 9;
+		int x_center = (-bg_w/2) + 2 + 9;
+		int y_center = (-bg_h/2) + 12 + 9;
 
-		x_center += (25 * x) + 8;
+		x_center += (25 * VID_WIDTH_MULTIPLIER * x) + 16 * VID_WIDTH_MULTIPLIER;
 		y_center += (25 * y) + 8;
 
 		if (id == selected_block) {
-			draw_block_icon((x_center - 160) * 2, y_center - 120, 64, 32, id);
+			draw_block_icon(x_center, y_center, 32 * VID_WIDTH_MULTIPLIER, 32, id);
 
 			// background
 			DMA_PUSH(3, 1);
 			dma_buffer[dma_pos++] = 0x62FFFFFF;
-			dma_buffer[dma_pos++] = ((y_center - 120 - 16) << 16) | (((x_center - 160 - 16) * 2) & 0xFFFF);
-			dma_buffer[dma_pos++] = ((32) << 16) | ((64) & 0xFFFF);
+			dma_buffer[dma_pos++] = (
+				(y_center - 16) << 16) |
+				((x_center - 16 * VID_WIDTH_MULTIPLIER) & 0xFFFF);
+			dma_buffer[dma_pos++] = ((32) << 16) | ((32 * VID_WIDTH_MULTIPLIER) & 0xFFFF);
 		} else {
-			draw_block_icon((x_center - 160) * 2, y_center - 120, 32, 16, id);
+			draw_block_icon(x_center, y_center, 16 * VID_WIDTH_MULTIPLIER, 16, id);
 		}
 
 		if ((++x) == 9) { y++; x = 0; }
@@ -234,13 +277,13 @@ void draw_block_sel_menu(int selected_block)
 
 	// text
 	int text_w = get_text_width("Select block");
-	draw_text((320 - text_w) / 2, ((240 - bg_h) / 2) + 2, 0xFFFFFF, "Select block");
+	draw_text((VID_WIDTH - text_w) / 2, ((VID_HEIGHT - bg_h) / 2) + 2, 0xFFFFFF, "Select block");
 
 	// background
 	DMA_PUSH(3, 1);
 	dma_buffer[dma_pos++] = 0x62080808;
-	dma_buffer[dma_pos++] = ((-bg_h/2) << 16) | ((-bg_w) & 0xFFFF);
-	dma_buffer[dma_pos++] = ((bg_h) << 16) | ((bg_w*2) & 0xFFFF);
+	dma_buffer[dma_pos++] = ((-bg_h/2) << 16) | ((-bg_w/2) & 0xFFFF);
+	dma_buffer[dma_pos++] = ((bg_h) << 16) | ((bg_w) & 0xFFFF);
 }
 
 void draw_current_block(void)
@@ -273,7 +316,7 @@ void draw_current_block(void)
 
 void draw_hotbar(void)
 {
-	const int bw = 32;
+	const int bw = 16 * VID_WIDTH_MULTIPLIER;
 	const int bh = 16;
 	const int by = 103 + 8;
 
@@ -313,11 +356,11 @@ void draw_crosshair(void)
 	DMA_PUSH(3, 1);
 	dma_buffer[dma_pos++] = 0x60FFFFFF;
 	dma_buffer[dma_pos++] = (((-3) & 0xFFFF) << 16) | ((0) & 0xFFFF);
-	dma_buffer[dma_pos++] = (7 << 16) | 2;
+	dma_buffer[dma_pos++] = (7 << 16) | (1 * VID_WIDTH_MULTIPLIER);
 	DMA_PUSH(3, 1);
 	dma_buffer[dma_pos++] = 0x60FFFFFF;
-	dma_buffer[dma_pos++] = (((0) & 0xFFFF) << 16) | ((-6) & 0xFFFF);
-	dma_buffer[dma_pos++] = (1 << 16) | 14;
+	dma_buffer[dma_pos++] = (((0) & 0xFFFF) << 16) | ((-3 * VID_WIDTH_MULTIPLIER) & 0xFFFF);
+	dma_buffer[dma_pos++] = (1 << 16) | (7 * VID_WIDTH_MULTIPLIER);
 }
 
 void draw_liquid_overlay(void)
@@ -332,15 +375,15 @@ void draw_liquid_overlay(void)
 		DMA_PUSH(6, 1);
 		for (int i = 0; i < 2; i++) {
 			dma_buffer[dma_pos++] = 0x62501000;
-			dma_buffer[dma_pos++] = (((-120)&0xFFFF) << 16) | ((-160)&0xFFFF);
-			dma_buffer[dma_pos++] = (240 << 16) | (320 << 0);
+			dma_buffer[dma_pos++] = (((-(VID_HEIGHT/2))&0xFFFF) << 16) | ((-(VID_WIDTH/2))&0xFFFF);
+			dma_buffer[dma_pos++] = (VID_HEIGHT << 16) | (VID_WIDTH << 0);
 		}
 	} else if ((cam_cb & (~1)) == 10) {
 		DMA_PUSH(9, 1);
 		for (int i = 0; i < 3; i++) {
 			dma_buffer[dma_pos++] = 0x62081CB0;
-			dma_buffer[dma_pos++] = (((-120)&0xFFFF) << 16) | ((-160)&0xFFFF);
-			dma_buffer[dma_pos++] = (240 << 16) | (320 << 0);
+			dma_buffer[dma_pos++] = (((-(VID_HEIGHT/2))&0xFFFF) << 16) | ((-(VID_WIDTH/2))&0xFFFF);
+			dma_buffer[dma_pos++] = (VID_HEIGHT << 16) | (VID_WIDTH << 0);
 		}
 	}
 }

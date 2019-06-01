@@ -145,12 +145,13 @@ int32_t gte_zsf3 = 1;
 int32_t gte_zsf4 = 1;
 
 // FORMULA:
-// gte_h = 120/tan(fov_angle/2.0);
+// gte_h = (VID_HEIGHT/2)/tan(fov_angle/2.0);
 
 //int32_t gte_h = 289; // 45 deg
 //int32_t gte_h = 208; // 60 deg
 //int32_t gte_h = 156; // 75 deg
-int32_t gte_h = 120; // 90 deg
+//int32_t gte_h = 120; // 90 deg
+int32_t gte_h = VID_HEIGHT/2; // 90 deg
 //int32_t gte_h = 69; // 120 deg
 //int32_t gte_h = 50; // 135 deg
 //int32_t gte_h = 32; // 150 deg
@@ -825,13 +826,13 @@ void draw_everything(void)
 	// Sky gradient
 	DMA_PUSH(8, DMA_ORDER_MAX-1);
 	dma_buffer[dma_pos++] = 0x38FFCB7F;
-	dma_buffer[dma_pos++] = ((-320)&0xFFFF)|((-120)<<16);
+	dma_buffer[dma_pos++] = ((-(VID_WIDTH/2))&0xFFFF)|((-(VID_HEIGHT/2))<<16);
 	dma_buffer[dma_pos++] = 0x00FFCB7F;
-	dma_buffer[dma_pos++] = ((+320)&0xFFFF)|((-120)<<16);
+	dma_buffer[dma_pos++] = ((+(VID_WIDTH/2))&0xFFFF)|((-(VID_HEIGHT/2))<<16);
 	dma_buffer[dma_pos++] = 0x00FFF0E1;
-	dma_buffer[dma_pos++] = ((-320)&0xFFFF)|((+120)<<16);
+	dma_buffer[dma_pos++] = ((-(VID_WIDTH/2))&0xFFFF)|((+(VID_HEIGHT/2))<<16);
 	dma_buffer[dma_pos++] = 0x00FFF0E1;
-	dma_buffer[dma_pos++] = ((+320)&0xFFFF)|((+120)<<16);
+	dma_buffer[dma_pos++] = ((+(VID_WIDTH/2))&0xFFFF)|((+(VID_HEIGHT/2))<<16);
 #else
 	// Solid colour
 	DMA_PUSH(4, DMA_ORDER_MAX-1);
@@ -839,14 +840,14 @@ void draw_everything(void)
 	//dma_buffer[dma_pos++] = 0x02FFCF9F;
 	dma_buffer[dma_pos++] = 0x02FFCB7F;
 	dma_buffer[dma_pos++] = ((frame_x+0)&0xFFFF)|((frame_y+0)<<16); // X/Y
-	dma_buffer[dma_pos++] = ((640)&0xFFFF)|((240)<<16); // W/H
+	dma_buffer[dma_pos++] = ((VID_WIDTH)&0xFFFF)|((240)<<16); // W/H
 #endif
 
 	// Send VERY FIRST COMMANDS
 	DMA_PUSH(3, DMA_ORDER_MAX-1);
 	dma_buffer[dma_pos++] = 0xE3000000 | ((frame_x+0)<<0) | ((frame_y+0)<<10); // XY1 draw range
-	dma_buffer[dma_pos++] = 0xE4000000 | ((frame_x+640-1)<<0) | ((frame_y+240-1)<<10); // XY2 draw range
-	dma_buffer[dma_pos++] = 0xE5000000 | ((frame_x+640/2)<<0) | ((frame_y+240/2)<<11); // Draw offset
+	dma_buffer[dma_pos++] = 0xE4000000 | ((frame_x+VID_WIDTH-1)<<0) | ((frame_y+VID_HEIGHT-1)<<10); // XY2 draw range
+	dma_buffer[dma_pos++] = 0xE5000000 | ((frame_x+VID_WIDTH/2)<<0) | ((frame_y+VID_HEIGHT/2)<<11); // Draw offset
 
 	// Load mesh data into GTE
 	draw_world();
@@ -1131,17 +1132,34 @@ int main(void)
 	//gp1_command(0x04000001); // DMA mode: FIFO (1)
 	gp1_command(0x04000002); // DMA mode: DMA to GPU (2)
 	gp1_command(0x05000000 | ((0)<<0) | ((0)<<10)); // Display start (x,y)
-	gp1_command(0x06000000 | ((0x260)<<0) | ((0x260+320*8)<<12)); // X screen range
-#ifdef TV_PAL
-	gp1_command(0x07000000 | ((0xA3-240/2)<<0) | ((0xA3+240/2)<<10)); // Y screen range
+#if VID_WIDTH == 640
+	gp1_command(0x06000000 | ((0x260)<<0) | ((0x260+VID_WIDTH*4)<<12)); // X screen range
+#elif VID_WIDTH == 320
+	gp1_command(0x06000000 | ((0x260)<<0) | ((0x260+VID_WIDTH*8)<<12)); // X screen range
 #else
-	gp1_command(0x07000000 | ((0x88-240/2)<<0) | ((0x88+240/2)<<10)); // Y screen range
+#error "Given VID_WIDTH not supported - cannot set a valid video mode!"
+#endif
+
+#ifdef TV_PAL
+	gp1_command(0x07000000 | ((0xA3-VID_HEIGHT/2)<<0) | ((0xA3+VID_HEIGHT/2)<<10)); // Y screen range
+#else
+	gp1_command(0x07000000 | ((0x88-VID_HEIGHT/2)<<0) | ((0x88+VID_HEIGHT/2)<<10)); // Y screen range
 #endif
 
 	// Set display mode
 	gp1_command(0x08000000
+#if VID_WIDTH == 640
 		| (3<<0) | (0<<6) // X resolution (640)
+#elif VID_WIDTH == 320
+		| (1<<0) | (0<<6) // X resolution (640)
+#else
+#error "Given VID_WIDTH not supported - cannot set a valid video mode!"
+#endif
+#if VID_HEIGHT == 240
 		| (0<<2) | (0<<5) // Y resolution / interlace (240/OFF)
+#else
+#error "Given VID_HEIGHT not supported - cannot set a valid video mode!"
+#endif
 #ifdef TV_PAL
 		| (1<<3) // TV standard (PAL)
 #else
@@ -1154,8 +1172,8 @@ int main(void)
 	gp0_command(0xE1000600); // Texpage
 	gp0_command(0xE2000000); // Texwindow
 	gp0_command(0xE3000000 | ((0)<<0) | ((0)<<10)); // XY1 draw range
-	gp0_command(0xE4000000 | ((640-1)<<0) | ((240-1)<<10)); // XY2 draw range
-	gp0_command(0xE5000000 | ((640/2)<<0) | ((240/2)<<11)); // Draw offset
+	gp0_command(0xE4000000 | ((VID_WIDTH-1)<<0) | ((VID_HEIGHT-1)<<10)); // XY2 draw range
+	gp0_command(0xE5000000 | ((VID_WIDTH/2)<<0) | ((VID_HEIGHT/2)<<11)); // Draw offset
 	//gp0_command(0xE5000000 | ((0)<<0) | ((0)<<10)); // Draw offset
 	gp0_command(0xE6000000); // Mask bit setting
 
@@ -1166,7 +1184,7 @@ int main(void)
 	gp0_command(0x01000000);
 	gp0_command(0x02000000);
 	gp0_data(((0)<<0) | ((0)<<16)); // X/Y
-	gp0_data(((640)<<0) | ((240)<<16)); // W/H
+	gp0_data(((VID_WIDTH)<<0) | ((VID_HEIGHT)<<16)); // W/H
 
 	// Enable VBLANK interrupt
 	vblank_counter = 0;
