@@ -608,7 +608,13 @@ void draw_world(void)
 			,bcull3 += cull3zstep1
 			) {
 
-			if((vismask & 1) == 0) { continue; }
+			if((vismask & 1) == 0) {
+				bcull0 += cull0xstep4;
+				bcull1 += cull1xstep4;
+				bcull2 += cull2xstep4;
+				bcull3 += cull3xstep4;
+				continue;
+			}
 			nfmask &= ~0x03;
 			if(bdz > 0) { nfmask |= 0x01; }
 			if(bdz < 0) { nfmask |= 0x02; }
@@ -623,16 +629,11 @@ void draw_world(void)
 			) {
 
 			// Frustum culling
-#if 0
-			// CURRENTLY BROKEN.
-			// Needs a special case for the (vismask&1)==0 case.
-			// That is, add cullQstep4 to each bcullQ.
-			// Do this in the vismask&1 check before the continue.
 			if(bcull0 < -(0x200<<12)) { continue; }
 			if(bcull1 < -(0x200<<12)) { continue; }
 			if(bcull2 < -(0x200<<12)) { continue; }
 			if(bcull3 < -(0x200<<12)) { continue; }
-#endif
+
 			nfmask &= ~0x0C;
 			if(bdx > 0) { nfmask |= 0x04; }
 			if(bdx < 0) { nfmask |= 0x08; }
