@@ -183,7 +183,24 @@ int32_t world_is_colliding(int32_t x1, int32_t y1, int32_t z1, int32_t x2, int32
 }
 
 int32_t world_is_colliding_fixed(int32_t x1, int32_t y1, int32_t z1, int32_t x2, int32_t y2, int32_t z2) {
-	return world_is_colliding((x1) >> 8, (y1) >> 8, (z1) >> 8, (x2) >> 8, (y2) >> 8, (z2) >> 8);
+	if (x2 < 0 || y2 < 0 || z2 < 0 || x1 >= LEVEL_LX<<8 || y1 >= LEVEL_LY<<8 || z1 >= LEVEL_LZ<<8)
+		return true;
+
+	for (int y = (y1>>8); y <= (y2>>8); y++)
+	for (int z = (z1>>8); z <= (z2>>8); z++)
+	for (int x = (x1>>8); x <= (x2>>8); x++)
+	{
+		int block_id = world_get_block(x, y, z);
+		if (block_id == 44)
+		{
+			if (y1 < ((y << 8) | 0x80))
+				return true;
+		}
+		else if (!world_is_walkable(block_id))
+			return true;
+	}
+
+	return false;
 }
 
 static inline uint32_t equal_render(int32_t b, int32_t nb) {
@@ -193,7 +210,7 @@ static inline uint32_t equal_render(int32_t b, int32_t nb) {
 
 static inline uint32_t should_render(int32_t b, int32_t nx, int32_t ny, int32_t nz) {
 	int32_t nb = world_get_block_unsafe(nx, ny, nz);
-	if (nb == 0) {
+	if (nb == 0 || nb == 44) {
 		return 1;
 	} else if (!equal_render(b, nb)) {
 		return world_is_translucent_render(b) || world_is_translucent_render(nb);

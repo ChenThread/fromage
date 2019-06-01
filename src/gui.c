@@ -168,6 +168,18 @@ void draw_block_icon(int bx, int by, int bw, int bh, int block_id)
 		uint32_t cd = ((by+bh16) << 16) | ((bx) & 0xFFFF);
 		uint32_t ru = ((by-bh8) << 16) | ((bx+bw14) & 0xFFFF);
 		uint32_t rd = ((by+bh8) << 16) | ((bx+bw14) & 0xFFFF);
+		uint16_t tc0 = 0x0000;
+		uint16_t tc1 = 0x000F;
+		uint16_t tc2 = 0x0F00;
+		uint16_t tc3 = 0x0F0F;
+		if (block_id == 44) {
+			lu += bh8<<16;
+			cu += bh8<<16;
+			ru += bh8<<16;
+			cc += bh8<<16;
+			tc0 |= 0x0008;
+			tc2 |= 0x0008;
+		}
 		DMA_PUSH(9, 1);
 		dma_buffer[dma_pos++] = 0x2C000000 | block_lighting[5];
 		dma_buffer[dma_pos++] = lu;
@@ -182,24 +194,24 @@ void draw_block_icon(int bx, int by, int bw, int bh, int block_id)
 		DMA_PUSH(9, 1);
 		dma_buffer[dma_pos++] = 0x2C000000 | block_lighting[0];
 		dma_buffer[dma_pos++] = lu;
-		dma_buffer[dma_pos++] = (bi1->cl << 16) | (bi1->tc + (0x0000));
+		dma_buffer[dma_pos++] = (bi1->cl << 16) | (bi1->tc + (tc0));
 		dma_buffer[dma_pos++] = cc;
-		dma_buffer[dma_pos++] = (bi1->tp << 16) | (bi1->tc + (0x000F));
+		dma_buffer[dma_pos++] = (bi1->tp << 16) | (bi1->tc + (tc1));
 		dma_buffer[dma_pos++] = ld;
-		dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (0x0F00));
+		dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (tc2));
 		dma_buffer[dma_pos++] = cd;
-		dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (0x0F0F));
+		dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (tc3));
 
 		DMA_PUSH(9, 1);
 		dma_buffer[dma_pos++] = 0x2C000000 | block_lighting[2];
 		dma_buffer[dma_pos++] = cc;
-		dma_buffer[dma_pos++] = (bi1->cl << 16) | (bi1->tc + (0x0000));
+		dma_buffer[dma_pos++] = (bi1->cl << 16) | (bi1->tc + (tc0));
 		dma_buffer[dma_pos++] = ru;
-		dma_buffer[dma_pos++] = (bi1->tp << 16) | (bi1->tc + (0x000F));
+		dma_buffer[dma_pos++] = (bi1->tp << 16) | (bi1->tc + (tc1));
 		dma_buffer[dma_pos++] = cd;
-		dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (0x0F00));
+		dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (tc2));
 		dma_buffer[dma_pos++] = rd;
-		dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (0x0F0F));
+		dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (tc3));
 	}
 }
 

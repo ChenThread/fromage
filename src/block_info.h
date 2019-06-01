@@ -54,7 +54,7 @@ block_info_t block_info[BLOCK_MAX][QUAD_MAX] = {
 	INFO_BLOCK_CUBE_TB(7, 2, 7, 1, 7, 3), // 42: Block of Iron
 
 	INFO_BLOCK_CUBE_TB(5, 0, 6, 0, 6, 0), // 43: Double Slab
-	INFO_BLOCK_CUBE_TB(5, 0, 6, 0, 6, 0), // 44: (not really Double) Slab
+	INFO_BLOCK_CUBE_TB(5, 0, 6, 0, 6, 0), // 44: Slab
 
 	INFO_BLOCK_CUBE(7, 0), // 45: Brick
 	INFO_BLOCK_CUBE_TB(8, 0, 9, 0, 10, 0), // 46: TNT

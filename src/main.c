@@ -51,72 +51,7 @@ typedef struct mesh_data {
 	uint8_t _unused1[7];
 } mesh_data_t;
 
-#define FACE_N 0x0000
-#define FACE_P 0x0100
-const mesh_data_t mesh_data_block[] = {
-	// -Z
-	{FACE_N, FACE_N, FACE_N, 0x0F00, .face = 0,},
-	{FACE_P, FACE_N, FACE_N, 0x0F0F, .face = 0,},
-	{FACE_N, FACE_P, FACE_N, 0x0000, .face = 0,},
-	{FACE_P, FACE_P, FACE_N, 0x000F, .face = 0,},
-
-	// +Z
-	{FACE_N, FACE_N, FACE_P, 0x0F0F, .face = 1,},
-	{FACE_N, FACE_P, FACE_P, 0x000F, .face = 1,},
-	{FACE_P, FACE_N, FACE_P, 0x0F00, .face = 1,},
-	{FACE_P, FACE_P, FACE_P, 0x0000, .face = 1,},
-
-	// -X
-	{FACE_N, FACE_N, FACE_N, 0x0F0F, .face = 2,},
-	{FACE_N, FACE_P, FACE_N, 0x000F, .face = 2,},
-	{FACE_N, FACE_N, FACE_P, 0x0F00, .face = 2,},
-	{FACE_N, FACE_P, FACE_P, 0x0000, .face = 2,},
-
-	// +X
-	{FACE_P, FACE_N, FACE_N, 0x0F00, .face = 3,},
-	{FACE_P, FACE_N, FACE_P, 0x0F0F, .face = 3,},
-	{FACE_P, FACE_P, FACE_N, 0x0000, .face = 3,},
-	{FACE_P, FACE_P, FACE_P, 0x000F, .face = 3,},
-
-	// -Y
-	{FACE_N, FACE_N, FACE_N, 0x0000, .face = 4,},
-	{FACE_N, FACE_N, FACE_P, 0x0F00, .face = 4,},
-	{FACE_P, FACE_N, FACE_N, 0x000F, .face = 4,},
-	{FACE_P, FACE_N, FACE_P, 0x0F0F, .face = 4,},
-
-	// +Y
-	{FACE_N, FACE_P, FACE_N, 0x0000, .face = 5,},
-	{FACE_P, FACE_P, FACE_N, 0x000F, .face = 5,},
-	{FACE_N, FACE_P, FACE_P, 0x0F00, .face = 5,},
-	{FACE_P, FACE_P, FACE_P, 0x0F0F, .face = 5,},
-};
-
-const mesh_data_t mesh_data_plant[] = {
-	// TODO
-	// X-Z=0 front
-	{FACE_N, FACE_N, FACE_N, 0x0F00, .face = 0,},
-	{FACE_P, FACE_N, FACE_P, 0x0F0F, .face = 0,},
-	{FACE_N, FACE_P, FACE_N, 0x0000, .face = 0,},
-	{FACE_P, FACE_P, FACE_P, 0x000F, .face = 0,},
-
-	// X-Z=0 back
-	{FACE_P, FACE_P, FACE_P, 0x000F, .face = 1,},
-	{FACE_N, FACE_P, FACE_N, 0x0000, .face = 1,},
-	{FACE_P, FACE_N, FACE_P, 0x0F0F, .face = 1,},
-	{FACE_N, FACE_N, FACE_N, 0x0F00, .face = 1,},
-
-	// X+Z=0 front
-	{FACE_N, FACE_N, FACE_P, 0x0F00, .face = 2,},
-	{FACE_P, FACE_N, FACE_N, 0x0F0F, .face = 2,},
-	{FACE_N, FACE_P, FACE_P, 0x0000, .face = 2,},
-	{FACE_P, FACE_P, FACE_N, 0x000F, .face = 2,},
-
-	// X+Z=0 back
-	{FACE_P, FACE_P, FACE_N, 0x000F, .face = 3,},
-	{FACE_N, FACE_P, FACE_P, 0x0000, .face = 3,},
-	{FACE_P, FACE_N, FACE_N, 0x0F0F, .face = 3,},
-	{FACE_N, FACE_N, FACE_P, 0x0F00, .face = 3,},
-};
+#include "meshes.h"
 
 void yield(void)
 {
@@ -415,6 +350,7 @@ void draw_quads(int32_t cx, int32_t cy, int32_t cz, int di, const mesh_data_t *m
 }
 
 static int get_model(int block) {
+	if (block == 44) return 2;
 	return (block == 6) || (block >= 37 && block <= 40) ? 1 : 0;
 }
 
@@ -424,10 +360,16 @@ void draw_block(int32_t cx, int32_t cy, int32_t cz, int di, int block, uint32_t 
 		return;
 	}
 
-	if (get_model(block) == 1) {
-		draw_quads(cx, cy, cz, di, mesh_data_plant, block_info[block], 4, facemask, false);
-	} else {
-		draw_quads(cx, cy, cz, di, mesh_data_block, block_info[block], 6, facemask, transparent || ((block&(~1)) == 8));
+	switch (get_model(block)) {
+		case 0:
+			draw_quads(cx, cy, cz, di, mesh_data_block, block_info[block], 6, facemask, transparent || ((block&(~1)) == 8));
+			break;
+		case 1:
+			draw_quads(cx, cy, cz, di, mesh_data_plant, block_info[block], 4, facemask, false);
+			break;
+		case 2:
+			draw_quads(cx, cy, cz, di, mesh_data_slab, block_info[block], 6, facemask, transparent);
+			break;
 	}
 }
 
@@ -1095,8 +1037,18 @@ void player_update(int mmul)
 				vel_y /= 2;
 			}
 		}
-		while (vel_x != 0 && !try_move(vel_x, 0, 0, true)) { vel_x /= 2; }
-		while (vel_z != 0 && !try_move(0, 0, vel_z, true)) { vel_z /= 2; }
+		if (try_move(vel_x, 0, vel_z, true)) {
+			// pass
+		} else if (try_move(vel_x, 128, vel_z, true)) {
+			// pass
+		} else {
+			while (vel_x != 0 && !try_move(vel_x, 0, 0, true)) {
+				vel_x /= 2;
+			}
+			while (vel_z != 0 && !try_move(0, 0, vel_z, true)) {
+				vel_z /= 2;
+			}
+		}
 	}
 #endif
 }
