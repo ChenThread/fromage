@@ -1,0 +1,34 @@
+filename: "FromageN", where N >= 0
+
+sector 0:
+	PS1 title sector
+
+sector 1:
+	PS1 icon sector
+
+sector 2:
+	fromage header sector
+
+	addr	bytes	desc
+	0x00	1	major data version (1)
+	0x01	1	minor data version (0)
+	0x02	2	x level size
+	0x04	2	y level size
+	0x06	2	z level size
+	0x08	2	compressed buffer size, in sectors
+	0x0A	1	bits 0-6: compressed buffer - size of last sector - 1 (1-128 - 1)
+			bit 7: reserved
+	0x0B	5	reserved
+	0x10	4	cam_x
+	0x14	4	cam_y
+	0x18	4	cam_z
+	0x1C	2	cam_rx
+	0x1E	2	cam_ry
+	0x20	1	bits 0-3: hotbar position
+			bits 4-7: reserved
+	0x21	9	hotbar blocks
+	0x2A	6	reserved
+	0x30	80	reserved
+
+sector 3-N:
+	lz4-compressed data of size (xsize*ysize*zsize)

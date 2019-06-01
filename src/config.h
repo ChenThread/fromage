@@ -1,0 +1,21 @@
+#define TV_PAL
+#if 1
+#define VID_WIDTH 640
+#define VID_WIDTH_MULTIPLIER 2
+#else
+#define VID_WIDTH 320
+#define VID_WIDTH_MULTIPLIER 1
+#endif
+#define VID_HEIGHT 240
+#define VID_HEIGHT_MULTIPLIER 1
+
+#ifdef TV_PAL
+#define VBLANKS_PER_SEC 50
+#else
+#define VBLANKS_PER_SEC 60
+#endif
+
+/* #define LAVA_ANIMATION_START 80
+#define LAVA_ANIMATION_FRAMES 20
+#define WATER_ANIMATION_START 100
+#define WATER_ANIMATION_FRAMES 32 */

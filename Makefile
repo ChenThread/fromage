@@ -46,7 +46,7 @@ DATDIR = dat
 OBJDIR = obj
 SRCDIR = src
 
-INCLUDES = src/block_info.h src/common.h src/psx.h
+INCLUDES = src/block_info.h src/common.h src/config.h src/psx.h
 
 OBJS =	$(OBJDIR)/cdrom.o \
 	$(OBJDIR)/gui.o \

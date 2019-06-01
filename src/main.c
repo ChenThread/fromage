@@ -107,6 +107,8 @@ int16_t blocksel_id = 1;
 
 uint32_t ticks = 0;
 uint32_t movement_ticks = 0;
+uint32_t tex_update_ticks = 0;
+uint32_t tex_update_blanks = 0;
 
 #define OT_WORLD 2
 
@@ -138,6 +140,7 @@ chenboot_exception_frame_t *isr_handler_c(chenboot_exception_frame_t *sp)
 	if((PSXREG_I_STAT & (1<<0)) != 0) {
 		// VBLANK
 		vblank_counter++;
+		tex_update_blanks++;
 		ticks++;
 
 		//
@@ -1241,11 +1244,10 @@ int main(void)
 
 			draw_everything();
 
-			// fps (TODO ntsc)
 			fps_frames++;
 			fps_vblanks += vblank_counter;
-			if (fps_vblanks >= 50) {
-				fps_val = fps_frames * 50 / fps_vblanks;
+			if (fps_vblanks >= VBLANKS_PER_SEC) {
+				fps_val = fps_frames * VBLANKS_PER_SEC / fps_vblanks;
 				fps_frames = 0;
 				fps_vblanks = 0;
 			}
@@ -1254,6 +1256,26 @@ int main(void)
 			vblank_counter = 0;
 			int mmul = ticks - movement_ticks;
 			movement_ticks = ticks;
+
+#if defined(LAVA_ANIMATION_START) || defined(WATER_ANIMATION_START)
+			uint32_t last_tut = tex_update_ticks;
+			while (tex_update_blanks >= VBLANKS_PER_SEC/5) {
+				tex_update_blanks -= VBLANKS_PER_SEC/5;
+				tex_update_ticks++;
+			}
+			if (tex_update_ticks != last_tut) {
+				int water_tex = (tex_update_ticks % WATER_ANIMATION_FRAMES) + WATER_ANIMATION_START;
+				int lava_tex = (tex_update_ticks % (LAVA_ANIMATION_FRAMES * 2 - 1));
+				if (lava_tex >= LAVA_ANIMATION_FRAMES) lava_tex = ((LAVA_ANIMATION_FRAMES * 2 - 2) - lava_tex);
+				lava_tex += LAVA_ANIMATION_START;
+				for (int i = 0; i < 6; i++) {
+					block_info[8][i] = (block_info_t)QUAD(water_tex & 15, water_tex >> 4);
+					block_info[9][i] = (block_info_t)QUAD(water_tex & 15, water_tex >> 4);
+					block_info[10][i] = (block_info_t)QUAD(lava_tex & 15, lava_tex >> 4);
+					block_info[11][i] = (block_info_t)QUAD(lava_tex & 15, lava_tex >> 4);
+				}
+			}
+#endif
 
 			switch (mode) {
 				case MODE_INGAME:

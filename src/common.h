@@ -12,16 +12,7 @@
 #define ASSERT(x) if(!(x)) { for(;;) {} }
 #define ABS(x) ((x)>=0 ? (x) : -(x))
 
-#define TV_PAL
-#if 1
-#define VID_WIDTH 640
-#define VID_WIDTH_MULTIPLIER 2
-#else
-#define VID_WIDTH 320
-#define VID_WIDTH_MULTIPLIER 1
-#endif
-#define VID_HEIGHT 240
-#define VID_HEIGHT_MULTIPLIER 1
+#include "config.h"
 
 typedef int32_t fixed;
 typedef int64_t fixed64;
