@@ -806,9 +806,10 @@ void draw_everything(void)
 	}
 
 	draw_hotbar();
-	draw_liquid_overlay();
 	draw_text(1, 1, 0xFFFFFF, "0.30");
 	draw_text(1, 11, 0xFFFFFF, "%d FPS", fps_val);
+
+	draw_liquid_overlay();
 
 	/*
 	gp0_command(0x720000FF);
