@@ -8,6 +8,8 @@ RM_F=rm -f
 MKISOFS=mkisofs
 PYTHON3=python3
 
+SPUENC=$(CANDYK)/bin/spuenc
+
 ASFLAGS = -g -msoft-float
 
 CFLAGS = -g -c -O3 -flto -pipe \
@@ -112,7 +114,7 @@ $(OBJDIR)/soundbank.raw: $(SOUNDS)
 	$(PYTHON3) tools/mksoundbank.py $(OBJDIR)/soundbank.raw $(SOUNDS)
 
 $(OBJDIR)/%.spu: $(RESDIR)/%.ogg
-	spuenc -f 14700 -t spu -c 1 $< $@
+	$(SPUENC) -f 14700 -t spu -c 1 $< $@
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(INCLUDES)
 	$(CROSS_CC) -c -o $@ $(CFLAGS) $<
