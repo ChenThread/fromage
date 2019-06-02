@@ -470,3 +470,101 @@ int gui_menu(int optcount, ...)
 
 	return curr_opt;
 }
+
+void gui_terrible_text_viewer(const char* text)
+{
+	// Leave this alone. It can be slow and terrible.
+	// It's for fulfilling licensing obligations and nothing else.
+	// Shoo!
+	int text_pos = 0;
+	int last_tp = -1;
+	int border_width = VID_WIDTH * 7 / 8;
+	int border_height = VID_HEIGHT * 7 / 8;
+	int window_width = border_width - 8*VID_WIDTH_MULTIPLIER;
+	int window_height = (border_height - 8) & (~7);
+	int window_x = ((VID_WIDTH - window_width) / 2);
+	int window_y = ((VID_HEIGHT - window_height) / 2);
+	int border_x = ((-border_width) / 2);
+	int border_y = ((-border_height) / 2);
+	char buffer[512];
+
+	window_height -= 16;
+
+	while (1) {
+	if (last_tp != text_pos) {
+		const char *tpos = text;
+		int newlines = 0;
+		while (newlines < text_pos && (*tpos)!=0) {
+			if (*(tpos++) == 10) newlines++;
+		}
+		if ((*tpos) == 0) {
+			text_pos--;
+			continue;
+		}
+
+		gpu_dma_init();
+		frame_start();
+
+		draw_text_buffer(window_x, window_y + window_height + 8, 0x404040, "[press o to exit]");
+
+		int iy = 0;
+		int ix = 0;
+		int ib = 0;
+		while (iy < window_height) {
+			switch (*tpos) {
+				case 13: continue;
+				case 10:
+				case 32: {
+					buffer[ib] = 0;
+					int w = get_text_width_buffer(buffer);
+					if (w > window_width) {
+						char *last_word = strrchr(buffer, ' ');
+						last_word[0] = '\0';
+						draw_text_buffer(window_x + ix, window_y + iy, 0xFFFFFF, buffer);
+						last_word[0] = ' ';
+						int lwl = strlen(last_word);
+						memmove(buffer, last_word + 1, lwl);
+						ib = lwl;
+						buffer[ib++] = 32;
+						iy += 8;
+					} else if ((*tpos) == 10) {
+						draw_text_buffer(window_x + ix, window_y + iy, 0xFFFFFF, buffer);
+						ib = 0;
+						iy += 8;
+					} else {
+						buffer[ib++] = 32;
+					}
+				} break;
+				case 0:
+					iy = window_height;
+					break;
+				default:
+					buffer[ib++] = *tpos;
+					break;
+			}
+			tpos++;
+		}
+
+
+		DMA_PUSH(3, 1);
+		dma_buffer[dma_pos++] = 0x62000000;
+		dma_buffer[dma_pos++] = (border_y << 16) | (border_x & 0xFFFF);
+		dma_buffer[dma_pos++] = (border_height << 16) | (border_width & 0xFFFF);
+
+		draw_dirt_background();
+		gpu_dma_finish();
+		wait_for_next_vblank();
+		frame_flip();
+
+		last_tp = text_pos;
+	} else {
+		wait_for_next_vblank();
+		sawpads_do_read();
+	}
+
+		int joy_pressed = update_joy_pressed();
+		if ((joy_pressed & PAD_DOWN) != 0) text_pos++;
+		if ((joy_pressed & PAD_UP) != 0) text_pos--;
+		if ((joy_pressed & PAD_O) != 0) break;
+	}
+}

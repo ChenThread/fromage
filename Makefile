@@ -60,6 +60,7 @@ OBJS =	$(OBJDIR)/cdrom.o \
 	$(OBJDIR)/atlas.o \
 	$(OBJDIR)/font.o \
 	$(OBJDIR)/icon.o \
+	$(OBJDIR)/license_text.o \
 	\
 	$(OBJDIR)/lz4.o \
 	\
@@ -71,6 +72,7 @@ all: $(EXE_NAME).exe $(ISO_NAME).cue
 clean:
 	$(RM_F) $(OBJS) $(OBJDIR)/$(EXE_NAME).elf $(ISO_NAME).bin $(ISO_NAME).cue
 	$(RM_F) $(OBJDIR)/atlas.s $(OBJDIR)/font.s $(OBJDIR)/icon.s $(OBJDIR)/icon.raw
+	$(RM_F) $(OBJDIR)/license_text.s $(OBJDIR)/license_text.txt
 
 $(ISO_NAME).cue: $(ISO_NAME) manifest.txt
 	$(CANDYK)/bin/pscd-new manifest.txt
@@ -104,3 +106,14 @@ $(OBJDIR)/icon.raw: $(RESDIR)/icon.png
 $(OBJDIR)/icon.o: $(OBJDIR)/icon.raw tools/bin2s.py $(INCLUDES)
 	$(PYTHON3) tools/bin2s.py $(OBJDIR)/icon.raw > $(OBJDIR)/icon.s
 	$(CROSS_AS) -o $@ $(ASFLAGS) $(OBJDIR)/icon.s
+
+$(OBJDIR)/license_text.txt: LICENSE contrib/lz4/LICENSE
+	cat LICENSE > $(OBJDIR)/license_text.txt
+	echo "" >> $(OBJDIR)/license_text.txt
+	echo "--------" >> $(OBJDIR)/license_text.txt
+	echo "" >> $(OBJDIR)/license_text.txt
+	cat contrib/lz4/LICENSE >> $(OBJDIR)/license_text.txt
+
+$(OBJDIR)/license_text.o: $(OBJDIR)/license_text.txt tools/bin2s.py $(INCLUDES)
+	$(PYTHON3) tools/bin2s.py $(OBJDIR)/license_text.txt > $(OBJDIR)/license_text.s
+	$(CROSS_AS) -o $@ $(ASFLAGS) $(OBJDIR)/license_text.s

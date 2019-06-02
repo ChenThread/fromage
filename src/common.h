@@ -107,6 +107,7 @@ void draw_hotbar(void);
 void draw_crosshair(void);
 void draw_liquid_overlay(void);
 int gui_menu(int optcount, ...);
+void gui_terrible_text_viewer(const char* text);
 
 // save.c
 #define SAVE_ERROR_COMPRESSION -1
