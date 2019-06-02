@@ -13,6 +13,7 @@ static uint8_t level_opaque_height[LEVEL_LZ][LEVEL_LX];
 static uint8_t level_faces[LEVEL_LY][LEVEL_LZ][LEVEL_LX];
 static uint16_t level_has_vis_blocks[LEVEL_LY>>2][LEVEL_LZ>>2][LEVEL_LX>>2];
 static uint32_t level_time = 0;
+static uint32_t tick_seed = 1;
 static update_entry_t* update_list;
 
 static inline void world_update_block_cache(int32_t cx, int32_t cy, int32_t cz);
@@ -432,7 +433,14 @@ static inline void world_tick() {
 	if ((level_time & 3) == 0) {
 		// TODO: consider using LFSR
 		for (int i = 0; i < 64; i++)
-			world_block_check(rand() % LEVEL_LX, rand() % LEVEL_LY, rand() % LEVEL_LZ);
+		{
+			int r = RAND(tick_seed);
+			int ry = r % LEVEL_LY;
+			int rz = (r / LEVEL_LY) % LEVEL_LZ;
+			int rx = ((r / LEVEL_LY) / LEVEL_LZ) % LEVEL_LX;
+
+			world_block_check(rx, ry, rz);
+		}
 
 		update_entry_t* prev = NULL;
 		update_entry_t* curr = update_list;

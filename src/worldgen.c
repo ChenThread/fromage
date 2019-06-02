@@ -71,7 +71,6 @@ static float perlin(uint8_t *perm, float x, float y, float z)
 
 #define SET(x,y,z,b) if (x>=0&&y>=0&&z>=0&&x<lx&&y<ly&&z<lz) map[(((y) * lz + (z)) * lx + (x))] = (b)
 #define GET(x,y,z) ((x>=0&&y>=0&&z>=0&&x<lx&&y<ly&&z<lz) ? map[(((y) * lz + (z)) * lx + (x))] : 0)
-#define SEED_NEXT() seed = (seed * 16843009) + 826366247;
 
 void world_generate(uint8_t *map, int32_t lx, int32_t ly, int32_t lz, uint32_t seed, worldgen_stage_callback *wc, save_progress_callback *pc)
 {
@@ -85,7 +84,7 @@ void world_generate(uint8_t *map, int32_t lx, int32_t ly, int32_t lz, uint32_t s
 	{
 		uint8_t j = seed & 0xFF;
 		uint8_t t = perm[j]; perm[j] = perm[i]; perm[i] = t;
-		SEED_NEXT();
+		RAND(seed);
 	}
 
 	for (int z = 0; z < lz; z++)
@@ -129,7 +128,7 @@ void world_generate(uint8_t *map, int32_t lx, int32_t ly, int32_t lz, uint32_t s
 		if (pc != NULL) pc(i,imax);
 		int tx = seed % lx;
 		int tz = (seed / lx) % lz;
-		SEED_NEXT();
+		RAND(seed);
 		if (heights[tz*lx+tx] > ly/2 && heights[tz*lx+tx] < ly-5)
 		{
 			// plant tree
@@ -137,7 +136,7 @@ void world_generate(uint8_t *map, int32_t lx, int32_t ly, int32_t lz, uint32_t s
 			if (GET(tx,y_base,tz) != 0) continue;
 
 			int log_height = 3 + (seed % 3);
-			SEED_NEXT();
+			RAND(seed);
 
 			for (int i = 0; i < log_height; i++)
 				SET(tx,i+y_base,tz,17);
@@ -179,7 +178,7 @@ void world_generate(uint8_t *map, int32_t lx, int32_t ly, int32_t lz, uint32_t s
 					if (i < -1 || ((seed & (8<<sb)))) SET(tx+2,y_base+log_height+i,tz+2,18);
 				}
 
-				SEED_NEXT();
+				RAND(seed);
 			}
 
 			SET(tx-1,y_base+log_height,tz,18);
@@ -194,7 +193,7 @@ void world_generate(uint8_t *map, int32_t lx, int32_t ly, int32_t lz, uint32_t s
 		if (pc != NULL) pc(i,imax);
 		int tx = seed % lx;
 		int tz = (seed / lx) % lz;
-		SEED_NEXT();
+		RAND(seed);
 
 		if (heights[tz*lx+tx] > ly/2)
 		{
@@ -203,7 +202,7 @@ void world_generate(uint8_t *map, int32_t lx, int32_t ly, int32_t lz, uint32_t s
 			if (GET(tx,y_base,tz) != 0) continue;
 
 			SET(tx, y_base, tz, (seed&1) + 37);
-			SEED_NEXT();
+			RAND(seed);
 		}
 	}
 

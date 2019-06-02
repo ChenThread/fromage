@@ -28,6 +28,8 @@ typedef vec4 mat4[4];
 #define FACE_YN 4
 #define FACE_YP 5
 
+#define RAND(seed) ((seed) = ((seed) * 16843009) + 826366247)
+
 // Files
 #define LEVEL_LX 64
 #define LEVEL_LY 64
