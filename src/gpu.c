@@ -20,6 +20,8 @@ void frame_flip(void)
 	vis_frame_x = frame_x;
 	vis_frame_y = frame_y;
 	frame_y = 256 - vis_frame_y;
+
+	while((DMA_n_CHCR(2) & (1<<24)) != 0) {}
 	gp1_command(0x05000000 | ((vis_frame_x)<<0) | ((vis_frame_y)<<10)); // Display start (x,y)
 }
 

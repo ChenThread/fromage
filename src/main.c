@@ -1372,9 +1372,6 @@ int main(void)
 			world_update(ticks);
 			// FIXME: if vsync is disabled,
 			// joypad reads occasionally glitch
-			while((DMA_n_CHCR(2) & (1<<24)) != 0) {
-				//
-			}
 			while(vblank_counter == 0) {}
 			frame_flip();
 			sawpads_do_read();
