@@ -302,12 +302,17 @@ int save_level(int save_id, level_info *info, const uint8_t *data, save_progress
 	memcpy(secbuf, icon_raw + 0x20, 0x80);
 	{
 		// overlay icon slot id (clut index 15 = white)
-		int fx = ((save_id + '0') & 0xF) * 4;
+		int fx = ((save_id + '0') & 0xF) * 4 * VID_WIDTH_MULTIPLIER;
 		int fy = ((save_id + '0') >> 4) * 8;
 
 		for (int iy = 0; iy < 8; iy++) {
 			for (int ix = 0; ix < 4; ix++) {
+#if VID_WIDTH_MULTIPLIER > 1
+				uint8_t v = (font_raw[(FONT_CHARS/2) + ((fy+iy) * 128) + (fx+ix*2)] * 0xF) & 0xF;
+				v |= (font_raw[(FONT_CHARS/2) + ((fy+iy) * 128) + (fx+ix*2+1)] * 0xF) & 0xF0;
+#else
 				uint8_t v = font_raw[(FONT_CHARS/2) + ((fy+iy) * 64) + (fx+ix)] * 0xF;
+#endif
 				secbuf[(iy + 8) * 8 + (ix)] |= v;
 			}
 		}
