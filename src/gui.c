@@ -457,7 +457,6 @@ int gui_menu(int optcount, ...)
 
 		draw_dirt_background();
 		gpu_dma_finish();
-		wait_for_next_vblank();
 		frame_flip();
 		sawpads_do_read();
 
@@ -553,7 +552,6 @@ void gui_terrible_text_viewer(const char* text)
 
 		draw_dirt_background();
 		gpu_dma_finish();
-		wait_for_next_vblank();
 		frame_flip();
 
 		last_tp = text_pos;

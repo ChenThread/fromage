@@ -849,7 +849,6 @@ void wgen_stage_frame(const char* format) {
 	draw_status_progress(0, 1);
 	draw_status_window(format);
 	gpu_dma_finish();
-	wait_for_next_vblank();
 	frame_flip();
 }
 
@@ -859,7 +858,6 @@ void world_main_prepare(void)
 	frame_start();
 	draw_status_window("Reticulating splines..");
 	gpu_dma_finish();
-	wait_for_next_vblank();
 	frame_flip();
 
 	vel_x = vel_y = vel_z = 0;
@@ -873,7 +871,6 @@ void world_main_load(int slot)
 	frame_start();
 	draw_status_window("Loading level..");
 	gpu_dma_finish();
-	wait_for_next_vblank();
 	frame_flip();
 
 	level_info info;
@@ -893,7 +890,6 @@ void world_main_load(int slot)
 		frame_start();
 		draw_status_window("Error: %s", save_get_error_string(ret));
 		gpu_dma_finish();
-		wait_for_next_vblank();
 		frame_flip();
 		wait_for_vblanks(90);
 	}
@@ -905,7 +901,6 @@ void world_main_save(int slot)
 	frame_start();
 	draw_status_window("Saving level..");
 	gpu_dma_finish();
-	wait_for_next_vblank();
 	frame_flip();
 
 	level_info info;
@@ -929,7 +924,6 @@ void world_main_save(int slot)
 		draw_status_window("Error: %s", save_get_error_string(ret));
 	}
 	gpu_dma_finish();
-	wait_for_next_vblank();
 	frame_flip();
 	wait_for_vblanks(90);
 }
@@ -1306,7 +1300,6 @@ int main(void)
 	frame_start();
 	draw_dirt_background();
 	gpu_dma_finish();
-	wait_for_next_vblank();
 	frame_flip();
 
 	// Display enable: ON (1)
@@ -1369,9 +1362,6 @@ int main(void)
 			}
 
 			world_update(ticks);
-			// FIXME: if vsync is disabled,
-			// joypad reads occasionally glitch
-			while(vblank_counter == 0) {}
 			frame_flip();
 			sawpads_do_read();
 		}
