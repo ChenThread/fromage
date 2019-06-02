@@ -229,18 +229,18 @@ static inline uint32_t equal_render(int32_t b, int32_t nb) {
 static inline uint32_t should_render(int32_t b, int32_t nx, int32_t ny, int32_t nz, int32_t face) {
 	int32_t nb = world_get_block_unsafe(nx, ny, nz);
 	switch (b) {
-		case 8:
-		case 9: // water
-			return nb == 0;
 		case 6:
 		case 37:
 		case 38:
 		case 39:
 		case 40: // plants
 			return 1;
+		case 8:
+		case 9: // water
+			return (b&(~1)) != (nb&(~1)) && world_is_translucent_render(nb);
 		case 18: // leaves
 		case 20: // glass
-			return b != nb && world_is_translucent(nb);
+			return b != nb && world_is_translucent_render(nb);
 		case 44: // single slab
 			if (face == FACE_YP) return 1;
 			else return world_is_translucent_render(nb);
