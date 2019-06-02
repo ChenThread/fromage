@@ -9,11 +9,13 @@ if len(sys.argv) >= 5:
 	imlava = Image.open(sys.argv[4])
 fp = open(sys.argv[2], "wb")
 clut = [None] * 256
+avgcol = [None] * 256
 imgdata = [None] * (256*256)
 imgwidth = 256
 
 def draw_4bit(im, ix, iy, iw, ih, tx, ty):
 	img = im.crop((ix, iy, ix+iw, iy+ih)).convert("RGBA")
+	imgac = img.resize((1, 1), Image.ANTIALIAS)
 	imgp = img.convert(mode='P', palette=Image.ADAPTIVE, colors=16)
 	imgpalr = imgp.getpalette()
 	palette = [None] * 16
@@ -26,7 +28,7 @@ def draw_4bit(im, ix, iy, iw, ih, tx, ty):
 			if len(impp) > 3:
 				palette[impc][3] = impp[3]
 			imgdata[(ty+iry)*imgwidth + tx+irx] = impc
-	return palette
+	return palette, imgac.getpixel((0, 0))
 
 def write_palette(fp, palette):
 	for ip in range(16):
@@ -42,7 +44,7 @@ def write_palette(fp, palette):
 def add_texture(im, ix, iy, i):
 	tx = (i & 15) << 4
 	ty = (i & 240)
-	clut[i] = draw_4bit(im, ix, iy, 16, 16, tx, ty)
+	clut[i], avgcol[i] = draw_4bit(im, ix, iy, 16, 16, tx, ty)
 
 for i in range(256):
 	tx = (i & 15) << 4
@@ -60,5 +62,11 @@ for iy in range(256):
 		v = (imgdata[iy*imgwidth+ix+1] << 4) | (imgdata[iy*imgwidth+ix] << 0)
 		fp.write(struct.pack("<B", v))
 	write_palette(fp, clut[iy])
+
+for iy in range(256):
+	fp.write(struct.pack("<B", avgcol[iy][0]))
+	fp.write(struct.pack("<B", avgcol[iy][1]))
+	fp.write(struct.pack("<B", avgcol[iy][2]))
+	fp.write(struct.pack("<B", 0))
 
 fp.close()

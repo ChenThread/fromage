@@ -19,6 +19,9 @@ eyes: 1.7
 int main(void);
 void yield(void);
 
+// #define DEBUG_RENDERED_QUADS
+// #define QUADS_DISABLE_FAR_TEXTURES
+
 const int16_t sintab[256] = {
 0,101,201,301,401,501,601,700,799,897,995,1092,1189,1285,1380,1474,1567,1660,1751,1842,1931,2019,2106,2191,2276,2359,2440,2520,2598,2675,2751,2824,2896,2967,3035,3102,3166,3229,3290,3349,3406,3461,3513,3564,3612,3659,3703,3745,3784,3822,3857,3889,3920,3948,3973,3996,4017,4036,4052,4065,4076,4085,4091,4095,4096,4095,4091,4085,4076,4065,4052,4036,4017,3996,3973,3948,3920,3889,3857,3822,3784,3745,3703,3659,3612,3564,3513,3461,3406,3349,3290,3229,3166,3102,3035,2967,2896,2824,2751,2675,2598,2520,2440,2359,2276,2191,2106,2019,1931,1842,1751,1660,1567,1474,1380,1285,1189,1092,995,897,799,700,601,501,401,301,201,101,0,-101,-201,-301,-401,-501,-601,-700,-799,-897,-995,-1092,-1189,-1285,-1380,-1474,-1567,-1660,-1751,-1842,-1931,-2019,-2106,-2191,-2276,-2359,-2440,-2520,-2598,-2675,-2751,-2824,-2896,-2967,-3035,-3102,-3166,-3229,-3290,-3349,-3406,-3461,-3513,-3564,-3612,-3659,-3703,-3745,-3784,-3822,-3857,-3889,-3920,-3948,-3973,-3996,-4017,-4036,-4052,-4065,-4076,-4085,-4091,-4095,-4096,-4095,-4091,-4085,-4076,-4065,-4052,-4036,-4017,-3996,-3973,-3948,-3920,-3889,-3857,-3822,-3784,-3745,-3703,-3659,-3612,-3564,-3513,-3461,-3406,-3349,-3290,-3229,-3166,-3102,-3035,-2967,-2896,-2824,-2751,-2675,-2598,-2520,-2440,-2359,-2276,-2191,-2106,-2019,-1931,-1842,-1751,-1660,-1567,-1474,-1380,-1285,-1189,-1092,-995,-897,-799,-700,-601,-501,-401,-301,-201,-101,
 };
@@ -178,7 +181,7 @@ static inline void draw_one_quad(
 	int32_t x01, int32_t y01, int32_t z01, int32_t t01,
 	int32_t x10, int32_t y10, int32_t z10, int32_t t10,
 	int32_t x11, int32_t y11, int32_t z11, int32_t t11,
-	int32_t cl, int32_t tp)
+	int32_t cl, int32_t tp, uint32_t col)
 {
 	int32_t xy00 = ((x00&0xFFFF)|(y00<<16));
 	int32_t xy01 = ((x01&0xFFFF)|(y01<<16));
@@ -270,6 +273,32 @@ static inline void draw_one_quad(
 #endif
 
 	// Draw a quad
+#ifdef DEBUG_RENDERED_QUADS
+	int color = 0x010101 * ((di > 85 ? 85 : di) * 3);
+	DMA_PUSH(5, 60 + OT_WORLD - di);
+	dma_buffer[dma_pos++] = (command & 0xFB000000) | color;
+	dma_buffer[dma_pos++] = (sxy00);
+	dma_buffer[dma_pos++] = (sxy01);
+	dma_buffer[dma_pos++] = (sxy10);
+	dma_buffer[dma_pos++] = (sxy11);
+#else
+#ifdef QUADS_DISABLE_FAR_TEXTURES
+	if (!(col & 0xFF000000)) {
+		int32_t average_z;
+		asm volatile ("cop2 0x0168002E\nnop\n" ::: ); // AVSZ4
+		asm volatile ("mfc2 %0, $24\nnop\n" : "=r"(average_z) : : );
+
+		if (average_z > 0x3000) {
+			DMA_PUSH(5, OT_WORLD + di);
+			dma_buffer[dma_pos++] = (command & 0xFB000000) | col;
+			dma_buffer[dma_pos++] = (sxy00);
+			dma_buffer[dma_pos++] = (sxy01);
+			dma_buffer[dma_pos++] = (sxy10);
+			dma_buffer[dma_pos++] = (sxy11);
+			return;
+		}
+	}
+#endif
 	DMA_PUSH(9, OT_WORLD + di);
 	dma_buffer[dma_pos++] = command;
 	dma_buffer[dma_pos++] = (sxy00);
@@ -280,7 +309,7 @@ static inline void draw_one_quad(
 	dma_buffer[dma_pos++] = (t10);
 	dma_buffer[dma_pos++] = (sxy11);
 	dma_buffer[dma_pos++] = (t11);
-
+#endif
 }
 
 void draw_quads(int32_t cx, int32_t cy, int32_t cz, int di, const mesh_data_t *mesh_data, const block_info_t *bi, int face_count, uint32_t facemask, bool semitrans)
@@ -316,12 +345,14 @@ void draw_quads(int32_t cx, int32_t cy, int32_t cz, int di, const mesh_data_t *m
 		int32_t z11 = oz+mesh_data[mi+3].z;
 		int32_t t11 = mesh_data[mi+3].tc+block_data->tc;
 
+		uint32_t col = block_data->col;
 		uint32_t lighting = block_lighting[i];
 		if(!is_face_lit(cx, cy, cz, i)) {
 			lighting >>= 1;
 			lighting &= 0x7F7F7F;
-		} else {
-			lighting &= 0xFFFFFF;
+
+			col >>= 1;
+			col &= 0x7F7F7F;
 		}
 
 		uint32_t command;
@@ -337,7 +368,7 @@ void draw_quads(int32_t cx, int32_t cy, int32_t cz, int di, const mesh_data_t *m
 			x01, y01, z01, t01,
 			x10, y10, z10, t10,
 			x11, y11, z11, t11,
-			cl, tp);
+			cl, tp, col);
 	}
 }
 
@@ -468,7 +499,7 @@ void draw_world(void)
 	int cam_cx = cam_x >> 8;
 	int cam_cy = cam_y >> 8;
 	int cam_cz = cam_z >> 8;
-	int cam_dist = 12;
+	int cam_dist = 20;
 	/*
 	for(int cd = cam_dist; cd != 0; cd--) {
 		draw_blocks_in_range(cam_cx, cam_cy, cam_cz, cd);
@@ -1299,6 +1330,19 @@ int main(void)
 	gpu_dma_load(atlas_raw, 768, 256, 320/4, 256);
 	gpu_dma_load((uint32_t*) (&font_raw[64]), 64 * 0xE, 256, 128*VID_WIDTH_MULTIPLIER/4, 64);
 
+	// copy atlas colors to block info
+	uint32_t *atlas_colors = ((uint32_t*) (((uint8_t *) atlas_raw) + 0xA000));
+	for (int i = 0; i < BLOCK_MAX; i++) {
+		for (int j = 0; j < QUAD_MAX; j++) {
+			block_info_t *info = &(block_info[i][j]);
+			if (i == 6 || (i >= 37 && i <= 40) || (i == 18) || (i == 2 && j < 4)) {
+				info->col = 0xFFFFFFFF; // cannot approximate
+			} else {
+				info->col = atlas_colors[(((info->tc) >> 4) & 0xF) | (((info->tc) >> 8) & 0xF0)];
+			}
+		}
+	}
+
 	// Write font CLUT
 	gp1_command(0x04000001); // DMA mode: FIFO (1)
 	gp0_command(0xA0000000);
@@ -1356,11 +1400,17 @@ int main(void)
 				int lava_tex = (tex_update_ticks % (LAVA_ANIMATION_FRAMES * 2 - 1));
 				if (lava_tex >= LAVA_ANIMATION_FRAMES) lava_tex = ((LAVA_ANIMATION_FRAMES * 2 - 2) - lava_tex);
 				lava_tex += LAVA_ANIMATION_START;
+				block_info_t water_quad = (block_info_t)QUAD(water_tex & 15, water_tex >> 4);
+				block_info_t lava_quad = (block_info_t)QUAD(lava_tex & 15, lava_tex >> 4);
 				for (int i = 0; i < 6; i++) {
-					block_info[8][i] = (block_info_t)QUAD(water_tex & 15, water_tex >> 4);
-					block_info[9][i] = (block_info_t)QUAD(water_tex & 15, water_tex >> 4);
-					block_info[10][i] = (block_info_t)QUAD(lava_tex & 15, lava_tex >> 4);
-					block_info[11][i] = (block_info_t)QUAD(lava_tex & 15, lava_tex >> 4);
+					block_info[8][i].tc = water_quad.tc;
+					block_info[8][i].cl = water_quad.cl;
+					block_info[9][i].tc = water_quad.tc;
+					block_info[9][i].cl = water_quad.cl;
+					block_info[10][i].tc = lava_quad.tc;
+					block_info[10][i].cl = lava_quad.cl;
+					block_info[11][i].tc = lava_quad.tc;
+					block_info[11][i].cl = lava_quad.cl;
 				}
 			}
 #endif
