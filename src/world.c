@@ -80,6 +80,8 @@ void world_set_block(int32_t cx, int32_t cy, int32_t cz, uint8_t b, uint8_t flag
 	}
 }
 
+uint32_t world_is_raycast_hit(int32_t b);
+
 bool world_cast_ray(int32_t px, int32_t py, int32_t pz, int32_t vx, int32_t vy, int32_t vz, int32_t *ocx, int32_t *ocy, int32_t *ocz, int32_t max_steps, bool use_block_before_hit)
 {
 	// Get cell
@@ -146,7 +148,7 @@ bool world_cast_ray(int32_t px, int32_t py, int32_t pz, int32_t vx, int32_t vy, 
 		}
 
 		// Check if our cell is good
-		if(!world_is_walkable(world_get_block(cx, cy, cz))) {
+		if(world_is_raycast_hit(world_get_block(cx, cy, cz))) {
 			// We hit something
 			if(use_block_before_hit) {
 				*ocx = lcx;
@@ -178,6 +180,10 @@ inline uint32_t world_is_translucent_render(int32_t b) {
 
 inline uint32_t world_is_walkable(int32_t b) {
 	return b == 0 || b == 6 || (b >= 8 && b <= 11) || (b >= 37 && b <= 40);
+}
+
+inline uint32_t world_is_raycast_hit(int32_t b) {
+	return b != 0 && !(b >= 8 && b <= 11);
 }
 
 int32_t world_is_colliding(int32_t x1, int32_t y1, int32_t z1, int32_t x2, int32_t y2, int32_t z2) {
