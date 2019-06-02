@@ -42,9 +42,8 @@ LIBS = -lm -lsawpads -lseedy -lc -lgcc -lchenboot
 EXE_NAME=boot
 ISO_NAME=fromage
 
-DATDIR = dat
 OBJDIR = obj
-RESDIR = res
+RESDIR ?= res
 SRCDIR = src
 
 INCLUDES = src/block_info.h src/common.h src/config.h src/psx.h
@@ -71,7 +70,8 @@ all: $(EXE_NAME).exe $(ISO_NAME).cue
 
 clean:
 	$(RM_F) $(OBJS) $(OBJDIR)/$(EXE_NAME).elf $(ISO_NAME).bin $(ISO_NAME).cue
-	$(RM_F) $(OBJDIR)/atlas.s $(OBJDIR)/font.s $(OBJDIR)/icon.s $(OBJDIR)/icon.raw
+	$(RM_F) $(OBJDIR)/atlas.s $(OBJDIR)/font.s $(OBJDIR)/icon.s
+	$(RM_F) $(OBJDIR)/atlas.raw $(OBJDIR)/font.raw $(OBJDIR)/icon.raw
 	$(RM_F) $(OBJDIR)/license_text.s $(OBJDIR)/license_text.txt
 
 $(ISO_NAME).cue: $(ISO_NAME) manifest.txt
@@ -92,13 +92,19 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c $(INCLUDES)
 $(OBJDIR)/lz4.o: contrib/lz4/lz4.c contrib/lz4/lz4.h
 	$(CROSS_CC) -c -o $@ $(CFLAGS) $<
 
-$(OBJDIR)/atlas.o: $(DATDIR)/atlas.raw tools/bin2s.py $(INCLUDES)
-	$(PYTHON3) tools/bin2s.py $(DATDIR)/atlas.raw > $(OBJDIR)/atlas.s
+$(OBJDIR)/atlas.o: $(OBJDIR)/atlas.raw tools/bin2s.py $(INCLUDES)
+	$(PYTHON3) tools/bin2s.py $(OBJDIR)/atlas.raw > $(OBJDIR)/atlas.s
 	$(CROSS_AS) -o $@ $(ASFLAGS) $(OBJDIR)/atlas.s
 
-$(OBJDIR)/font.o: $(DATDIR)/font.raw tools/bin2s.py $(INCLUDES)
-	$(PYTHON3) tools/bin2s.py $(DATDIR)/font.raw > $(OBJDIR)/font.s
+$(OBJDIR)/font.o: $(OBJDIR)/font.raw tools/bin2s.py $(INCLUDES)
+	$(PYTHON3) tools/bin2s.py $(OBJDIR)/font.raw > $(OBJDIR)/font.s
 	$(CROSS_AS) -o $@ $(ASFLAGS) $(OBJDIR)/font.s
+
+$(OBJDIR)/atlas.raw: $(RESDIR)/atlas.png $(RESDIR)/water.png $(RESDIR)/lava.png
+	$(PYTHON3) tools/mkatlas.py $(RESDIR)/atlas.png $(OBJDIR)/atlas.raw $(RESDIR)/water.png $(RESDIR)/lava.png
+
+$(OBJDIR)/font.raw: $(RESDIR)/font.png
+	$(PYTHON3) tools/mkfont.py $(RESDIR)/font.png $(OBJDIR)/font.raw
 
 $(OBJDIR)/icon.raw: $(RESDIR)/icon.png
 	$(PYTHON3) tools/mkicon.py $(RESDIR)/icon.png $(OBJDIR)/icon.raw
@@ -107,8 +113,12 @@ $(OBJDIR)/icon.o: $(OBJDIR)/icon.raw tools/bin2s.py $(INCLUDES)
 	$(PYTHON3) tools/bin2s.py $(OBJDIR)/icon.raw > $(OBJDIR)/icon.s
 	$(CROSS_AS) -o $@ $(ASFLAGS) $(OBJDIR)/icon.s
 
-$(OBJDIR)/license_text.txt: LICENSE contrib/lz4/LICENSE
+$(OBJDIR)/license_text.txt: LICENSE res/LICENSE contrib/lz4/LICENSE
 	cat LICENSE > $(OBJDIR)/license_text.txt
+	echo "" >> $(OBJDIR)/license_text.txt
+	echo "--------" >> $(OBJDIR)/license_text.txt
+	echo "" >> $(OBJDIR)/license_text.txt
+	cat res/LICENSE >> $(OBJDIR)/license_text.txt
 	echo "" >> $(OBJDIR)/license_text.txt
 	echo "--------" >> $(OBJDIR)/license_text.txt
 	echo "" >> $(OBJDIR)/license_text.txt

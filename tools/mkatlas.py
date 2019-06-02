@@ -13,7 +13,7 @@ imgdata = [None] * (256*256)
 imgwidth = 256
 
 def draw_4bit(im, ix, iy, iw, ih, tx, ty):
-	img = im.crop((ix, iy, ix+iw, iy+ih))
+	img = im.crop((ix, iy, ix+iw, iy+ih)).convert("RGBA")
 	imgp = img.convert(mode='P', palette=Image.ADAPTIVE, colors=16)
 	imgpalr = imgp.getpalette()
 	palette = [None] * 16

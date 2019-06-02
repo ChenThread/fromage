@@ -1,7 +1,6 @@
-License of code (src/, tools/) and Makefile
---------------------------
+= fromage =
 
-Copyright (c) 2015, 2016, 2017 asie, GreaseMonkey
+Copyright (c) 2015, 2016, 2017, 2018, 2019 asie, GreaseMonkey
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
@@ -18,34 +17,3 @@ freely, subject to the following restrictions:
 2. Altered source versions must be plainly marked as such, and must not be
    misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
-
-License of media (textures - dat/atlas.tga)
---------------------------------------
-Copyright (C) 2017 asiekierka
-Copyright (C) 2014-2016 RHRhino
-Copyright (C) 2016 yyt16384
-Copyright (C) 2010-2016:
-  G4JC
-  VanessaE
-  RealBadAngel
-  Calinou
-  MirceaKitsune
-  Jordach
-  PilzAdam
-  jojoa1997
-  InfinityProject
-  Splizard
-  Zeg9
-  BlockMen
-  sofar
-  Neuromancer
-  Gambit
-  asl97
-  KevDoy
-  Mito551
-  GreenXenith
-  kaeza
-  kilbith
-
-Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0)
-http://creativecommons.org/licenses/by-sa/3.0/
