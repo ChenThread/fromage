@@ -8,7 +8,7 @@ fp = open(sys.argv[2], "wb")
 
 def find_width(fch, offx, offy):
 	if fch == 32:
-		return 6
+		return 2
 	for ix in range(7, 0, -1):
 		for iy in range(8):
 			if im.getpixel((offx+ix, offy+iy))[3] > 0:
