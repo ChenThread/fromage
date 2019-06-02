@@ -522,7 +522,7 @@ void gui_terrible_text_viewer(const char* text)
 						last_word[0] = '\0';
 						draw_text_buffer(window_x + ix, window_y + iy, 0xFFFFFF, buffer);
 						last_word[0] = ' ';
-						int lwl = strlen(last_word);
+						int lwl = strlen(last_word + 1);
 						memmove(buffer, last_word + 1, lwl);
 						ib = lwl;
 						buffer[ib++] = 32;
