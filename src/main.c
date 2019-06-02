@@ -1006,13 +1006,13 @@ void player_update(int mmul)
 		int32_t sel_cx = -1;
 		int32_t sel_cy = -1;
 		int32_t sel_cz = -1;
-		bool sel_valid = world_cast_ray(
+		int32_t sel_valid = world_cast_ray(
 			cam_x, cam_y, cam_z,
 			mat_rt31, mat_rt32, mat_rt33,
 			&sel_cx, &sel_cy, &sel_cz,
 			10, false);
 
-		if (sel_valid && world_get_block(sel_cx, sel_cy, sel_cz) != 0) {
+		if (sel_valid >= 0 && world_get_block(sel_cx, sel_cy, sel_cz) != 0) {
 			int32_t bl = world_get_block(sel_cx, sel_cy, sel_cz);
 			if (bl == 46) {
 				for (int32_t cdx = -2; cdx <= 2; cdx++)
@@ -1029,13 +1029,13 @@ void player_update(int mmul)
 		int32_t sel_cx = -1;
 		int32_t sel_cy = -1;
 		int32_t sel_cz = -1;
-		bool sel_valid = world_cast_ray(
+		int32_t sel_valid = world_cast_ray(
 			cam_x, cam_y, cam_z,
 			mat_rt31, mat_rt32, mat_rt33,
 			&sel_cx, &sel_cy, &sel_cz,
 			10, false);
 
-		if (sel_valid) {
+		if (sel_valid >= 0) {
 			int32_t sel_block = world_get_block(sel_cx, sel_cy, sel_cz);
 			for (int i = 0; i <= HOTBAR_MAX; i++) {
 				if (i == HOTBAR_MAX)
@@ -1053,14 +1053,26 @@ void player_update(int mmul)
 		int32_t sel_cx = -1;
 		int32_t sel_cy = -1;
 		int32_t sel_cz = -1;
-		bool sel_valid = world_cast_ray(
+		int32_t sel_valid = world_cast_ray(
 			cam_x, cam_y, cam_z,
 			mat_rt31, mat_rt32, mat_rt33,
 			&sel_cx, &sel_cy, &sel_cz,
 			10, true);
 
-		if (sel_valid && try_move(0, 0, 0, false)) {
-			world_set_block(sel_cx, sel_cy, sel_cz, current_block[hotbar_pos], 1);
+		if (sel_valid >= 0 && try_move(0, 0, 0, false)) {
+			int32_t b_set = 0;
+
+			if (sel_valid == FACE_YP && current_block[hotbar_pos] == 44) {
+				int sel_cb = world_get_block(sel_cx, sel_cy - 1, sel_cz);
+				if (sel_cb == 44) {
+					world_set_block(sel_cx, sel_cy - 1, sel_cz, 43, 1);
+					b_set = 1;
+				}
+			}
+
+			if (b_set == 0) {
+				world_set_block(sel_cx, sel_cy, sel_cz, current_block[hotbar_pos], 1);
+			}
 		}
 	}
 

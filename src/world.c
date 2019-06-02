@@ -82,7 +82,7 @@ void world_set_block(int32_t cx, int32_t cy, int32_t cz, uint8_t b, uint8_t flag
 
 uint32_t world_is_raycast_hit(int32_t b);
 
-bool world_cast_ray(int32_t px, int32_t py, int32_t pz, int32_t vx, int32_t vy, int32_t vz, int32_t *ocx, int32_t *ocy, int32_t *ocz, int32_t max_steps, bool use_block_before_hit)
+int32_t world_cast_ray(int32_t px, int32_t py, int32_t pz, int32_t vx, int32_t vy, int32_t vz, int32_t *ocx, int32_t *ocy, int32_t *ocz, int32_t max_steps, bool use_block_before_hit)
 {
 	// Get cell
 	int32_t cx = px>>8;
@@ -122,6 +122,7 @@ bool world_cast_ray(int32_t px, int32_t py, int32_t pz, int32_t vx, int32_t vy, 
 		int32_t lcx = cx;
 		int32_t lcy = cy;
 		int32_t lcz = cz;
+		int32_t face_hit = -1;
 
 		// Find nearest boundary
 		if(tx < ty && tx < tz) {
@@ -130,21 +131,21 @@ bool world_cast_ray(int32_t px, int32_t py, int32_t pz, int32_t vx, int32_t vy, 
 			ty -= tx;
 			tz -= tx;
 			tx = tbx;
-
+			face_hit = gx < 0 ? FACE_XP : FACE_XN;
 		} else if(ty < tz) {
 			// Y
 			tx -= ty;
 			cy += gy;
 			tz -= ty;
 			ty = tby;
-
+			face_hit = gy < 0 ? FACE_YP : FACE_YN;
 		} else {
 			// Z
 			tx -= tz;
 			ty -= tz;
 			cz += gz;
 			tz = tbz;
-
+			face_hit = gz < 0 ? FACE_ZP : FACE_ZN;
 		}
 
 		// Check if our cell is good
@@ -161,13 +162,13 @@ bool world_cast_ray(int32_t px, int32_t py, int32_t pz, int32_t vx, int32_t vy, 
 			}
 
 			// And return
-			return true;
+			return face_hit;
 		}
 
 	}
 
 	// We hit nothing
-	return false;
+	return -1;
 }
 
 inline uint32_t world_is_translucent(int32_t b) {

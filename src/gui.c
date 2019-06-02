@@ -297,13 +297,13 @@ void draw_current_block(void)
 		int32_t sel_cx = -1;
 		int32_t sel_cy = -1;
 		int32_t sel_cz = -1;
-		bool sel_valid = world_cast_ray(
+		int32_t sel_valid = world_cast_ray(
 			cam_x, cam_y, cam_z,
 			mat_rt31, mat_rt32, mat_rt33,
 			&sel_cx, &sel_cy, &sel_cz,
 			10, true);
 
-		if(sel_valid) {
+		if(sel_valid >= 0) {
 			int32_t fmask = 0x00;
 			fmask |= (cam_cx < sel_cx ? 0x04 : cam_cx > sel_cx ? 0x08 : 0);
 			fmask |= (cam_cy < sel_cy ? 0x10 : cam_cy > sel_cy ? 0x20 : 0);

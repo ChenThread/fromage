@@ -146,7 +146,7 @@ int32_t world_get_block_unsafe(int32_t cx, int32_t cy, int32_t cz);
 int32_t world_get_render_faces_unsafe(int32_t cx, int32_t cy, int32_t cz);
 int32_t world_get_block(int32_t cx, int32_t cy, int32_t cz);
 void world_set_block(int32_t cx, int32_t cy, int32_t cz, uint8_t b, uint8_t flags);
-bool world_cast_ray(int32_t px, int32_t py, int32_t pz, int32_t vx, int32_t vy, int32_t vz, int32_t *ocx, int32_t *ocy, int32_t *ocz, int32_t max_steps, bool use_block_before_hit);
+int32_t world_cast_ray(int32_t px, int32_t py, int32_t pz, int32_t vx, int32_t vy, int32_t vz, int32_t *ocx, int32_t *ocy, int32_t *ocz, int32_t max_steps, bool use_block_before_hit);
 uint32_t world_is_translucent(int32_t b);
 uint32_t world_is_walkable(int32_t b);
 int32_t world_is_colliding(int32_t x1, int32_t y1, int32_t z1, int32_t x2, int32_t y2, int32_t z2);
