@@ -979,6 +979,7 @@ void player_update(int mmul)
 			}
 			case 4:
 			default:
+				is_menu_open = 0;
 				break;
 		}
 	}
