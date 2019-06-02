@@ -1284,7 +1284,7 @@ int main(void)
 
 	// DMA a texture
 	gpu_dma_load(atlas_raw, 768, 256, 320/4, 256);
-	gpu_dma_load((uint32_t*) (&font_raw[64]), 768 + 320/4, 256, 128/4, 64);
+	gpu_dma_load((uint32_t*) (&font_raw[64]), 64 * 0xE, 256, 128*VID_WIDTH_MULTIPLIER/4, 64);
 
 	// Write font CLUT
 	gp1_command(0x04000001); // DMA mode: FIFO (1)

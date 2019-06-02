@@ -36,27 +36,24 @@ static void draw_text_buffer(int x, int y, int color, const char *buffer)
 	x -= VID_WIDTH/2;
 	y -= VID_HEIGHT/2;
 
-#if VID_WIDTH_MULTIPLIER == 1
 	// Undo texpage
 	DMA_PUSH(1, 1);
 	dma_buffer[dma_pos++] = 0x00000000;
 	DMA_PUSH(1, 1);
 	dma_buffer[dma_pos++] = 0xE1000600;
-#endif
 
 	for (size_t i = 0; i < strlen(buffer); i++) {
 		uint8_t c = buffer[i];
 		int width = CHAR_WIDTH(c);
+		int widthmul = width * VID_WIDTH_MULTIPLIER;
 		int pos = (x & 0xFFFF) + ((y & 0xFFFF) << 16);
-		int texcoord = (((c & 15) << 3) + 64) | ((c >> 4) << 11);
+		int texcoord = (((c & 15) * VID_WIDTH_MULTIPLIER) << 3) | ((c >> 4) << 11);
 
-#if VID_WIDTH_MULTIPLIER == 1
 		DMA_PUSH(4, 1);
 		dma_buffer[dma_pos++] = 0x64000000 | color;
 		dma_buffer[dma_pos++] = pos;
 		dma_buffer[dma_pos++] = (384 << 22) | (0x35 << 16) | texcoord;
-		dma_buffer[dma_pos++] = (8 << 16) | (width & 0xFFFF);
-		//dma_buffer[dma_pos++] = (0x1D << 16) | (texcoord + width);
+		dma_buffer[dma_pos++] = (8 << 16) | (widthmul & 0xFFFF);
 
 		pos += 0x10001;
 
@@ -64,45 +61,16 @@ static void draw_text_buffer(int x, int y, int color, const char *buffer)
 		dma_buffer[dma_pos++] = 0x66000000;
 		dma_buffer[dma_pos++] = pos;
 		dma_buffer[dma_pos++] = (384 << 22) | (0x35 << 16) | texcoord;
-		dma_buffer[dma_pos++] = (8 << 16) | (width & 0xFFFF);
-		dma_buffer[dma_pos++] = (384 << 22) | (0x35 << 16) | texcoord;
-
-#else
-		DMA_PUSH(9, 1);
-		dma_buffer[dma_pos++] = 0x2C000000 | color;
-		dma_buffer[dma_pos++] = pos;
-		dma_buffer[dma_pos++] = (384 << 22) | (0x35 << 16) | texcoord;
-		dma_buffer[dma_pos++] = pos + width * VID_WIDTH_MULTIPLIER + 1;
-		dma_buffer[dma_pos++] = (0x1D << 16) | (texcoord + width);
-		dma_buffer[dma_pos++] = pos + 0x80000;
-		dma_buffer[dma_pos++] = texcoord + 0x800;
-		dma_buffer[dma_pos++] = pos + 0x80000 + width * VID_WIDTH_MULTIPLIER + 1;
-		dma_buffer[dma_pos++] = texcoord + 0x800 + width;
-
-		pos += 0x10001;
-
-		DMA_PUSH(9, 1);
-		dma_buffer[dma_pos++] = 0x2E000000;
-		dma_buffer[dma_pos++] = pos;
-		dma_buffer[dma_pos++] = (384 << 22) | (0x35 << 16) | texcoord;
-		dma_buffer[dma_pos++] = pos + width * VID_WIDTH_MULTIPLIER + 1;
-		dma_buffer[dma_pos++] = (0x1D << 16) | (texcoord + width);
-		dma_buffer[dma_pos++] = pos + 0x80000;
-		dma_buffer[dma_pos++] = texcoord + 0x800;
-		dma_buffer[dma_pos++] = pos + 0x80000 + width * VID_WIDTH_MULTIPLIER + 1;
-		dma_buffer[dma_pos++] = texcoord + 0x800 + width;
-#endif
+		dma_buffer[dma_pos++] = (8 << 16) | (widthmul & 0xFFFF);
 
 		x += (width + 1) * VID_WIDTH_MULTIPLIER;
 	}
 
-#if VID_WIDTH_MULTIPLIER == 1
 	// Do texpage
 	DMA_PUSH(1, 1);
 	dma_buffer[dma_pos++] = 0x00000000;
 	DMA_PUSH(1, 1);
-	dma_buffer[dma_pos++] = 0xE100061D;
-#endif
+	dma_buffer[dma_pos++] = 0xE100061E;
 
 }
 
