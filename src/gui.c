@@ -445,10 +445,12 @@ void gui_terrible_text_viewer(const char* text)
 	// Shoo!
 	int text_pos = 0;
 	int last_tp = -1;
+	int line_height = 9;
 	int border_width = VID_WIDTH * 7 / 8;
 	int border_height = VID_HEIGHT * 7 / 8;
 	int window_width = border_width - 8*VID_WIDTH_MULTIPLIER;
-	int window_height = (border_height - 8) & (~7);
+	int window_height = (border_height - 8);
+	window_height = window_height - (window_height % line_height);
 	int window_x = ((VID_WIDTH - window_width) / 2);
 	int window_y = ((VID_HEIGHT - window_height) / 2);
 	int border_x = ((-border_width) / 2);
@@ -493,11 +495,11 @@ void gui_terrible_text_viewer(const char* text)
 						memmove(buffer, last_word + 1, lwl);
 						ib = lwl;
 						buffer[ib++] = 32;
-						iy += 8;
+						iy += line_height;
 					} else if ((*tpos) == 10) {
 						draw_text_buffer(window_x + ix, window_y + iy, 0xFFFFFF, buffer);
 						ib = 0;
-						iy += 8;
+						iy += line_height;
 					} else {
 						buffer[ib++] = 32;
 					}
