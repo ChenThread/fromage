@@ -9,9 +9,11 @@ volatile uint32_t vis_frame_y = 0;
 
 void frame_start(void)
 {
-	DMA_PUSH(3, DMA_ORDER_MAX-1);
+	DMA_PUSH(1, DMA_ORDER_MAX-1);
 	dma_buffer[dma_pos++] = 0xE3000000 | ((frame_x+0)<<0) | ((frame_y+0)<<10); // XY1 draw range
+	DMA_PUSH(1, DMA_ORDER_MAX-1);
 	dma_buffer[dma_pos++] = 0xE4000000 | ((frame_x+VID_WIDTH-1)<<0) | ((frame_y+VID_HEIGHT-1)<<10); // XY2 draw range
+	DMA_PUSH(1, DMA_ORDER_MAX-1);
 	dma_buffer[dma_pos++] = 0xE5000000 | ((frame_x+VID_WIDTH/2)<<0) | ((frame_y+VID_HEIGHT/2)<<11); // Draw offset
 }
 

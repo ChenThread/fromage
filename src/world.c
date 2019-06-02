@@ -175,7 +175,7 @@ inline uint32_t world_is_translucent(int32_t b) {
 }
 
 inline uint32_t world_is_translucent_render(int32_t b) {
-	return world_is_translucent(b) || (b >= 8 && b <= 11);
+	return world_is_translucent(b) || (b >= 8 && b <= 9);
 }
 
 inline uint32_t world_is_walkable(int32_t b) {
@@ -224,14 +224,33 @@ static inline uint32_t equal_render(int32_t b, int32_t nb) {
 	else return b == nb;
 }
 
-static inline uint32_t should_render(int32_t b, int32_t nx, int32_t ny, int32_t nz) {
+static inline uint32_t should_render(int32_t b, int32_t nx, int32_t ny, int32_t nz, int32_t face) {
 	int32_t nb = world_get_block_unsafe(nx, ny, nz);
-	if (nb == 0 || nb == 44) {
-		return 1;
-	} else if (!equal_render(b, nb)) {
-		return world_is_translucent_render(b) || world_is_translucent_render(nb);
-	} else {
-		return 0;
+	switch (b) {
+		case 8:
+		case 9: // water
+			return nb == 0;
+		case 6:
+		case 37:
+		case 38:
+		case 39:
+		case 40: // plants
+			return 1;
+		case 18: // leaves
+		case 20: // glass
+			return b != nb && world_is_translucent(nb);
+		case 44: // single slab
+			if (face == FACE_YP) return 1;
+			else return world_is_translucent_render(nb);
+		default: // solid blocks
+			switch (nb) {
+				case 44:
+					if (face != FACE_YP) return 1;
+					return world_is_translucent_render(nb);
+				default:
+					return world_is_translucent_render(nb);
+			}
+			break;
 	}
 }
 
@@ -243,12 +262,12 @@ static inline uint32_t calc_fmask(int32_t cx, int32_t cy, int32_t cz, int32_t b)
 
 	uint32_t fmask = 0;
 
-	if(cz > 0 && should_render(b, cx, cy, cz-1)) fmask |= 0x01;
-	if(cx > 0 && should_render(b, cx-1, cy, cz)) fmask |= 0x04;
-	if(cy > 0 && should_render(b, cx, cy-1, cz)) fmask |= 0x10;
-	if(cz < LEVEL_LZ-1 && should_render(b, cx, cy, cz+1)) fmask |= 0x02;
-	if(cx < LEVEL_LX-1 && should_render(b, cx+1, cy, cz)) fmask |= 0x08;
-	if(cy < LEVEL_LY-1 && should_render(b, cx, cy+1, cz)) fmask |= 0x20;
+	if(cz > 0 && should_render(b, cx, cy, cz-1, FACE_ZN)) fmask |= 0x01;
+	if(cx > 0 && should_render(b, cx-1, cy, cz, FACE_XN)) fmask |= 0x04;
+	if(cy > 0 && should_render(b, cx, cy-1, cz, FACE_YN)) fmask |= 0x10;
+	if(cz < LEVEL_LZ-1 && should_render(b, cx, cy, cz+1, FACE_ZP)) fmask |= 0x02;
+	if(cx < LEVEL_LX-1 && should_render(b, cx+1, cy, cz, FACE_XP)) fmask |= 0x08;
+	if(cy < LEVEL_LY-1 && should_render(b, cx, cy+1, cz, FACE_YP)) fmask |= 0x20;
 
 	return fmask;
 }

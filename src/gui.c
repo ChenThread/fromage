@@ -372,15 +372,15 @@ void draw_liquid_overlay(void)
 	int32_t cam_cb = world_get_block(cam_cx, cam_cy, cam_cz);
 
 	if ((cam_cb & (~1)) == 8) {
-		DMA_PUSH(6, 1);
 		for (int i = 0; i < 2; i++) {
+			DMA_PUSH(3, 1);
 			dma_buffer[dma_pos++] = 0x62501000;
 			dma_buffer[dma_pos++] = (((-(VID_HEIGHT/2))&0xFFFF) << 16) | ((-(VID_WIDTH/2))&0xFFFF);
 			dma_buffer[dma_pos++] = (VID_HEIGHT << 16) | (VID_WIDTH << 0);
 		}
 	} else if ((cam_cb & (~1)) == 10) {
-		DMA_PUSH(9, 1);
 		for (int i = 0; i < 3; i++) {
+			DMA_PUSH(3, 1);
 			dma_buffer[dma_pos++] = 0x62081CB0;
 			dma_buffer[dma_pos++] = (((-(VID_HEIGHT/2))&0xFFFF) << 16) | ((-(VID_WIDTH/2))&0xFFFF);
 			dma_buffer[dma_pos++] = (VID_HEIGHT << 16) | (VID_WIDTH << 0);

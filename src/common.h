@@ -21,6 +21,12 @@ typedef fixed vec4[4];
 typedef vec4 mat4[4];
 
 #define FM_PI ((fixed)0x00008000)
+#define FACE_ZN 0
+#define FACE_ZP 1
+#define FACE_XN 2
+#define FACE_XP 3
+#define FACE_YN 4
+#define FACE_YP 5
 
 // Files
 #define LEVEL_LX 64
@@ -82,7 +88,7 @@ extern uint32_t dma_buffer[256*512];
 extern uint32_t dma_order_table[4][DMA_ORDER_MAX];
 extern uint32_t dma_buffer_current;
 #define DMA_PUSH(len, ot) \
-	while(dma_pos*4 >= sizeof(dma_buffer)) {} \
+	while(dma_pos >= (sizeof(dma_buffer)/sizeof(int32_t))) {} \
 	dma_buffer[dma_pos] = \
 		(dma_order_table[dma_buffer_current][ot] & 0x00FFFFFF) \
 		| ((len)<<24); \
