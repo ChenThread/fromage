@@ -527,7 +527,6 @@ void draw_world(void)
 		int cull##X##xstep4 = cull##X##xstep1*4; \
 		int cull##X##ystep4 = cull##X##ystep1*4; \
 		int cull##X##zstep4 = cull##X##zstep1*4; \
-		int cull##X##xzstep16 = cull##X##xstep1*4 + cull##X##zstep1*16; \
 		int cull##X##xmin = ((cxmin<<8)+0x200-cam_x)*cull##X##xstep_raw; \
 		int cull##X##ymin = ((cymin<<8)+0x200-cam_y)*cull##X##ystep_raw; \
 		int cull##X##zmin = ((czmin<<8)+0x200-cam_z)*cull##X##zstep_raw; \
@@ -597,11 +596,11 @@ void draw_world(void)
 			) {
 
 			if((vismask & 15) == 0) {
-				if (vismask == 0) { break; }
-				bcull0 += cull0xzstep16;
-				bcull1 += cull1xzstep16;
-				bcull2 += cull2xzstep16;
-				bcull3 += cull3xzstep16;
+				if (vismask == 0) break;
+				bcull0 += (cull0zstep1<<2) + (cull0xstep1<<4);
+				bcull1 += (cull1zstep1<<2) + (cull1xstep1<<4);
+				bcull2 += (cull2zstep1<<2) + (cull2xstep1<<4);
+				bcull3 += (cull3zstep1<<2) + (cull3xstep1<<4);
 				vismask >>= 4;
 				continue;
 			}
@@ -621,10 +620,10 @@ void draw_world(void)
 
 			if((vismask & 1) == 0) {
 				if (vismask == 0) { biy = 4; break; }
-				bcull0 += cull0xstep4;
-				bcull1 += cull1xstep4;
-				bcull2 += cull2xstep4;
-				bcull3 += cull3xstep4;
+				bcull0 += cull0xstep1<<2;
+				bcull1 += cull1xstep1<<2;
+				bcull2 += cull2xstep1<<2;
+				bcull3 += cull3xstep1<<2;
 				continue;
 			}
 			nfmask &= ~0x03;
