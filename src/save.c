@@ -40,6 +40,15 @@ void write_sjis_name(uint8_t *buffer, const char *format, ...)
 #define WRITE16(i, v) { secbuf[i] = ((v) & 0xFF); secbuf[i+1] = ((v) >> 8); }
 #define WRITE32(i, v) { secbuf[i] = ((v) & 0xFF); secbuf[i+1] = (((v) >> 8) & 0xFF); secbuf[i+2] = (((v) >> 16) & 0xFF); secbuf[i+3] = ((v) >> 24); }
 
+void checksum_memory_card_frame(uint8_t *secbuf)
+{
+	uint8_t checksum = 0x00;
+	for(size_t i = 0; i < 0x7F; i++) {
+		checksum ^= secbuf[i];
+	}
+	secbuf[0x7F] = checksum;
+}
+
 int load_level(int save_id, level_info *info, char *target, int32_t target_size, save_progress_callback *pc)
 {
 	uint8_t secbuf[128];
@@ -184,6 +193,7 @@ int save_level(int save_id, level_info *info, const char *data, save_progress_ca
 					return -6;
 				}
 				secbuf[0] = (secbuf[0] & 0x0F) | 0xA0;
+				checksum_memory_card_frame(secbuf);
 				if (sawpads_write_card_sector(j + 1, secbuf) <= 0) {
 					free(level_cmp_data);
 					return -6;
@@ -219,8 +229,9 @@ int save_level(int save_id, level_info *info, const char *data, save_progress_ca
 			memset(secbuf + 0x0a, 0, 0x20 - 0x0a);
 		}
 
-		secbuf[0x7F] = 0;
-		for (int i = 0; i < 0x1F; i++) secbuf[0x7F] ^= secbuf[i];
+		//secbuf[0x7F] = 0;
+		//for (int i = 0; i < 0x1F; i++) secbuf[0x7F] ^= secbuf[i];
+		checksum_memory_card_frame(secbuf);
 		if (sawpads_write_card_sector(block_ids[i], secbuf) <= 0) {
 			free(level_cmp_data);
 			return i == 0 ? -3 : -5;
