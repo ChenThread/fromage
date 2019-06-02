@@ -110,6 +110,7 @@ uint32_t ticks = 0;
 uint32_t movement_ticks = 0;
 uint32_t tex_update_ticks = 0;
 uint32_t tex_update_blanks = 0;
+uint32_t feet_sound_ticks = 0;
 
 #define OT_WORLD 2
 
@@ -1024,6 +1025,9 @@ void player_update(int mmul)
 			} else {
 				world_set_block(sel_cx, sel_cy, sel_cz, 0, 1);
 			}
+			if (!world_is_walkable(bl)) {
+				sound_play(sound_get_id(bl), 0x3FFF, 0x3FFF);
+			}
 		}
 	}
 
@@ -1074,6 +1078,10 @@ void player_update(int mmul)
 
 			if (b_set == 0) {
 				world_set_block(sel_cx, sel_cy, sel_cz, current_block[hotbar_pos], 1);
+			}
+
+			if (!world_is_walkable(current_block[hotbar_pos])) {
+				sound_play(sound_get_id(current_block[hotbar_pos]), 0x3FFF, 0x3FFF);
 			}
 		}
 	}
@@ -1153,6 +1161,10 @@ void player_update(int mmul)
 
 	bool in_liquid = player_is_in_liquid();
 
+	int prev_feet_x = cam_x >> 8;
+	int prev_feet_y = (cam_y - 443) >> 8;
+	int prev_feet_z = cam_z >> 8;
+
 	for (int i = 0; i < mmul; i++) {
 		if ((sawpads_buttons & PAD_X) == 0) {
 			if (in_liquid || !try_move(0, -16, 0, false))
@@ -1188,6 +1200,19 @@ void player_update(int mmul)
 			while (vel_z != 0 && !try_move(0, 0, vel_z, true)) {
 				vel_z /= 2;
 			}
+		}
+	}
+
+	int feet_x = cam_x >> 8;
+	int feet_y = (cam_y - 443) >> 8;
+	int feet_z = cam_z >> 8;
+
+	feet_sound_ticks += mmul*3;
+	if (prev_feet_x != feet_x || prev_feet_y != feet_y || prev_feet_z != feet_z) {
+		int bid = world_get_block(feet_x, feet_y, feet_z);
+		if (!world_is_walkable(bid) && feet_sound_ticks >= VBLANKS_PER_SEC) {
+			feet_sound_ticks %= VBLANKS_PER_SEC;
+			sound_play(sound_get_id(bid), 0x1FFF, 0x1FFF);
 		}
 	}
 #endif
@@ -1319,6 +1344,9 @@ int main(void)
 	// Display enable: ON (1)
 	gp1_command(0x03000000);
 	wait_for_next_vblank();
+
+	// Initialize sound
+	sound_init();
 
         // Generate a world
 	world_main_generate();

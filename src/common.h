@@ -141,6 +141,11 @@ const char *save_get_error_string(int value);
 int load_level(int save_id, level_info *info, uint8_t *target, int32_t target_size, save_progress_callback *pc);
 int save_level(int save_id, level_info *info, const uint8_t *data, save_progress_callback *pc);
 
+// sound.c
+void sound_init(void);
+void sound_play(int id, int vol_left, int vol_right);
+int sound_get_id(int32_t block_id);
+
 // world.c
 uint8_t world_get_top_opaque(int32_t cx, int32_t cz);
 uint32_t world_get_vis_blocks_unsafe(int32_t cx, int32_t cy, int32_t cz);
