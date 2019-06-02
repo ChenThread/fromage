@@ -35,6 +35,8 @@ void write_sjis_name(uint8_t *buffer, const char *format, ...)
 		if (c >= '0' && c <= '9') { buffer[pos++] = 0x82; buffer[pos++] = 0x4F + c - '0'; }
 		else if (c >= 'A' && c <= 'Z') { buffer[pos++] = 0x82; buffer[pos++] = 0x60 + c - 'A'; }
 		else if (c >= 'a' && c <= 'z') { buffer[pos++] = 0x82; buffer[pos++] = 0x81 + c - 'a'; }
+		else if (c == '(') { buffer[pos++] = 0x81; buffer[pos++] = 0x69; }
+		else if (c == ')') { buffer[pos++] = 0x81; buffer[pos++] = 0x6A; }
 		else /* space */ { buffer[pos++] = 0x81; buffer[pos++] = 0x40; }
 	}
 }
