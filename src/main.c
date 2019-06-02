@@ -956,21 +956,22 @@ void player_update(int mmul)
 	}
 
 	if ((joy_pressed & PAD_START) != 0) {
-		switch (gui_menu(5, "Generate new level", "Save level..", "Load level..", "License information", "Back to game")) {
+		int is_menu_open = 1;
+		while (is_menu_open) switch (gui_menu(5, "Generate new level", "Save level..", "Load level..", "License information", "Back to game")) {
 			case 0:
 				world_main_generate();
 				return;
 			case 1: {
-				int slot = gui_menu(5, "Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5");
-				if (slot < 0) break;
+				int slot = gui_menu(6, "Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Cancel");
+				if (slot < 0 || slot >= 5) break;
 				world_main_save(slot+1);
 				return;
 			}
 			case 2: {
-				int slot = gui_menu(5, "Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5");
-				if (slot < 0) break;
+				int slot = gui_menu(6, "Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Cancel");
+				if (slot < 0 || slot >= 5) break;
 				world_main_load(slot+1);
-				break;
+				return;
 			}
 			case 3: {
 				gui_terrible_text_viewer(license_text_txt);
