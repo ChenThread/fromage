@@ -108,6 +108,17 @@ void draw_liquid_overlay(void);
 int gui_menu(int optcount, ...);
 
 // save.c
+#define SAVE_ERROR_COMPRESSION -1
+#define SAVE_ERROR_OUT_OF_SPACE -2
+#define SAVE_ERROR_NOT_FOUND -3
+#define SAVE_ERROR_INVALID_ARGUMENTS -4
+#define SAVE_ERROR_CARD -5
+#define SAVE_ERROR_CARD_FATAL -6
+#define SAVE_ERROR_CORRUPT_DATA -7
+#define SAVE_ERROR_MAP_TOO_LARGE -8
+#define SAVE_ERROR_OUT_OF_MEMORY -9
+#define SAVE_ERROR_UNSUPPORTED_DATA -10
+
 typedef void save_progress_callback(int progress, int max);
 typedef struct {
 	int16_t xsize, ysize, zsize;
@@ -116,6 +127,7 @@ typedef struct {
 	uint8_t hotbar_pos;
 } level_info;
 
+const char *save_get_error_string(int value);
 int load_level(int save_id, level_info *info, char *target, int32_t target_size, save_progress_callback *pc);
 int save_level(int save_id, level_info *info, const char *data, save_progress_callback *pc);
 

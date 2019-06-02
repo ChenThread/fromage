@@ -891,7 +891,7 @@ void world_main_load(int slot)
 		// TODO: add error msgs
 		gpu_dma_init();
 		frame_start();
-		draw_status_window("Could not load level!");
+		draw_status_window("Error: %s", save_get_error_string(ret));
 		gpu_dma_finish();
 		wait_for_next_vblank();
 		frame_flip();
@@ -923,7 +923,11 @@ void world_main_save(int slot)
 	int ret = save_level(slot, &info, fsys_level, draw_status_prog_frame);
 	gpu_dma_init();
 	frame_start();
-	draw_status_window(ret >= 0 ? "World saved!" : "Could not save world!");
+	if (ret >= 0) {
+		draw_status_window("Level saved!");
+	} else {
+		draw_status_window("Error: %s", save_get_error_string(ret));
+	}
 	gpu_dma_finish();
 	wait_for_next_vblank();
 	frame_flip();

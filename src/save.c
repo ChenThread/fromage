@@ -4,6 +4,8 @@
 #include <sawpads.h>
 #include "lz4.h"
 
+#define VERSION_MAJOR 1
+#define VERSION_MINOR 0
 #define HEADER_SIZE sizeof(level_header_t)
 
 static int card_initialized = 0;
@@ -40,13 +42,51 @@ void write_sjis_name(uint8_t *buffer, const char *format, ...)
 #define WRITE16(i, v) { secbuf[i] = ((v) & 0xFF); secbuf[i+1] = ((v) >> 8); }
 #define WRITE32(i, v) { secbuf[i] = ((v) & 0xFF); secbuf[i+1] = (((v) >> 8) & 0xFF); secbuf[i+2] = (((v) >> 16) & 0xFF); secbuf[i+3] = ((v) >> 24); }
 
-void checksum_memory_card_frame(uint8_t *secbuf)
+static uint8_t get_card_checksum(uint8_t *secbuf)
 {
 	uint8_t checksum = 0x00;
 	for(size_t i = 0; i < 0x7F; i++) {
 		checksum ^= secbuf[i];
 	}
-	secbuf[0x7F] = checksum;
+	return checksum;
+}
+
+static void checksum_card_frame(uint8_t *secbuf)
+{
+	secbuf[0x7F] = get_card_checksum(secbuf);
+}
+
+static int checksum_card_match(uint8_t *secbuf)
+{
+	return secbuf[0x7F] == get_card_checksum(secbuf);
+}
+
+const char *save_get_error_string(int value)
+{
+	switch (value) {
+		case SAVE_ERROR_COMPRESSION:
+			return "Compression failed!";
+		case SAVE_ERROR_OUT_OF_SPACE:
+			return "Out of memory card space!";
+		case SAVE_ERROR_NOT_FOUND:
+			return "Save not found!";
+		case SAVE_ERROR_INVALID_ARGUMENTS:
+			return "Invalid arguments!";
+		case SAVE_ERROR_CARD:
+			return "Card error!";
+		case SAVE_ERROR_CARD_FATAL:
+			return "Fatal card error!";
+		case SAVE_ERROR_CORRUPT_DATA:
+			return "Save corrupted!";
+		case SAVE_ERROR_MAP_TOO_LARGE:
+			return "Map too large!";
+		case SAVE_ERROR_OUT_OF_MEMORY:
+			return "Out of memory!";
+		case SAVE_ERROR_UNSUPPORTED_DATA:
+			return "Unsupported save data!";
+		default:
+			return "<unknown error>";
+	}
 }
 
 int load_level(int save_id, level_info *info, char *target, int32_t target_size, save_progress_callback *pc)
@@ -59,12 +99,12 @@ int load_level(int save_id, level_info *info, char *target, int32_t target_size,
 	uint8_t *buffer;
 	int sectors_read = 0;
 
-	if (save_id < 0) return -1;
+	if (save_id < 0) return SAVE_ERROR_INVALID_ARGUMENTS;
 	snprintf(filename, sizeof(filename), "Fromage%d", save_id);
 
 	// find start block and nexts
 	for (int i = 1; i < 16; i++) {
-		if (sawpads_read_card_sector(i, secbuf) <= 0) return -3;
+		if (sawpads_read_card_sector(i, secbuf) <= 0) return SAVE_ERROR_CARD;
 
 		if ((secbuf[0] & 0x5C) == 0x50) {
 			if (start_block < 0 && strcmp(secbuf + 10, filename) == 0) {
@@ -74,12 +114,15 @@ int load_level(int save_id, level_info *info, char *target, int32_t target_size,
 		}
 	}
 
-	if (start_block < 0) return -2;
+	if (start_block < 0) return SAVE_ERROR_NOT_FOUND;
 
 	// read header and parse it
-	if (sawpads_read_card_sector((start_block + 1) * 64 + 2, secbuf) <= 0) return -3;
+	if (sawpads_read_card_sector((start_block + 1) * 64 + 2, secbuf) <= 0) return SAVE_ERROR_CARD;
+
+	if (secbuf[0] != VERSION_MAJOR || secbuf[1] != VERSION_MINOR) return SAVE_ERROR_UNSUPPORTED_DATA;
+
 	int16_t sector_count = READ16(0x08);
-	if (sector_count < 0) return -6;
+	if (sector_count < 0) return SAVE_ERROR_CORRUPT_DATA;
 
 	int cmp_data_size = ((sector_count - 1) * 128) + ((secbuf[0x0A] & 0x7F) + 1);
 
@@ -93,14 +136,14 @@ int load_level(int save_id, level_info *info, char *target, int32_t target_size,
 	info->cam_ry = READ16(0x1E);
 
 	int target_data_size = info->xsize * info->ysize * info->zsize;
-	if (target_data_size > target_size) return -4;
+	if (target_data_size > target_size) return SAVE_ERROR_MAP_TOO_LARGE;
 
 	info->hotbar_pos = secbuf[0x20] & 0x0F;
 	for (int i = 0; i < HOTBAR_MAX; i++)
 		info->hotbar_blocks[i] = secbuf[0x21 + i];
 
 	buffer = malloc(sector_count * 128);
-	if (buffer == NULL) return -4;
+	if (buffer == NULL) return SAVE_ERROR_OUT_OF_MEMORY;
 
 	// read data
 	while (start_block >= 0) {
@@ -108,7 +151,7 @@ int load_level(int save_id, level_info *info, char *target, int32_t target_size,
 			if (pc != NULL) pc(sectors_read, sector_count);
 			if (sectors_read >= sector_count) break;
 
-			if (sawpads_read_card_sector((start_block + 1) * 64 + start_sector, buffer + (sectors_read * 128)) <= 0) return -3;
+			if (sawpads_read_card_sector((start_block + 1) * 64 + start_sector, buffer + (sectors_read * 128)) <= 0) return SAVE_ERROR_CARD;
 			start_sector++; sectors_read++;
 		}
 
@@ -134,19 +177,19 @@ int save_level(int save_id, level_info *info, const char *data, save_progress_ca
 	uint8_t block_delete[15];
 	char filename[16];
 
-	if (save_id < 0) return -1;
+	if (save_id < 0) return SAVE_ERROR_INVALID_ARGUMENTS;
 	snprintf(filename, sizeof(filename), "Fromage%d", save_id);
 
 	int level_size = info->xsize * info->ysize * info->zsize;
 	int level_cmp_size = LZ4_compressBound(level_size);
 	char *level_cmp_data = malloc(level_cmp_size);
-	if (level_cmp_data == NULL) return -1;
+	if (level_cmp_data == NULL) return SAVE_ERROR_OUT_OF_MEMORY;
 
 	level_cmp_size = LZ4_compress_default(data, level_cmp_data, level_size, level_cmp_size);
-	if (level_cmp_size <= 0) return -1;
+	if (level_cmp_size <= 0) return SAVE_ERROR_COMPRESSION;
 
 	level_cmp_data = realloc(level_cmp_data, level_cmp_size);
-	if (level_cmp_data == NULL) return -1;
+	if (level_cmp_data == NULL) return SAVE_ERROR_OUT_OF_MEMORY;
 
 	init_card(pc);
 
@@ -154,7 +197,7 @@ int save_level(int save_id, level_info *info, const char *data, save_progress_ca
 	int blocks_required = (sectors_required + 63) / 64;
 	if (blocks_required > 15) {
 		free(level_cmp_data);
-		return -2;
+		return SAVE_ERROR_MAP_TOO_LARGE;
 	}
 
 	int progress_max = sectors_required + 3 + 1;
@@ -168,7 +211,7 @@ int save_level(int save_id, level_info *info, const char *data, save_progress_ca
 	for (int i = 1; i < 16; i++) {
 		if (sawpads_read_card_sector(i, secbuf) <= 0) {
 			free(level_cmp_data);
-			return -3;
+			return SAVE_ERROR_CARD;
 		}
 		block_delete[i - 1] = 0;
 
@@ -190,13 +233,13 @@ int save_level(int save_id, level_info *info, const char *data, save_progress_ca
 			while (j >= 0) {
 				if (sawpads_read_card_sector(j + 1, secbuf) <= 0) {
 					free(level_cmp_data);
-					return -6;
+					return SAVE_ERROR_CARD_FATAL;
 				}
 				secbuf[0] = (secbuf[0] & 0x0F) | 0xA0;
-				checksum_memory_card_frame(secbuf);
+				checksum_card_frame(secbuf);
 				if (sawpads_write_card_sector(j + 1, secbuf) <= 0) {
 					free(level_cmp_data);
-					return -6;
+					return SAVE_ERROR_CARD_FATAL;
 				}
 				block_ids[blocks_found++] = j;
 				j = block_nexts[j];
@@ -206,7 +249,7 @@ int save_level(int save_id, level_info *info, const char *data, save_progress_ca
 
 	if (blocks_found < blocks_required) {
 		free(level_cmp_data);
-		return -4;
+		return SAVE_ERROR_OUT_OF_SPACE;
 	}
 
 	// allocate blocks
@@ -229,9 +272,7 @@ int save_level(int save_id, level_info *info, const char *data, save_progress_ca
 			memset(secbuf + 0x0a, 0, 0x20 - 0x0a);
 		}
 
-		//secbuf[0x7F] = 0;
-		//for (int i = 0; i < 0x1F; i++) secbuf[0x7F] ^= secbuf[i];
-		checksum_memory_card_frame(secbuf);
+		checksum_card_frame(secbuf);
 		if (sawpads_write_card_sector(block_ids[i], secbuf) <= 0) {
 			free(level_cmp_data);
 			return i == 0 ? -3 : -5;
@@ -247,7 +288,7 @@ int save_level(int save_id, level_info *info, const char *data, save_progress_ca
 	write_sjis_name(secbuf + 4, "Fromage (Slot %d)", save_id);
 	if (sawpads_write_card_sector(block_ids[0] * 64, secbuf) <= 0) {
 		free(level_cmp_data);
-		return -5;
+		return SAVE_ERROR_CARD_FATAL;
 	}
 	if (pc != NULL) pc(2, progress_max);
 
@@ -255,14 +296,14 @@ int save_level(int save_id, level_info *info, const char *data, save_progress_ca
 	memset(secbuf, 0, 128);
 	if (sawpads_write_card_sector(block_ids[0] * 64 + 1, secbuf) <= 0) {
 		free(level_cmp_data);
-		return -5;
+		return SAVE_ERROR_CARD_FATAL;
 	}
 	if (pc != NULL) pc(3, progress_max);
 
 	// write fromage header frame
 	memset(secbuf, 0, 128);
-	secbuf[0x00] = 1;
-	secbuf[0x01] = 0;
+	secbuf[0x00] = VERSION_MAJOR;
+	secbuf[0x01] = VERSION_MINOR;
 	WRITE16(0x02, info->xsize);
 	WRITE16(0x04, info->ysize);
 	WRITE16(0x06, info->zsize);
@@ -279,7 +320,7 @@ int save_level(int save_id, level_info *info, const char *data, save_progress_ca
 
 	if (sawpads_write_card_sector(block_ids[0] * 64 + 2, secbuf) <= 0) {
 		free(level_cmp_data);
-		return -5;
+		return SAVE_ERROR_CARD_FATAL;
 	}
 
 	// write fromage data frames
@@ -288,11 +329,11 @@ int save_level(int save_id, level_info *info, const char *data, save_progress_ca
 		uint8_t *ptr = level_cmp_data + (128 * (i - 3));
 		if (sawpads_write_card_sector(block_ids[i >> 6] * 64 + (i & 0x3F), ptr) <= 0) {
 			free(level_cmp_data);
-			return -5;
+			return SAVE_ERROR_CARD_FATAL;
 		}
 	}
 
 	// done!
 	free(level_cmp_data);
-	return level_cmp_size;
+	return blocks_required;
 }
