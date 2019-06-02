@@ -93,6 +93,7 @@ void gpu_dma_init(void);
 void gpu_dma_finish(void);
 
 // gui.c
+#define FONT_CHARS 128
 int get_text_width(char *format, ...);
 void draw_text(int x, int y, int color, char *format, ...);
 void draw_status_progress(int progress, int max);

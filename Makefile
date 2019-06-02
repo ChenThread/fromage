@@ -44,6 +44,7 @@ ISO_NAME=fromage
 
 DATDIR = dat
 OBJDIR = obj
+RESDIR = res
 SRCDIR = src
 
 INCLUDES = src/block_info.h src/common.h src/config.h src/psx.h
@@ -58,6 +59,7 @@ OBJS =	$(OBJDIR)/cdrom.o \
 	\
 	$(OBJDIR)/atlas.o \
 	$(OBJDIR)/font.o \
+	$(OBJDIR)/icon.o \
 	\
 	$(OBJDIR)/lz4.o \
 	\
@@ -67,7 +69,8 @@ OBJS =	$(OBJDIR)/cdrom.o \
 all: $(EXE_NAME).exe $(ISO_NAME).cue
 
 clean:
-	$(RM_F) $(OBJS) $(OBJDIR)/$(EXE_NAME).elf $(ISO_NAME).bin $(ISO_NAME).cue $(OBJDIR)/atlas.s $(OBJDIR)/font.s
+	$(RM_F) $(OBJS) $(OBJDIR)/$(EXE_NAME).elf $(ISO_NAME).bin $(ISO_NAME).cue
+	$(RM_F) $(OBJDIR)/atlas.s $(OBJDIR)/font.s $(OBJDIR)/icon.s $(OBJDIR)/icon.raw
 
 $(ISO_NAME).cue: $(ISO_NAME) manifest.txt
 	$(CANDYK)/bin/pscd-new manifest.txt
@@ -95,3 +98,9 @@ $(OBJDIR)/font.o: $(DATDIR)/font.raw tools/bin2s.py $(INCLUDES)
 	$(PYTHON3) tools/bin2s.py $(DATDIR)/font.raw > $(OBJDIR)/font.s
 	$(CROSS_AS) -o $@ $(ASFLAGS) $(OBJDIR)/font.s
 
+$(OBJDIR)/icon.raw: $(RESDIR)/icon.png
+	$(PYTHON3) tools/mkicon.py $(RESDIR)/icon.png $(OBJDIR)/icon.raw
+
+$(OBJDIR)/icon.o: $(OBJDIR)/icon.raw tools/bin2s.py $(INCLUDES)
+	$(PYTHON3) tools/bin2s.py $(OBJDIR)/icon.raw > $(OBJDIR)/icon.s
+	$(CROSS_AS) -o $@ $(ASFLAGS) $(OBJDIR)/icon.s

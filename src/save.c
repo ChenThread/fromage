@@ -8,6 +8,8 @@
 #define VERSION_MINOR 0
 #define HEADER_SIZE sizeof(level_header_t)
 
+extern uint8_t icon_raw[];
+
 static int card_initialized = 0;
 
 static void init_card(save_progress_callback *pc)
@@ -100,7 +102,7 @@ int load_level(int save_id, level_info *info, char *target, int32_t target_size,
 	int sectors_read = 0;
 
 	if (save_id < 0) return SAVE_ERROR_INVALID_ARGUMENTS;
-	snprintf(filename, sizeof(filename), "Fromage%d", save_id);
+	snprintf(filename, sizeof(filename), REGION_SAVE_FILENAME, save_id);
 
 	// find start block and nexts
 	for (int i = 1; i < 16; i++) {
@@ -177,8 +179,8 @@ int save_level(int save_id, level_info *info, const char *data, save_progress_ca
 	uint8_t block_delete[15];
 	char filename[16];
 
-	if (save_id < 0) return SAVE_ERROR_INVALID_ARGUMENTS;
-	snprintf(filename, sizeof(filename), "Fromage%d", save_id);
+	if (save_id < 0 || save_id > 9) return SAVE_ERROR_INVALID_ARGUMENTS;
+	snprintf(filename, sizeof(filename), REGION_SAVE_FILENAME, save_id);
 
 	int level_size = info->xsize * info->ysize * info->zsize;
 	int level_cmp_size = LZ4_compressBound(level_size);
@@ -285,7 +287,9 @@ int save_level(int save_id, level_info *info, const char *data, save_progress_ca
 	secbuf[0] = 'S'; secbuf[1] = 'C';
 	secbuf[2] = 0x11;
 	secbuf[3] = 0x01;
-	write_sjis_name(secbuf + 4, "Fromage (Slot %d)", save_id);
+	write_sjis_name(secbuf + 4, "Fromage Level (Slot %d)", save_id);
+	memcpy(secbuf + 0x60, icon_raw, 0x20);
+
 	if (sawpads_write_card_sector(block_ids[0] * 64, secbuf) <= 0) {
 		free(level_cmp_data);
 		return SAVE_ERROR_CARD_FATAL;
@@ -293,11 +297,25 @@ int save_level(int save_id, level_info *info, const char *data, save_progress_ca
 	if (pc != NULL) pc(2, progress_max);
 
 	// write icon frame
-	memset(secbuf, 0, 128);
+	memcpy(secbuf, icon_raw + 0x20, 0x80);
+	{
+		// overlay icon slot id (clut index 15 = white)
+		int fx = ((save_id + '0') & 0xF) * 4;
+		int fy = ((save_id + '0') >> 4) * 8;
+
+		for (int iy = 0; iy < 8; iy++) {
+			for (int ix = 0; ix < 4; ix++) {
+				uint8_t v = font_raw[(FONT_CHARS/2) + ((fy+iy) * 64) + (fx+ix)] * 0xF;
+				secbuf[(iy + 8) * 8 + (ix)] |= v;
+			}
+		}
+	}
+
 	if (sawpads_write_card_sector(block_ids[0] * 64 + 1, secbuf) <= 0) {
 		free(level_cmp_data);
 		return SAVE_ERROR_CARD_FATAL;
 	}
+
 	if (pc != NULL) pc(3, progress_max);
 
 	// write fromage header frame

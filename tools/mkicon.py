@@ -2,23 +2,19 @@ import sys, struct
 from PIL import Image, ImageOps, ImageColor
 
 im = Image.open(sys.argv[1])
-imwater = None
-imlava = None
-if len(sys.argv) >= 5:
-	imwater = Image.open(sys.argv[3])
-	imlava = Image.open(sys.argv[4])
 fp = open(sys.argv[2], "wb")
-clut = [None] * 256
-imgdata = [None] * (256*256)
-imgwidth = 256
+clut = [None]
+imgdata = [None] * (16*16)
+imgwidth = 16
 
 def draw_4bit(im, ix, iy, iw, ih, tx, ty):
 	img = im.crop((ix, iy, ix+iw, iy+ih))
-	imgp = img.convert(mode='P', palette=Image.ADAPTIVE, colors=16)
+	imgp = img.convert(mode='P', palette=Image.ADAPTIVE, colors=15)
 	imgpalr = imgp.getpalette()
 	palette = [None] * 16
-	for col in range(16):
+	for col in range(15):
 		palette[col] = [imgpalr[col * 3], imgpalr[col * 3 + 1], imgpalr[col * 3 + 2], 255]
+	palette[15] = [255, 255, 255, 255]
 	for iry in range(ih):
 		for irx in range(iw):
 			impc = imgp.getpixel((irx, iry))
@@ -39,26 +35,11 @@ def write_palette(fp, palette):
 			v = 0x8000|(r<<0)|(g<<5)|(b<<10)
 		fp.write(struct.pack("<H", v))
 
-def add_texture(im, ix, iy, i):
-	tx = (i & 15) << 4
-	ty = (i & 240)
-	clut[i] = draw_4bit(im, ix, iy, 16, 16, tx, ty)
+write_palette(fp, draw_4bit(im, 0, 0, 16, 16, 0, 0))
 
-for i in range(256):
-	tx = (i & 15) << 4
-	ty = (i & 240)
-	add_texture(im, tx, ty, i)
-
-if imlava != None:
-	for i in range(20):
-		add_texture(imlava, 0, i*16, 80+i)
-	for i in range(32):
-		add_texture(imwater, 0, i*16, 100+i)
-
-for iy in range(256):
-	for ix in range(0, imgwidth, 2):
+for iy in range(16):
+	for ix in range(0, 16, 2):
 		v = (imgdata[iy*imgwidth+ix+1] << 4) | (imgdata[iy*imgwidth+ix] << 0)
 		fp.write(struct.pack("<B", v))
-	write_palette(fp, clut[iy])
 
 fp.close()
