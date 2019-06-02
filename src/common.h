@@ -94,13 +94,13 @@ void gpu_dma_finish(void);
 
 // gui.c
 #define FONT_CHARS 128
-int get_text_width(char *format, ...);
-void draw_text(int x, int y, int color, char *format, ...);
+int get_text_width(const char *format, ...);
+void draw_text(int x, int y, int color, const char *format, ...);
 void draw_status_progress(int progress, int max);
 void draw_block_icon(int bx, int by, int bw, int bh, int bid);
 void draw_block_background(block_info_t *bi);
 void draw_dirt_background(void);
-void draw_status_window(char *format, ...);
+void draw_status_window(const char *format, ...);
 void draw_block_sel_menu(int selected_block);
 void draw_current_block(void);
 void draw_hotbar(void);
@@ -130,8 +130,8 @@ typedef struct {
 } level_info;
 
 const char *save_get_error_string(int value);
-int load_level(int save_id, level_info *info, char *target, int32_t target_size, save_progress_callback *pc);
-int save_level(int save_id, level_info *info, const char *data, save_progress_callback *pc);
+int load_level(int save_id, level_info *info, uint8_t *target, int32_t target_size, save_progress_callback *pc);
+int save_level(int save_id, level_info *info, const uint8_t *data, save_progress_callback *pc);
 
 // world.c
 uint8_t world_get_top_opaque(int32_t cx, int32_t cz);

@@ -91,7 +91,7 @@ const char *save_get_error_string(int value)
 	}
 }
 
-int load_level(int save_id, level_info *info, char *target, int32_t target_size, save_progress_callback *pc)
+int load_level(int save_id, level_info *info, uint8_t *target, int32_t target_size, save_progress_callback *pc)
 {
 	uint8_t secbuf[128];
 	int start_block = -1;
@@ -171,7 +171,7 @@ int load_level(int save_id, level_info *info, char *target, int32_t target_size,
 	return 0;
 }
 
-int save_level(int save_id, level_info *info, const char *data, save_progress_callback *pc)
+int save_level(int save_id, level_info *info, const uint8_t *data, save_progress_callback *pc)
 {
 	uint8_t secbuf[128];
 	uint8_t block_ids[15];

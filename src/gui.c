@@ -7,7 +7,7 @@ extern uint32_t block_lighting[6];
 
 #define CHAR_WIDTH(c) ((font_raw[(uint8_t)(c) >> 1] >> (((uint8_t)(c) & 1) << 2)) & 0x0F)
 
-static int get_text_width_buffer(char *buffer)
+static int get_text_width_buffer(const char *buffer)
 {
 	int len = 0;
 	for (size_t i = 0; i < strlen(buffer); i++) {
@@ -16,7 +16,7 @@ static int get_text_width_buffer(char *buffer)
 	return len * VID_WIDTH_MULTIPLIER;
 }
 
-int get_text_width(char *format, ...)
+int get_text_width(const char *format, ...)
 {
 	char buffer[256];
 	int len;
@@ -31,7 +31,7 @@ int get_text_width(char *format, ...)
 	return len;
 }
 
-static void draw_text_buffer(int x, int y, int color, char *buffer)
+static void draw_text_buffer(int x, int y, int color, const char *buffer)
 {
 	x -= VID_WIDTH/2;
 	y -= VID_HEIGHT/2;
@@ -121,7 +121,7 @@ void draw_status_progress(int progress, int max)
 	dma_buffer[dma_pos++] = ((2*VID_HEIGHT_MULTIPLIER) << 16) | ((width) & 0xFFFF);
 }
 
-void draw_text(int x, int y, int color, char *format, ...)
+void draw_text(int x, int y, int color, const char *format, ...)
 {
 	char buffer[256];
 
@@ -256,7 +256,7 @@ void draw_dirt_background(void)
 	draw_block_background(&block_info[3][5]);
 }
 
-void draw_status_window(char *format, ...)
+void draw_status_window(const char *format, ...)
 {
 	char buffer[256];
 
