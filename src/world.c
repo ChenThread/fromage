@@ -189,8 +189,10 @@ inline uint32_t world_is_raycast_hit(int32_t b) {
 }
 
 int32_t world_is_colliding(int32_t x1, int32_t y1, int32_t z1, int32_t x2, int32_t y2, int32_t z2) {
-	if (x2 < 0 || y2 < 0 || z2 < 0 || x1 >= LEVEL_LX || y1 >= LEVEL_LY || z1 >= LEVEL_LZ)
+	if (x2 < 0 || y2 < 0 || z2 < 0 || x1 >= LEVEL_LX || z1 >= LEVEL_LZ)
 		return true;
+	if (y1 >= LEVEL_LY)
+		return false;
 
 	for (int y = y1; y <= y2; y++)
 	for (int z = z1; z <= z2; z++)
@@ -201,8 +203,10 @@ int32_t world_is_colliding(int32_t x1, int32_t y1, int32_t z1, int32_t x2, int32
 }
 
 int32_t world_is_colliding_fixed(int32_t x1, int32_t y1, int32_t z1, int32_t x2, int32_t y2, int32_t z2) {
-	if (x2 < 0 || y2 < 0 || z2 < 0 || x1 >= LEVEL_LX<<8 || y1 >= LEVEL_LY<<8 || z1 >= LEVEL_LZ<<8)
+	if (x2 < 0 || y2 < 0 || z2 < 0 || x1 >= LEVEL_LX<<8 || z1 >= LEVEL_LZ<<8)
 		return true;
+	if (y1 >= LEVEL_LY<<8)
+		return false;
 
 	for (int y = (y1>>8); y <= (y2>>8); y++)
 	for (int z = (z1>>8); z <= (z2>>8); z++)
