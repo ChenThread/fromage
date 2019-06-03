@@ -273,7 +273,7 @@ static inline uint32_t calc_fmask(int32_t cx, int32_t cy, int32_t cz, int32_t b)
 	if(cy > 0 && should_render(b, cx, cy-1, cz, FACE_YN)) fmask |= 0x10;
 	if(cz < LEVEL_LZ-1 && should_render(b, cx, cy, cz+1, FACE_ZP)) fmask |= 0x02;
 	if(cx < LEVEL_LX-1 && should_render(b, cx+1, cy, cz, FACE_XP)) fmask |= 0x08;
-	if(cy < LEVEL_LY-1 && should_render(b, cx, cy+1, cz, FACE_YP)) fmask |= 0x20;
+	if(cy >= LEVEL_LY-1 || should_render(b, cx, cy+1, cz, FACE_YP)) fmask |= 0x20;
 
 	return fmask;
 }

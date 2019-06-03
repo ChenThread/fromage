@@ -469,7 +469,7 @@ void draw_world(void)
 	int cam_cx = cam_x >> 8;
 	int cam_cy = cam_y >> 8;
 	int cam_cz = cam_z >> 8;
-	int cam_dist = 12;
+	int cam_dist = 16;
 	/*
 	for(int cd = cam_dist; cd != 0; cd--) {
 		draw_blocks_in_range(cam_cx, cam_cy, cam_cz, cd);
