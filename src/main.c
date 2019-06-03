@@ -503,6 +503,10 @@ void draw_world(void)
 	int yrange = ((cymax+4-cymin)>>2);
 	int zrange = ((czmax+4-czmin)>>2);
 
+	// Frustum cull centre sphere distances
+	const int32_t cull_centre_chunk = 0x376cf6; // (0x200<<12) * sqrt(3)
+	const int32_t cull_centre_block = 0xddb3e; // (0x80<<12) * sqrt(3)
+
 	// Frustum cull planes
 	int xmul = gte_h;
 	int xdiv = VID_WIDTH/2;
@@ -525,6 +529,9 @@ void draw_world(void)
 		int cull##X##xstep1 = cull##X##xstep_raw<<8; \
 		int cull##X##ystep1 = cull##X##ystep_raw<<8; \
 		int cull##X##zstep1 = cull##X##zstep_raw<<8; \
+		int cull##X##xstep1_5 = (cull##X##xstep1*3+1)>>1; \
+		int cull##X##ystep1_5 = (cull##X##ystep1*3+1)>>1; \
+		int cull##X##zstep1_5 = (cull##X##zstep1*3+1)>>1; \
 		int cull##X##xstep4 = cull##X##xstep1*4; \
 		int cull##X##ystep4 = cull##X##ystep1*4; \
 		int cull##X##zstep4 = cull##X##zstep1*4; \
@@ -539,6 +546,7 @@ void draw_world(void)
 		cull##X##ystep1 -= 4*cull##X##zstep1; \
 		cull##X##zstep1 -= 4*cull##X##xstep1; \
  \
+		int cull##X##step1_5 = cull##X##ystep1_5+cull##X##zstep1_5+cull##X##xstep1_5; \
 		int cull##X = cull##X##ymin+cull##X##zmin+cull##X##xmin; \
 
 	CULL_PLANE_SETUP(0)
@@ -572,87 +580,140 @@ void draw_world(void)
 		) {
 
 		// Frustum culling
-		if(cull0 < -(0x800<<12)) { continue; }
-		if(cull1 < -(0x800<<12)) { continue; }
-		if(cull2 < -(0x800<<12)) { continue; }
-		if(cull3 < -(0x800<<12)) { continue; }
+		if(cull0 < -cull_centre_chunk) { continue; }
+		if(cull1 < -cull_centre_chunk) { continue; }
+		if(cull2 < -cull_centre_chunk) { continue; }
+		if(cull3 < -cull_centre_chunk) { continue; }
 
 		uint32_t vismask = world_get_vis_blocks_unsafe(cx, cy, cz);
 		if(vismask == 0) {
 			continue;
 		}
 
-		int bcull0 = cull0;
-		int bcull1 = cull1;
-		int bcull2 = cull2;
-		int bcull3 = cull3;
+		int bcull0 = cull0 - cull0step1_5;
+		int bcull1 = cull1 - cull1step1_5;
+		int bcull2 = cull2 - cull2step1_5;
+		int bcull3 = cull3 - cull3step1_5;
 
-		for(int biy = 0, bcy = cy, bdy = dy;
-			biy < 4;
-			biy++, bcy++, bdy++
-			,bcull0 += cull0ystep1
-			,bcull1 += cull1ystep1
-			,bcull2 += cull2ystep1
-			,bcull3 += cull3ystep1
-			) {
+		int min_bcull01 = (bcull0 < bcull1 ? bcull0 : bcull1);
+		int min_bcull23 = (bcull2 < bcull3 ? bcull2 : bcull3);
+		int min_bcull = (min_bcull01 < min_bcull23 ? min_bcull01 : min_bcull23);
 
-			if((vismask & 15) == 0) {
-				if (vismask == 0) break;
-				bcull0 += (cull0zstep1<<2) + (cull0xstep1<<4);
-				bcull1 += (cull1zstep1<<2) + (cull1xstep1<<4);
-				bcull2 += (cull2zstep1<<2) + (cull2xstep1<<4);
-				bcull3 += (cull3zstep1<<2) + (cull3xstep1<<4);
-				vismask >>= 4;
-				continue;
+		if(min_bcull > cull_centre_chunk) {
+			// Chunk fully in frustum
+
+			for(int biy = 0, bcy = cy, bdy = dy;
+				biy < 4;
+				biy++, bcy++, bdy++
+				) {
+
+				if((vismask & 15) == 0) {
+					if (vismask == 0) break;
+					vismask >>= 4;
+					continue;
+				}
+				uint32_t nfmask = 0;
+				if     (bdy > 0) { nfmask |= 0x10; }
+				else if(bdy < 0) { nfmask |= 0x20; }
+				int ady = (bdy < 0 ? -bdy : bdy);
+			for(int biz = 0, bcz = cz, bdz = dz;
+				biz < 4;
+				biz++, bcz++, bdz++
+				, vismask>>=1
+				) {
+
+				if((vismask & 1) == 0) {
+					if (vismask == 0) { biy = 4; break; }
+					continue;
+				}
+				nfmask &= ~0x03;
+				if     (bdz > 0) { nfmask |= 0x01; }
+				else if(bdz < 0) { nfmask |= 0x02; }
+				int adz = (bdz < 0 ? -bdz : bdz);
+			for(int bix = 0, bcx = cx, bdx = dx;
+				bix < 4;
+				bix++, bcx++, bdx++
+				) {
+
+				nfmask &= ~0x0C;
+				if(bdx > 0)      { nfmask |= 0x04; }
+				else if(bdx < 0) { nfmask |= 0x08; }
+				int adx = (bdx < 0 ? -bdx : bdx);
+				draw_block_in_level(bcx, bcy, bcz, adx+ady+adz, nfmask);
 			}
-			uint32_t nfmask = 0;
-			if     (bdy > 0) { nfmask |= 0x10; }
-			else if(bdy < 0) { nfmask |= 0x20; }
-			int ady = (bdy < 0 ? -bdy : bdy);
-		for(int biz = 0, bcz = cz, bdz = dz;
-			biz < 4;
-			biz++, bcz++, bdz++
-			, vismask>>=1
-			,bcull0 += cull0zstep1
-			,bcull1 += cull1zstep1
-			,bcull2 += cull2zstep1
-			,bcull3 += cull3zstep1
-			) {
-
-			if((vismask & 1) == 0) {
-				if (vismask == 0) { biy = 4; break; }
-				bcull0 += cull0xstep1<<2;
-				bcull1 += cull1xstep1<<2;
-				bcull2 += cull2xstep1<<2;
-				bcull3 += cull3xstep1<<2;
-				continue;
 			}
-			nfmask &= ~0x03;
-			if     (bdz > 0) { nfmask |= 0x01; }
-			else if(bdz < 0) { nfmask |= 0x02; }
-			int adz = (bdz < 0 ? -bdz : bdz);
-		for(int bix = 0, bcx = cx, bdx = dx;
-			bix < 4;
-			bix++, bcx++, bdx++
-			,bcull0 += cull0xstep1
-			,bcull1 += cull1xstep1
-			,bcull2 += cull2xstep1
-			,bcull3 += cull3xstep1
-			) {
+			}
 
-			// Frustum culling
-			if(bcull0 < -(0x200<<12)) { continue; }
-			if(bcull1 < -(0x200<<12)) { continue; }
-			if(bcull2 < -(0x200<<12)) { continue; }
-			if(bcull3 < -(0x200<<12)) { continue; }
+		} else {
+			// Blocks may need culling
 
-			nfmask &= ~0x0C;
-			if(bdx > 0)      { nfmask |= 0x04; }
-			else if(bdx < 0) { nfmask |= 0x08; }
-			int adx = (bdx < 0 ? -bdx : bdx);
-			draw_block_in_level(bcx, bcy, bcz, adx+ady+adz, nfmask);
-		}
-		}
+			for(int biy = 0, bcy = cy, bdy = dy;
+				biy < 4;
+				biy++, bcy++, bdy++
+				,bcull0 += cull0ystep1
+				,bcull1 += cull1ystep1
+				,bcull2 += cull2ystep1
+				,bcull3 += cull3ystep1
+				) {
+
+				if((vismask & 15) == 0) {
+					if (vismask == 0) break;
+					bcull0 += (cull0zstep1<<2) + (cull0xstep1<<4);
+					bcull1 += (cull1zstep1<<2) + (cull1xstep1<<4);
+					bcull2 += (cull2zstep1<<2) + (cull2xstep1<<4);
+					bcull3 += (cull3zstep1<<2) + (cull3xstep1<<4);
+					vismask >>= 4;
+					continue;
+				}
+				uint32_t nfmask = 0;
+				if     (bdy > 0) { nfmask |= 0x10; }
+				else if(bdy < 0) { nfmask |= 0x20; }
+				int ady = (bdy < 0 ? -bdy : bdy);
+			for(int biz = 0, bcz = cz, bdz = dz;
+				biz < 4;
+				biz++, bcz++, bdz++
+				, vismask>>=1
+				,bcull0 += cull0zstep1
+				,bcull1 += cull1zstep1
+				,bcull2 += cull2zstep1
+				,bcull3 += cull3zstep1
+				) {
+
+				if((vismask & 1) == 0) {
+					if (vismask == 0) { biy = 4; break; }
+					bcull0 += cull0xstep1<<2;
+					bcull1 += cull1xstep1<<2;
+					bcull2 += cull2xstep1<<2;
+					bcull3 += cull3xstep1<<2;
+					continue;
+				}
+				nfmask &= ~0x03;
+				if     (bdz > 0) { nfmask |= 0x01; }
+				else if(bdz < 0) { nfmask |= 0x02; }
+				int adz = (bdz < 0 ? -bdz : bdz);
+			for(int bix = 0, bcx = cx, bdx = dx;
+				bix < 4;
+				bix++, bcx++, bdx++
+				,bcull0 += cull0xstep1
+				,bcull1 += cull1xstep1
+				,bcull2 += cull2xstep1
+				,bcull3 += cull3xstep1
+				) {
+
+				// Frustum culling
+				if(bcull0 < -(0x200<<12)) { continue; }
+				if(bcull1 < -(0x200<<12)) { continue; }
+				if(bcull2 < -(0x200<<12)) { continue; }
+				if(bcull3 < -(0x200<<12)) { continue; }
+
+				nfmask &= ~0x0C;
+				if(bdx > 0)      { nfmask |= 0x04; }
+				else if(bdx < 0) { nfmask |= 0x08; }
+				int adx = (bdx < 0 ? -bdx : bdx);
+				draw_block_in_level(bcx, bcy, bcz, adx+ady+adz, nfmask);
+			}
+			}
+			}
 		}
 	}
 	}
