@@ -32,11 +32,11 @@ void gpu_dma_finish(void) {
 
 	while((DMA_n_CHCR(2) & (1<<24)) != 0) {}
 
-	DMA_n_CHCR(2) = 0x00000401;
+	DMA_n_CHCR(2) = 0x00000001;
 	DMA_DICR = 0;
 	DMA_DPCR = 0x07654321;
 	DMA_n_MADR(2) = dma_start_ptr;
 	DMA_n_BCR(2)  = 0;
-	DMA_n_CHCR(2) |= 0x01000000;
 	DMA_DPCR |= (0x8<<(4*2)); // Enable DMA
+	DMA_n_CHCR(2) = 0x01000401;
 }
