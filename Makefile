@@ -1,4 +1,4 @@
-CROSSPREFIX=mipsel-elf-
+CROSSPREFIX=mipsel-none-elf-
 
 CROSS_CC=$(CROSSPREFIX)gcc
 CROSS_AS=$(CROSSPREFIX)as
