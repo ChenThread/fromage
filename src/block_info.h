@@ -5,6 +5,14 @@
 #define INFO_BLOCK_PLANT(x,y) {QUAD(x,y),QUAD(x,y),QUAD(x,y),QUAD(x,y)}
 #define INFO_BLOCK_WOOL(i) INFO_BLOCK_CUBE(i,4)
 
+uint8_t block_sel_slots[] = {
+	1, 4, 45, 3, 5, 17, 18, 20, 44,
+	48, 6, 37, 38, 39, 40, 12, 13, 19,
+	21, 22, 23, 24, 25, 26, 27, 28, 29,
+	30, 31, 32, 33, 34, 35, 36, 14, 15,
+	16, 42, 41, 47, 46, 49, 0, 8, 10
+};
+
 block_info_t block_info[BLOCK_MAX][QUAD_MAX] = {
 	{}, // 0: Air
 	INFO_BLOCK_CUBE(1, 0), // 1: Stone

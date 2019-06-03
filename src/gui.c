@@ -153,6 +153,8 @@ void draw_block_icon(int bx, int by, int bw, int bh, int block_id)
 		uint16_t tc1 = 0x000F;
 		uint16_t tc2 = 0x0F00;
 		uint16_t tc3 = 0x0F0F;
+		uint32_t cmd = ((block_id&(~1)) == 8) ? 0x2E000000 : 0x2C000000;
+
 		if (block_id == 44) {
 			lu += bh8<<16;
 			cu += bh8<<16;
@@ -162,7 +164,7 @@ void draw_block_icon(int bx, int by, int bw, int bh, int block_id)
 			tc2 |= 0x0008;
 		}
 		DMA_PUSH(9, 1);
-		dma_buffer[dma_pos++] = 0x2C000000 | block_lighting[5];
+		dma_buffer[dma_pos++] = cmd | block_lighting[5];
 		dma_buffer[dma_pos++] = lu;
 		dma_buffer[dma_pos++] = (bi0->cl << 16) | (bi0->tc + (0x0000));
 		dma_buffer[dma_pos++] = cu;
@@ -173,7 +175,7 @@ void draw_block_icon(int bx, int by, int bw, int bh, int block_id)
 		dma_buffer[dma_pos++] = (0 << 16) | (bi0->tc + (0x0F0F));
 
 		DMA_PUSH(9, 1);
-		dma_buffer[dma_pos++] = 0x2C000000 | block_lighting[0];
+		dma_buffer[dma_pos++] = cmd | block_lighting[0];
 		dma_buffer[dma_pos++] = lu;
 		dma_buffer[dma_pos++] = (bi1->cl << 16) | (bi1->tc + (tc0));
 		dma_buffer[dma_pos++] = cc;
@@ -184,7 +186,7 @@ void draw_block_icon(int bx, int by, int bw, int bh, int block_id)
 		dma_buffer[dma_pos++] = (0 << 16) | (bi1->tc + (tc3));
 
 		DMA_PUSH(9, 1);
-		dma_buffer[dma_pos++] = 0x2C000000 | block_lighting[2];
+		dma_buffer[dma_pos++] = cmd | block_lighting[2];
 		dma_buffer[dma_pos++] = cc;
 		dma_buffer[dma_pos++] = (bi1->cl << 16) | (bi1->tc + (tc0));
 		dma_buffer[dma_pos++] = ru;
@@ -241,25 +243,26 @@ void draw_status_window(const char *format, ...)
 	va_end(args);
 }
 
-void draw_block_sel_menu(int selected_block)
+void draw_block_sel_menu(int pos, uint8_t *slots, int slotcount)
 {
 	// 34x34 slots
 	int bg_w = ((25 * 9) + 18 + 4) * VID_WIDTH_MULTIPLIER;
-	int bg_h = 141 + 18 + 13;
+	int bg_h = ((25 * ((slotcount+8)/9))) + 18 + 15;
 
 	int y = 0;
 	int x = 0;
 
 	// blocks
-	for (int id = 1; id <= 49; id++) {
+	for (int id = 0; id < slotcount; id++) {
 		int x_center = (-bg_w/2) + 2 + 9;
 		int y_center = (-bg_h/2) + 12 + 9;
+		int bid = slots[id];
 
 		x_center += (25 * VID_WIDTH_MULTIPLIER * x) + 16 * VID_WIDTH_MULTIPLIER;
-		y_center += (25 * y) + 8;
+		y_center += (25 * y) + 11;
 
-		if (id == selected_block) {
-			draw_block_icon(x_center, y_center, 32 * VID_WIDTH_MULTIPLIER, 32, id);
+		if (id == pos) {
+			draw_block_icon(x_center, y_center, 32 * VID_WIDTH_MULTIPLIER, 32, bid);
 
 			// background
 			DMA_PUSH(3, 1);
@@ -269,7 +272,7 @@ void draw_block_sel_menu(int selected_block)
 				((x_center - 16 * VID_WIDTH_MULTIPLIER) & 0xFFFF);
 			dma_buffer[dma_pos++] = ((32) << 16) | ((32 * VID_WIDTH_MULTIPLIER) & 0xFFFF);
 		} else {
-			draw_block_icon(x_center, y_center, 16 * VID_WIDTH_MULTIPLIER, 16, id);
+			draw_block_icon(x_center, y_center, 16 * VID_WIDTH_MULTIPLIER, 16, bid);
 		}
 
 		if ((++x) == 9) { y++; x = 0; }
@@ -277,7 +280,7 @@ void draw_block_sel_menu(int selected_block)
 
 	// text
 	int text_w = get_text_width("Select block");
-	draw_text((VID_WIDTH - text_w) / 2, ((VID_HEIGHT - bg_h) / 2) + 2, 0xFFFFFF, "Select block");
+	draw_text((VID_WIDTH - text_w) / 2, ((VID_HEIGHT - bg_h) / 2) + 4, 0xFFFFFF, "Select block");
 
 	// background
 	DMA_PUSH(3, 1);

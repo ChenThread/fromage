@@ -851,7 +851,7 @@ void draw_everything(void)
 
 	switch (mode) {
 		case MODE_BLOCKSEL:
-			draw_block_sel_menu(blocksel_id);
+			draw_block_sel_menu(blocksel_id, block_sel_slots, sizeof(block_sel_slots));
 			break;
 		case MODE_INGAME:
 			draw_current_block();
@@ -891,12 +891,12 @@ void blocksel_update(void)
 		return;
 	}
 
-	if ((joy_pressed & PAD_UP) != 0) if (blocksel_id >= 10) blocksel_id -= 9;
-	if ((joy_pressed & PAD_LEFT) != 0) if (blocksel_id >= 2) blocksel_id--;
-	if ((joy_pressed & PAD_RIGHT) != 0) if (blocksel_id < 49) blocksel_id++;
-	if ((joy_pressed & PAD_DOWN) != 0) if (blocksel_id <= 40) blocksel_id += 9;
+	if ((joy_pressed & PAD_UP) != 0) if (blocksel_id >= 9) blocksel_id -= 9;
+	if ((joy_pressed & PAD_LEFT) != 0) if (blocksel_id >= 1) blocksel_id--;
+	if ((joy_pressed & PAD_RIGHT) != 0) if (blocksel_id < (sizeof(block_sel_slots) - 1)) blocksel_id++;
+	if ((joy_pressed & PAD_DOWN) != 0) if (blocksel_id < (sizeof(block_sel_slots) - 9)) blocksel_id += 9;
 
-	current_block[hotbar_pos] = blocksel_id;
+	current_block[hotbar_pos] = block_sel_slots[blocksel_id];
 }
 
 void draw_status_prog_frame(int progress, int max) {
@@ -1037,12 +1037,12 @@ void player_update(int mmul)
 			}
 			case 3: {
 				gui_terrible_text_viewer(license_text_txt);
-				break;
+				return;
 			}
 			case 4:
 			default:
 				is_menu_open = 0;
-				break;
+				return;
 		}
 	}
 
