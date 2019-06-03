@@ -29,6 +29,7 @@ typedef vec4 mat4[4];
 #define FACE_YP 5
 
 #define RAND(seed) ((seed) = ((seed) * 16843009) + 826366247)
+typedef void save_progress_callback(int progress, int max);
 
 // Files
 #define LEVEL_LX 64
@@ -48,8 +49,16 @@ typedef struct block_info {
 extern block_info_t block_info[BLOCK_MAX][QUAD_MAX];
 
 // cdrom.c
+typedef struct {
+	int32_t lba, size;
+	uint8_t flags;
+	char filename[16];
+} file_record_t;
+
+void cdrom_tick_song_player(int vblanks);
+file_record_t *cdrom_get_file(const char *name);
 void cdrom_isr(void);
-void cdrom_init(void);
+void cdrom_init(save_progress_callback *pc);
 
 // main.c
 extern int32_t cam_x;
@@ -74,6 +83,7 @@ extern volatile uint32_t vblank_counter;
 
 void frame_start(void);
 void frame_flip(void);
+void frame_flip_nosync(void);
 void wait_for_next_vblank(void);
 void wait_for_vblanks(uint32_t count);
 void gpu_dma_load(uint32_t *buffer, int x, int y, int width, int height);
@@ -129,7 +139,6 @@ void gui_terrible_text_viewer(const char* text);
 #define SAVE_ERROR_OUT_OF_MEMORY -9
 #define SAVE_ERROR_UNSUPPORTED_DATA -10
 
-typedef void save_progress_callback(int progress, int max);
 typedef struct {
 	int16_t xsize, ysize, zsize;
 	int32_t cam_x, cam_y, cam_z, cam_rx, cam_ry;

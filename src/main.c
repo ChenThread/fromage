@@ -1307,20 +1307,6 @@ int main(void)
 	vblank_counter = 0;
 	PSXREG_I_MASK |= (1<<0);
 
-	// Prepare joypad
-	PSXREG_JOY_CTRL = 0x0010;
-	PSXREG_JOY_MODE = 0x000D;
-	PSXREG_JOY_BAUD = 0x0088;
-
-	// Enable joypad ISR
-	PSXREG_I_STAT = ~(1<<7);
-	PSXREG_I_MASK |= (1<<7);
-
-	sawpads_unlock_dualshock();
-
-	// Enable CD-ROM
-	cdrom_init();
-
 	// DMA a texture
 	gpu_dma_load(atlas_raw, 768, 256, 320/4, 256);
 	gpu_dma_load((uint32_t*) (&font_raw[64]), 64 * 0xE, 256, 128*VID_WIDTH_MULTIPLIER/4, 64);
@@ -1337,7 +1323,7 @@ int main(void)
 	// Draw status window
 	gpu_dma_init();
 	frame_start();
-	draw_dirt_background();
+	draw_status_window("Initializing..");
 	gpu_dma_finish();
 	frame_flip();
 
@@ -1345,8 +1331,22 @@ int main(void)
 	gp1_command(0x03000000);
 	wait_for_next_vblank();
 
+	// Prepare joypad
+	PSXREG_JOY_CTRL = 0x0010;
+	PSXREG_JOY_MODE = 0x000D;
+	PSXREG_JOY_BAUD = 0x0088;
+
+	// Enable joypad ISR
+	PSXREG_I_STAT = ~(1<<7);
+	PSXREG_I_MASK |= (1<<7);
+
+	sawpads_unlock_dualshock();
+
 	// Initialize sound
 	sound_init();
+
+	// Initialize CD data
+	cdrom_init(draw_status_prog_frame);
 
         // Generate a world
 	world_main_generate();
@@ -1404,7 +1404,10 @@ int main(void)
 			}
 
 			world_update(ticks);
-			frame_flip();
+			cdrom_tick_song_player(mmul);
+			while ((DMA_n_CHCR(2) & (1<<24)) != 0) {}
+			while (vblank_counter == 0) {}
+			frame_flip_nosync();
 			sawpads_do_read();
 		}
 	}

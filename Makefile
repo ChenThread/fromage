@@ -1,4 +1,4 @@
-CROSSPREFIX=mipsel-none-elf-
+CROSSPREFIX=mipsel-elf-
 
 CROSS_CC=$(CROSSPREFIX)gcc
 CROSS_AS=$(CROSSPREFIX)as
@@ -50,23 +50,28 @@ SRCDIR = src
 
 INCLUDES = src/block_info.h src/common.h src/config.h src/psx.h $(OBJDIR)/soundbank.h
 
+MUSIC = \
+	$(OBJDIR)/calm1.mus \
+	$(OBJDIR)/calm2.mus \
+	$(OBJDIR)/calm3.mus
+
 SOUNDS = \
-	$(OBJDIR)/grass1.spu \
-	$(OBJDIR)/grass2.spu \
-	$(OBJDIR)/grass3.spu \
-	$(OBJDIR)/grass4.spu \
-	$(OBJDIR)/gravel1.spu \
-	$(OBJDIR)/gravel2.spu \
-	$(OBJDIR)/gravel3.spu \
-	$(OBJDIR)/gravel4.spu \
-	$(OBJDIR)/stone1.spu \
-	$(OBJDIR)/stone2.spu \
-	$(OBJDIR)/stone3.spu \
-	$(OBJDIR)/stone4.spu \
-	$(OBJDIR)/wood1.spu \
-	$(OBJDIR)/wood2.spu \
-	$(OBJDIR)/wood3.spu \
-	$(OBJDIR)/wood4.spu
+	$(OBJDIR)/grass1.snd \
+	$(OBJDIR)/grass2.snd \
+	$(OBJDIR)/grass3.snd \
+	$(OBJDIR)/grass4.snd \
+	$(OBJDIR)/gravel1.snd \
+	$(OBJDIR)/gravel2.snd \
+	$(OBJDIR)/gravel3.snd \
+	$(OBJDIR)/gravel4.snd \
+	$(OBJDIR)/stone1.snd \
+	$(OBJDIR)/stone2.snd \
+	$(OBJDIR)/stone3.snd \
+	$(OBJDIR)/stone4.snd \
+	$(OBJDIR)/wood1.snd \
+	$(OBJDIR)/wood2.snd \
+	$(OBJDIR)/wood3.snd \
+	$(OBJDIR)/wood4.snd
 
 OBJS =	$(OBJDIR)/cdrom.o \
 	$(OBJDIR)/gui.o \
@@ -96,9 +101,10 @@ clean:
 	$(RM_F) $(OBJDIR)/soundbank.h
 	$(RM_F) $(OBJDIR)/soundbank.raw
 	$(RM_F) $(SOUNDS)
+	$(RM_F) $(MUSIC) music.hdr music.xa
 	$(RM_F) $(OBJDIR)/license_text.s $(OBJDIR)/license_text.txt
 
-$(ISO_NAME).cue: $(ISO_NAME) manifest.txt
+$(ISO_NAME).cue: $(ISO_NAME) music.hdr music.xa manifest.txt
 	$(CANDYK)/bin/pscd-new manifest.txt
 
 $(ISO_NAME): $(EXE_NAME).exe
@@ -110,11 +116,26 @@ $(EXE_NAME).exe: $(OBJDIR)/$(EXE_NAME).elf
 $(OBJDIR)/$(EXE_NAME).elf: $(OBJS)
 	$(CROSS_CC) -o $(OBJDIR)/$(EXE_NAME).elf $(LDFLAGS) $(OBJS) $(LIBS)
 
+music.hdr: $(MUSIC)
+	$(PYTHON3) tools/mkmusichdr.py music.hdr $(MUSIC)
+
+music.xa: $(MUSIC) $(RESDIR)/music.txt
+	$(CANDYK)/bin/xainterleave $(RESDIR)/music.txt music.xa
+
 $(OBJDIR)/soundbank.raw: $(SOUNDS)
 	$(PYTHON3) tools/mksoundbank.py $(OBJDIR)/soundbank.raw $(SOUNDS)
 
-$(OBJDIR)/%.spu: $(RESDIR)/%.ogg
-	$(SPUENC) -f 14700 -t spu -c 1 $< $@
+$(OBJDIR)/%.snd: $(RESDIR)/%.ogg
+	$(SPUENC) -f 14700 -t spu -c 1 -b 4 $< $@
+
+$(OBJDIR)/calm1.mus: $(RESDIR)/calm1.ogg
+	$(SPUENC) -f 37800 -t xacd -c 2 -b 4 -F 1 -C 0 $< $@
+
+$(OBJDIR)/calm2.mus: $(RESDIR)/calm2.ogg
+	$(SPUENC) -f 37800 -t xacd -c 2 -b 4 -F 1 -C 1 $< $@
+
+$(OBJDIR)/calm3.mus: $(RESDIR)/calm3.ogg
+	$(SPUENC) -f 37800 -t xacd -c 2 -b 4 -F 1 -C 2 $< $@
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(INCLUDES)
 	$(CROSS_CC) -c -o $@ $(CFLAGS) $<
