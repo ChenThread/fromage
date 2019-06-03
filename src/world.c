@@ -162,6 +162,9 @@ int32_t world_cast_ray(int32_t px, int32_t py, int32_t pz, int32_t vx, int32_t v
 				*ocz = cz;
 			}
 
+			if (*ocx < 0 || *ocy < 0 || *ocz < 0 || *ocx >= LEVEL_LX || *ocy >= LEVEL_LY || *ocz >= LEVEL_LZ)
+				return -1;
+
 			// And return
 			return face_hit;
 		}
@@ -203,7 +206,7 @@ int32_t world_is_colliding(int32_t x1, int32_t y1, int32_t z1, int32_t x2, int32
 }
 
 int32_t world_is_colliding_fixed(int32_t x1, int32_t y1, int32_t z1, int32_t x2, int32_t y2, int32_t z2) {
-	if (x2 < 0 || y2 < 0 || z2 < 0 || x1 >= LEVEL_LX<<8 || z1 >= LEVEL_LZ<<8)
+	if (x1 < 0 || y1 < 0 || z1 < 0 || x2 >= LEVEL_LX<<8 || z2 >= LEVEL_LZ<<8)
 		return true;
 	if (y1 >= LEVEL_LY<<8)
 		return false;
