@@ -31,6 +31,10 @@ typedef vec4 mat4[4];
 #define RAND(seed) ((seed) = ((seed) * 16843009) + 826366247)
 typedef void save_progress_callback(int progress, int max);
 
+typedef struct {
+	bool pro_jumps;
+} options_t;
+
 // Files
 #define LEVEL_LX 64
 #define LEVEL_LY 64
@@ -127,6 +131,9 @@ void draw_liquid_overlay(void);
 int gui_menu(int optcount, ...);
 void gui_terrible_text_viewer(const char* text);
 
+// options.c
+int gui_options_menu(options_t *options);
+
 // save.c
 #define SAVE_ERROR_COMPRESSION -1
 #define SAVE_ERROR_OUT_OF_SPACE -2
@@ -144,6 +151,7 @@ typedef struct {
 	int32_t cam_x, cam_y, cam_z, cam_rx, cam_ry;
 	uint8_t hotbar_blocks[HOTBAR_MAX];
 	uint8_t hotbar_pos;
+	options_t options;
 } level_info;
 
 const char *save_get_error_string(int value);

@@ -18,7 +18,8 @@ sector 2:
 	0x08	2	compressed buffer size, in sectors
 	0x0A	1	bits 0-6: compressed buffer - size of last sector - 1 (1-128 - 1)
 			bit 7: reserved
-	0x0B	5	reserved
+	0x0B	5	settings
+			bit 0: movement (1 - "fun" variant)
 	0x10	4	cam_x
 	0x14	4	cam_y
 	0x18	4	cam_z

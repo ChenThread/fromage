@@ -434,7 +434,7 @@ int gui_menu(int optcount, ...)
 		int joy_pressed = update_joy_pressed();
 		if ((joy_pressed & PAD_DOWN) != 0) curr_opt = (curr_opt + 1) % optcount;
 		if ((joy_pressed & PAD_UP) != 0) { curr_opt = (curr_opt - 1); if (curr_opt < 0) curr_opt = optcount - 1; }
-		if ((joy_pressed & PAD_O) != 0) { curr_opt = -1; break; }
+		if ((joy_pressed & (PAD_T | PAD_O)) != 0) { curr_opt = -1; break; }
 		if ((joy_pressed & PAD_X) != 0) break;
 	}
 
@@ -536,6 +536,6 @@ void gui_terrible_text_viewer(const char* text)
 		int joy_pressed = update_joy_pressed();
 		if ((joy_pressed & PAD_DOWN) != 0) text_pos++;
 		if ((joy_pressed & PAD_UP) != 0) text_pos--;
-		if ((joy_pressed & PAD_O) != 0) break;
+		if ((joy_pressed & (PAD_T | PAD_O)) != 0) break;
 	}
 }

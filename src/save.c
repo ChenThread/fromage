@@ -139,6 +139,9 @@ int load_level(int save_id, level_info *info, uint8_t *target, int32_t target_si
 	info->cam_rx = READ16(0x1C);
 	info->cam_ry = READ16(0x1E);
 
+	uint8_t opt1 = secbuf[0x0B];
+	info->options.pro_jumps = (opt1 & 0x01) != 0;
+
 	int target_data_size = info->xsize * info->ysize * info->zsize;
 	if (target_data_size > target_size) return SAVE_ERROR_MAP_TOO_LARGE;
 
@@ -334,6 +337,7 @@ int save_level(int save_id, level_info *info, const uint8_t *data, save_progress
 	WRITE16(0x06, info->zsize);
 	WRITE16(0x08, sectors_required - 3);
 	secbuf[0x0A] = ((level_cmp_size + 127) & 0x7F);
+	secbuf[0x0B] = info->options.pro_jumps ? 0x01 : 0x00;
 	WRITE32(0x10, info->cam_x);
 	WRITE32(0x14, info->cam_y);
 	WRITE32(0x18, info->cam_z);

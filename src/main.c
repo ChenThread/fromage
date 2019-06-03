@@ -122,6 +122,8 @@ int32_t fps_frames = 0;
 int32_t fps_vblanks = 0;
 int32_t fps_val = 0;
 
+static options_t options;
+
 // ISR handler
 
 chenboot_exception_frame_t *isr_handler_c(chenboot_exception_frame_t *sp)
@@ -936,6 +938,9 @@ void world_main_load(int slot)
 	frame_flip();
 
 	level_info info;
+	// fill with placeholders
+	info.options = options;
+
 	int ret = load_level(slot, &info, fsys_level, LEVEL_LX*LEVEL_LY*LEVEL_LZ, draw_status_prog_frame);
 	if (ret >= 0) {
 		cam_x = info.cam_x;
@@ -945,6 +950,7 @@ void world_main_load(int slot)
 		cam_ry = info.cam_ry;
 		memcpy(current_block, info.hotbar_blocks, HOTBAR_MAX);
 		hotbar_pos = info.hotbar_pos;
+		options = info.options;
 		world_main_prepare();
 	} else {
 		// TODO: add error msgs
@@ -976,6 +982,7 @@ void world_main_save(int slot)
 	info.cam_ry = cam_ry;
 	memcpy(info.hotbar_blocks, current_block, HOTBAR_MAX);
 	info.hotbar_pos = hotbar_pos;
+	info.options = options;
 
 	int ret = save_level(slot, &info, fsys_level, draw_status_prog_frame);
 	gpu_dma_init();
@@ -1019,27 +1026,30 @@ void player_update(int mmul)
 
 	if ((joy_pressed & PAD_START) != 0) {
 		int is_menu_open = 1;
-		while (is_menu_open) switch (gui_menu(5, "Generate new level", "Save level..", "Load level..", "License information", "Back to game")) {
+		while (is_menu_open) switch (gui_menu(6, "Options", "Generate new level", "Save level..", "Load level..", "License information", "Back to game")) {
 			case 0:
+				if (!gui_options_menu(&options)) break;
+				else return;
+			case 1:
 				world_main_generate();
 				return;
-			case 1: {
+			case 2: {
 				int slot = gui_menu(6, "Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Cancel");
 				if (slot < 0 || slot >= 5) break;
 				world_main_save(slot+1);
 				return;
 			}
-			case 2: {
+			case 3: {
 				int slot = gui_menu(6, "Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Cancel");
 				if (slot < 0 || slot >= 5) break;
 				world_main_load(slot+1);
 				return;
 			}
-			case 3: {
+			case 4: {
 				gui_terrible_text_viewer(license_text_txt);
 				return;
 			}
-			case 4:
+			case 5:
 			default:
 				is_menu_open = 0;
 				return;
@@ -1148,7 +1158,13 @@ void player_update(int mmul)
 	}
 
 	if ((joy_pressed & PAD_S) != 0) {
-		blocksel_id = current_block[hotbar_pos];
+		blocksel_id = 0;
+		for (int i = 0; i < sizeof(block_sel_slots); i++) {
+			if (current_block[hotbar_pos] == block_sel_slots[i]) {
+				blocksel_id = i;
+				break;
+			}
+		}
 		mode = MODE_BLOCKSEL;
 	}
 
@@ -1176,7 +1192,7 @@ void player_update(int mmul)
 	int32_t gvz = 0;
 	gvx = (lvx*mat_hr11 + lvz*mat_hr31 + 0x800)>>12;
 	gvz = (lvx*mat_hr13 + lvz*mat_hr33 + 0x800)>>12;
-#if 1
+if (options.pro_jumps) {
 	int acc_x = gvx;
 	int acc_z = gvz;
 
@@ -1215,10 +1231,10 @@ void player_update(int mmul)
 		vel_x += acc_x;
 		vel_z += acc_z;
 	}
-#else
-	vel_x = (vel_x + gvx) / 2;
-	vel_z = (vel_z + gvz) / 2;
-#endif
+} else {
+	vel_x = (vel_x + gvx) / 3;
+	vel_z = (vel_z + gvz) / 3;
+}
 
 	bool in_liquid = player_is_in_liquid();
 
@@ -1228,8 +1244,13 @@ void player_update(int mmul)
 
 	for (int i = 0; i < mmul; i++) {
 		if ((sawpads_buttons & PAD_X) == 0) {
-			if (in_liquid || !try_move(0, -16, 0, false))
-				vel_y = in_liquid ? 48 : 96;
+			if (in_liquid || !try_move(0, -16, 0, false)) {
+				if (options.pro_jumps) {
+					vel_y = in_liquid ? 48 : 96;
+				} else {
+					vel_y = in_liquid ? 32 : 64;
+				}
+			}
 		}
 		if (try_move(0, vel_y, 0, true)) {
 			if (vel_y > -192) vel_y -= ((ABS(vel_y) >> 4) + 4) >> (in_liquid ? 2 : 0);
