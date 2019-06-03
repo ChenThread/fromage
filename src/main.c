@@ -471,16 +471,18 @@ void draw_world(void)
 	int cam_cx = cam_x >> 8;
 	int cam_cy = cam_y >> 8;
 	int cam_cz = cam_z >> 8;
-	int cam_dist = 16;
+	int cam_dist = 19;
+	int cam_real_dist = 16;
 	/*
 	for(int cd = cam_dist; cd != 0; cd--) {
 		draw_blocks_in_range(cam_cx, cam_cy, cam_cz, cd);
 	}
 	*/
 	int cd = cam_dist;
+	int cdy = cam_real_dist;
 
-	int cymin = cam_cy - cd;
-	int cymax = cam_cy + cd;
+	int cymin = cam_cy - cdy;
+	int cymax = cam_cy + cdy;
 	if(cymin < 0) { cymin = 0; }
 	if(cymax >= LEVEL_LY) { cymax = LEVEL_LY-1; }
 
@@ -614,10 +616,10 @@ void draw_world(void)
 					vismask >>= 4;
 					continue;
 				}
+				int ady = (bdy < 0 ? -bdy : bdy);
 				uint32_t nfmask = 0;
 				if     (bdy > 0) { nfmask |= 0x10; }
 				else if(bdy < 0) { nfmask |= 0x20; }
-				int ady = (bdy < 0 ? -bdy : bdy);
 			for(int biz = 0, bcz = cz, bdz = dz;
 				biz < 4;
 				biz++, bcz++, bdz++
@@ -628,19 +630,21 @@ void draw_world(void)
 					if (vismask == 0) { biy = 4; break; }
 					continue;
 				}
+				int adz = (bdz < 0 ? -bdz : bdz);
+				if (adz > cam_real_dist) continue;
 				nfmask &= ~0x03;
 				if     (bdz > 0) { nfmask |= 0x01; }
 				else if(bdz < 0) { nfmask |= 0x02; }
-				int adz = (bdz < 0 ? -bdz : bdz);
 			for(int bix = 0, bcx = cx, bdx = dx;
 				bix < 4;
 				bix++, bcx++, bdx++
 				) {
 
+				int adx = (bdx < 0 ? -bdx : bdx);
+				if (adx > cam_real_dist) continue;
 				nfmask &= ~0x0C;
 				if(bdx > 0)      { nfmask |= 0x04; }
 				else if(bdx < 0) { nfmask |= 0x08; }
-				int adx = (bdx < 0 ? -bdx : bdx);
 				draw_block_in_level(bcx, bcy, bcz, adx+ady+adz, nfmask);
 			}
 			}
@@ -667,10 +671,10 @@ void draw_world(void)
 					vismask >>= 4;
 					continue;
 				}
+				int ady = (bdy < 0 ? -bdy : bdy);
 				uint32_t nfmask = 0;
 				if     (bdy > 0) { nfmask |= 0x10; }
 				else if(bdy < 0) { nfmask |= 0x20; }
-				int ady = (bdy < 0 ? -bdy : bdy);
 			for(int biz = 0, bcz = cz, bdz = dz;
 				biz < 4;
 				biz++, bcz++, bdz++
@@ -689,10 +693,11 @@ void draw_world(void)
 					bcull3 += cull3xstep1<<2;
 					continue;
 				}
+				int adz = (bdz < 0 ? -bdz : bdz);
+				if (adz > cam_real_dist) continue;
 				nfmask &= ~0x03;
 				if     (bdz > 0) { nfmask |= 0x01; }
 				else if(bdz < 0) { nfmask |= 0x02; }
-				int adz = (bdz < 0 ? -bdz : bdz);
 			for(int bix = 0, bcx = cx, bdx = dx;
 				bix < 4;
 				bix++, bcx++, bdx++
@@ -708,10 +713,11 @@ void draw_world(void)
 				if(bcull2 < -(0x200<<12)) { continue; }
 				if(bcull3 < -(0x200<<12)) { continue; }
 
+				int adx = (bdx < 0 ? -bdx : bdx);
+				if (adx > cam_real_dist) continue;
 				nfmask &= ~0x0C;
 				if(bdx > 0)      { nfmask |= 0x04; }
 				else if(bdx < 0) { nfmask |= 0x08; }
-				int adx = (bdx < 0 ? -bdx : bdx);
 				draw_block_in_level(bcx, bcy, bcz, adx+ady+adz, nfmask);
 			}
 			}
