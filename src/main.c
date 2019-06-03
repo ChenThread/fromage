@@ -97,7 +97,6 @@ int32_t cam_z = 0;
 int32_t vel_x = 0;
 int32_t vel_y = 0;
 int32_t vel_z = 0;
-bool use_dpad = true;
 
 #define MODE_INGAME 1
 #define MODE_BLOCKSEL 2
@@ -121,6 +120,7 @@ int hotbar_pos = 0;
 int32_t fps_frames = 0;
 int32_t fps_vblanks = 0;
 int32_t fps_val = 0;
+int32_t is_ticking = 1;
 
 static options_t options;
 
@@ -135,8 +135,10 @@ chenboot_exception_frame_t *isr_handler_c(chenboot_exception_frame_t *sp)
 	if((PSXREG_I_STAT & (1<<0)) != 0) {
 		// VBLANK
 		vblank_counter++;
-		tex_update_blanks++;
-		ticks++;
+		if (is_ticking) {
+			tex_update_blanks++;
+			ticks++;
+		}
 
 		//
 		PSXREG_I_STAT = ~(1<<0);
@@ -885,8 +887,8 @@ void draw_everything(void)
 
 int update_joy_pressed(void)
 {
-	int joy_pressed = (~joy_buttons_old) & ~sawpads_buttons;
-	joy_buttons_old = ~sawpads_buttons;
+	int joy_pressed = joy_buttons_old & (~sawpads_buttons);
+	joy_buttons_old = sawpads_buttons;
 	return joy_pressed;
 }
 
@@ -1034,35 +1036,37 @@ void player_update(int mmul)
 		int is_menu_open = 1;
 		while (is_menu_open) switch (gui_menu(6, "Options", "Generate new level", "Save level..", "Load level..", "License information", "Back to game")) {
 			case 0:
-				if (!gui_options_menu(&options)) break;
-				else return;
+				if (gui_options_menu(&options)) is_menu_open = 0;
+				break;
 			case 1:
 				world_main_generate();
-				return;
+				is_menu_open = 0; break;
 			case 2: {
 				int slot = gui_menu(6, "Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Cancel");
 				if (slot < 0 || slot >= 5) break;
 				world_main_save(slot+1);
-				return;
+				is_menu_open = 0; break;
 			}
 			case 3: {
 				int slot = gui_menu(6, "Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Cancel");
 				if (slot < 0 || slot >= 5) break;
 				world_main_load(slot+1);
-				return;
+				is_menu_open = 0; break;
 			}
 			case 4: {
 				gui_terrible_text_viewer(license_text_txt);
-				return;
+				is_menu_open = 0; break;
 			}
 			case 5:
 			default:
 				is_menu_open = 0;
-				return;
+				break;
 		}
+		joy_delay = 5;
+		return;
 	}
 
-	if (use_dpad == true) {
+	if (options.move_dpad) {
 		if ((sawpads_buttons & PAD_UP) == 0) jy0 = -0x7F;
 		if ((sawpads_buttons & PAD_DOWN) == 0) jy0 = 0x7F;
 		if ((sawpads_buttons & PAD_LEFT) == 0) jx0 = -0x7F;
@@ -1078,9 +1082,6 @@ void player_update(int mmul)
 	if (cam_ry > 0x8000) cam_ry -= 0x10000;
 	if (cam_rx < -0x4000) cam_rx = -0x4000;
 	if (cam_rx > 0x4000) cam_rx = 0x4000;
-
-	if ((joy_pressed & PAD_SELECT) != 0)
-		use_dpad = !use_dpad;
 
 	if ((joy_pressed & PAD_L2) != 0) {
 		int32_t sel_cx = -1;
@@ -1461,7 +1462,6 @@ int main(void)
 			vblank_counter = 0;
 			int mmul = ticks - movement_ticks;
 			movement_ticks = ticks;
-
 #if defined(LAVA_ANIMATION_START) || defined(WATER_ANIMATION_START)
 			uint32_t last_tut = tex_update_ticks;
 			while (tex_update_blanks >= VBLANKS_PER_SEC/5) {

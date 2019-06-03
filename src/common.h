@@ -33,6 +33,7 @@ typedef void save_progress_callback(int progress, int max);
 
 typedef struct {
 	bool pro_jumps;
+	bool move_dpad;
 } options_t;
 
 // Files

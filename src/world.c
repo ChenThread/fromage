@@ -495,6 +495,8 @@ void world_schedule_block_update(int32_t cx, int32_t cy, int32_t cz, uint32_t de
 		return;
 
 	update_entry_t* entry = (update_entry_t*) malloc(sizeof(update_entry_t));
+	if (entry == NULL)
+		return; // ah well
 
 	entry->cx = (uint8_t) cx;
 	entry->cy = (uint8_t) cy;
