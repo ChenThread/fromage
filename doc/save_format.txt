@@ -1,4 +1,4 @@
-filename: "FromageN", where N >= 0
+filename: "B?CHEN-00001_N", where N >= 0 (1..5 typically)
 
 sector 0:
 	PS1 title sector
