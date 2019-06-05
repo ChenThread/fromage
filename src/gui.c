@@ -409,13 +409,15 @@ int gui_menu(int optcount, ...)
 		int opt_height = 20;
 		int opt_width = VID_WIDTH * 3 / 4;
 		int opt_text_y = (opt_height - 8) / 2;
-		int opt_distance = opt_height + 12;
+		int opt_distance = opt_height + 8;
 		int opt_allheight = (opt_distance * (optcount - 1)) + opt_height;
 		int opt_x = (VID_WIDTH - opt_width) / 2;
 		int opt_y = (VID_HEIGHT - opt_allheight) / 2;
 
 		for (int i = 0; i < optcount; i++)
 		{
+			if (strs[i] == NULL) continue;
+
 			int tw = get_text_width_buffer(strs[i]);
 			int ty = opt_y + (opt_distance * i);
 			draw_text((VID_WIDTH - tw) / 2, ty + opt_text_y, 0xFFFFFF, strs[i]);
@@ -432,8 +434,19 @@ int gui_menu(int optcount, ...)
 		sawpads_do_read();
 
 		int joy_pressed = update_joy_pressed();
-		if ((joy_pressed & PAD_DOWN) != 0) curr_opt = (curr_opt + 1) % optcount;
-		if ((joy_pressed & PAD_UP) != 0) { curr_opt = (curr_opt - 1); if (curr_opt < 0) curr_opt = optcount - 1; }
+		if ((joy_pressed & PAD_DOWN) != 0) {
+			curr_opt = (curr_opt + 1) % optcount;
+			while (strs[curr_opt] == NULL)
+				curr_opt = (curr_opt + 1) % optcount;
+		}
+		if ((joy_pressed & PAD_UP) != 0) {
+			curr_opt = (curr_opt - 1);
+			if (curr_opt < 0) curr_opt = optcount - 1;
+			while (strs[curr_opt] == NULL) {
+				curr_opt = (curr_opt - 1);
+				if (curr_opt < 0) curr_opt = optcount - 1;
+			}
+		}
 		if ((joy_pressed & (PAD_START | PAD_T | PAD_O)) != 0) { curr_opt = -1; break; }
 		if ((joy_pressed & PAD_X) != 0) break;
 	}

@@ -1,35 +1,39 @@
-= fromage resources - texture atlas =
+== fromage resources - texture atlas ==
 
-Copyright (c) 2017 asie
+Derived from the Minetest project (https://www.minetest.net/)
+
 Copyright (c) 2014-2016 RHRhino
 Copyright (c) 2016 yyt16384
 Copyright (c) 2010-2016:
-  G4JC
-  VanessaE
-  RealBadAngel
-  Calinou
-  MirceaKitsune
-  Jordach
-  PilzAdam
-  jojoa1997
-  InfinityProject
-  Splizard
-  Zeg9
-  BlockMen
-  sofar
-  Neuromancer
-  Gambit
-  asl97
-  KevDoy
-  Mito551
-  GreenXenith
-  kaeza
-  kilbith
+  G4JC, VanessaE, RealBadAngel
+  Calinou, MirceaKitsune, Jordach
+  PilzAdam, jojoa1997, InfinityProject
+  Splizard, Zeg9, BlockMen
+  sofar, Neuromancer, Gambit
+  asl97, KevDoy, Mito551
+  GreenXenith, kaeza, kilbith
+
+Necessary edits: Copyright (c) 2017 asie
 
 Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0)
 http://creativecommons.org/licenses/by-sa/3.0/
 
-= fromage resources - font =
+== fromage resources - music ==
+
+Fromage OST - Copyright (c) 2019 GreaseMonkey
+
+== fromage resources - sounds ==
+
+Derived from the Minetest project (https://www.minetest.net/)
+
+Copyright (c) 2010-2016 Mito551
+
+Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0)
+http://creativecommons.org/licenses/by-sa/3.0/
+
+== fromage resources - font ==
+
+"k6x8" font from Little Limit
 
 http://littlelimit.net/k6x8.htm
 
@@ -37,6 +41,6 @@ These fonts are free software.
 Unlimited permission is granted to use, copy, and distribute them, with or without modification, either commercially or noncommercially.
 THESE FONTS ARE PROVIDED "AS IS" WITHOUT WARRANTY.
 
-= fromage resources - icon =
+== fromage resources - icon ==
 
 Copyright (c) 2019 asie

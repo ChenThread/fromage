@@ -1,6 +1,7 @@
 #include <chenboot.h>
 #include <sawpads.h>
 #include "common.h"
+#include <stdarg.h>
 
 /*
 
@@ -1034,7 +1035,7 @@ void player_update(int mmul)
 
 	if ((joy_pressed & PAD_START) != 0) {
 		int is_menu_open = 1;
-		while (is_menu_open) switch (gui_menu(6, "Options", "Generate new level", "Save level..", "Load level..", "License information", "Back to game")) {
+		while (is_menu_open) switch (gui_menu(7, "Options", "Generate new level", "Save level..", "Load level..", NULL, "Credits", "Back to game")) {
 			case 0:
 				if (gui_options_menu(&options)) is_menu_open = 0;
 				break;
@@ -1053,11 +1054,11 @@ void player_update(int mmul)
 				world_main_load(slot+1);
 				is_menu_open = 0; break;
 			}
-			case 4: {
+			case 5: {
 				gui_terrible_text_viewer(license_text_txt);
 				is_menu_open = 0; break;
 			}
-			case 5:
+			case 6:
 			default:
 				is_menu_open = 0;
 				break;

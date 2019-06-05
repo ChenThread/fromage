@@ -141,6 +141,9 @@ $(OBJDIR)/calm3.mus: $(RESDIR)/calm3.ogg
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(INCLUDES)
 	$(CROSS_CC) -c -o $@ $(CFLAGS) $<
 
+$(OBJDIR)/%.o: $(SRCDIR)/%.s
+	$(CROSS_CC) -g -c -o $@ $(CFLAGS) $<
+
 $(OBJDIR)/soundbank.h: $(OBJDIR)/soundbank.raw
 	$(PYTHON3) tools/bin2h.py $(OBJDIR)/soundbank.raw > $(OBJDIR)/soundbank.h
 
