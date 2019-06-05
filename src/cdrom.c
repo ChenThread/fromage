@@ -27,7 +27,7 @@ void cdrom_tick_song_player(int vbls) {
 	if (song_vblanks <= 0) {
 		int it_time = 0;
 		for (int i = 0; i < vbls; i++) {
-			if ((RAND(rand_seed) & 0x1FF) == 0x121) it_time++;
+			if ((RAND(rand_seed) & 0x3FF) == 0x121) it_time++;
 		}
 
 		if (it_time > 0) {
@@ -41,7 +41,7 @@ void cdrom_tick_song_player(int vbls) {
 					| SEEDY_READ_SINGLE_SPEED,
 					1, val
 				);
-				song_vblanks = song_lengths[val] * VBLANKS_PER_SEC;
+				song_vblanks = (song_lengths[val] + 3) * VBLANKS_PER_SEC;
 			}
 		}
 	} else {
