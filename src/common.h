@@ -34,12 +34,10 @@ typedef void save_progress_callback(int progress, int max);
 typedef struct {
 	bool pro_jumps;
 	bool move_dpad;
+	uint8_t render_distance;
 } options_t;
 
 // Files
-#define LEVEL_LX 64
-#define LEVEL_LY 64
-#define LEVEL_LZ 64
 extern uint32_t atlas_raw[];
 extern uint8_t font_raw[];
 extern uint8_t fsys_level[LEVEL_LY][LEVEL_LZ][LEVEL_LX];
@@ -81,7 +79,11 @@ extern int hotbar_pos;
 extern int current_block[HOTBAR_MAX];
 
 void draw_block(int32_t cx, int32_t cy, int32_t cz, int di, int block, uint32_t facemask, bool transparent);
-int update_joy_pressed(void);
+
+// joy.c
+extern int joy_pressed;
+extern int joy_released;
+void joy_update(int autorepeat_divisor);
 
 // gpu.c
 extern volatile uint32_t vblank_counter;
@@ -100,8 +102,9 @@ void gp1_command(uint32_t v);
 // gpu_dma.c
 extern uint32_t dma_pos;
 #define DMA_ORDER_MAX 64
+#define DMA_BUFFER_SIZE (256*384)
 
-extern uint32_t dma_buffer[256*512];
+extern uint32_t dma_buffer[DMA_BUFFER_SIZE];
 extern uint32_t dma_order_table[4][DMA_ORDER_MAX];
 extern uint32_t dma_buffer_current;
 #define DMA_PUSH(len, ot) \
@@ -129,7 +132,7 @@ void draw_current_block(void);
 void draw_hotbar(void);
 void draw_crosshair(void);
 void draw_liquid_overlay(void);
-int gui_menu(int optcount, ...);
+int gui_menu(int optcount, int optstartpos, ...);
 void gui_terrible_text_viewer(const char* text);
 
 // options.c

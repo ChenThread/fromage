@@ -76,7 +76,7 @@ void world_generate(uint8_t *map, int32_t lx, int32_t ly, int32_t lz, uint32_t s
 {
 	if (wc != NULL) wc("Raising..");
 
-	uint16_t heights[lx*lz];
+	uint8_t heights[lx*lz];
 	uint8_t perm[256];
 	for (int i = 0; i < 256; i++) perm[i] = i;
 

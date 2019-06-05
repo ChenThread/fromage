@@ -474,15 +474,15 @@ void draw_world(void)
 	int cam_cx = cam_x >> 8;
 	int cam_cy = cam_y >> 8;
 	int cam_cz = cam_z >> 8;
-	int cam_dist = 19;
-	int cam_real_dist = 16;
+	int cam_real_dist = 12 + (options.render_distance << 2);
+	int cam_dist = cam_real_dist + 3;
 	/*
 	for(int cd = cam_dist; cd != 0; cd--) {
 		draw_blocks_in_range(cam_cx, cam_cy, cam_cz, cd);
 	}
 	*/
 	int cd = cam_dist;
-	int cdy = cam_real_dist;
+	int cdy = cam_real_dist & (~3);
 
 	int cymin = cam_cy - cdy;
 	int cymax = cam_cy + cdy;
@@ -886,26 +886,22 @@ void draw_everything(void)
 	gpu_dma_finish();
 }
 
-int update_joy_pressed(void)
-{
-	int joy_pressed = joy_buttons_old & (~sawpads_buttons);
-	joy_buttons_old = sawpads_buttons;
-	return joy_pressed;
-}
-
 void blocksel_update(void)
 {
-	int joy_pressed = update_joy_pressed();
+	if (joy_pressed != 0) {
+		if ((joy_pressed & (PAD_T | PAD_S | PAD_O | PAD_X)) != 0) {
+			mode = MODE_INGAME;
+			return;
+		}
 
-	if ((joy_pressed & (PAD_T | PAD_S | PAD_O | PAD_X)) != 0) {
-		mode = MODE_INGAME;
-		return;
+		if ((joy_pressed & PAD_UP) != 0) blocksel_id -= 9;
+		if ((joy_pressed & PAD_LEFT) != 0) blocksel_id--;
+		if ((joy_pressed & PAD_RIGHT) != 0) blocksel_id++;
+		if ((joy_pressed & PAD_DOWN) != 0) blocksel_id += 9;
+
+		while (blocksel_id < 0) blocksel_id += sizeof(block_sel_slots);
+		while (blocksel_id >= sizeof(block_sel_slots)) blocksel_id -= sizeof(block_sel_slots);
 	}
-
-	if ((joy_pressed & PAD_UP) != 0) if (blocksel_id >= 9) blocksel_id -= 9;
-	if ((joy_pressed & PAD_LEFT) != 0) if (blocksel_id >= 1) blocksel_id--;
-	if ((joy_pressed & PAD_RIGHT) != 0) if (blocksel_id < (sizeof(block_sel_slots) - 1)) blocksel_id++;
-	if ((joy_pressed & PAD_DOWN) != 0) if (blocksel_id < (sizeof(block_sel_slots) - 9)) blocksel_id += 9;
 
 	current_block[hotbar_pos] = block_sel_slots[blocksel_id];
 }
@@ -1026,7 +1022,11 @@ void player_update(int mmul)
 	int jy0 = 0x00;
 	int jx1 = (int)(int8_t)(sawpads_axes[0]);
 	int jy1 = (int)(int8_t)(sawpads_axes[1]);
-	int joy_pressed = update_joy_pressed();
+
+	int prev_feet_x = cam_x >> 8;
+	int prev_feet_y = (cam_y - 443) >> 8;
+	int prev_feet_z = cam_z >> 8;
+	int prev_vel_y = vel_y;
 
 	if (joy_delay > 0) {
 		joy_delay--;
@@ -1035,7 +1035,7 @@ void player_update(int mmul)
 
 	if ((joy_pressed & PAD_START) != 0) {
 		int is_menu_open = 1;
-		while (is_menu_open) switch (gui_menu(7, "Options", "Generate new level", "Save level..", "Load level..", NULL, "Credits", "Back to game")) {
+		while (is_menu_open) switch (gui_menu(7, 0, "Options", "Generate new level", "Save level..", "Load level..", NULL, "Credits", "Back to game")) {
 			case 0:
 				if (gui_options_menu(&options)) is_menu_open = 0;
 				break;
@@ -1043,13 +1043,13 @@ void player_update(int mmul)
 				world_main_generate();
 				is_menu_open = 0; break;
 			case 2: {
-				int slot = gui_menu(6, "Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Cancel");
+				int slot = gui_menu(6, 0, "Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Cancel");
 				if (slot < 0 || slot >= 5) break;
 				world_main_save(slot+1);
 				is_menu_open = 0; break;
 			}
 			case 3: {
-				int slot = gui_menu(6, "Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Cancel");
+				int slot = gui_menu(6, 0, "Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Cancel");
 				if (slot < 0 || slot >= 5) break;
 				world_main_load(slot+1);
 				is_menu_open = 0; break;
@@ -1246,10 +1246,6 @@ if (options.pro_jumps) {
 
 	bool in_liquid = player_is_in_liquid();
 
-	int prev_feet_x = cam_x >> 8;
-	int prev_feet_y = (cam_y - 443) >> 8;
-	int prev_feet_z = cam_z >> 8;
-
 	for (int i = 0; i < mmul; i++) {
 		if ((sawpads_buttons & PAD_X) == 0) {
 			if (in_liquid || !try_move(0, -16, 0, false)) {
@@ -1296,10 +1292,12 @@ if (options.pro_jumps) {
 	int feet_x = cam_x >> 8;
 	int feet_y = (cam_y - 443) >> 8;
 	int feet_z = cam_z >> 8;
+	int force_feet_sound = (prev_vel_y < -8 && vel_y == 0);
 
 	feet_sound_ticks += mmul*3;
-	if (prev_feet_x != feet_x || prev_feet_y != feet_y || prev_feet_z != feet_z) {
+	if (force_feet_sound || prev_feet_x != feet_x || prev_feet_y != feet_y || prev_feet_z != feet_z) {
 		int bid = world_get_block(feet_x, feet_y, feet_z);
+		if (force_feet_sound) feet_sound_ticks = VBLANKS_PER_SEC;
 		if (!world_is_walkable(bid) && feet_sound_ticks >= VBLANKS_PER_SEC) {
 			feet_sound_ticks %= VBLANKS_PER_SEC;
 			sound_play(sound_get_id(bid), 0x1FFF, 0x1FFF);
@@ -1421,6 +1419,10 @@ int main(void)
 	gp1_command(0x03000000);
 	wait_for_next_vblank();
 
+	// Prepare options
+	memset(&options, 0, sizeof(options_t));
+	options.render_distance = 1;
+
 	// Prepare joypad
 	PSXREG_JOY_CTRL = 0x0010;
 	PSXREG_JOY_MODE = 0x000D;
@@ -1497,7 +1499,7 @@ int main(void)
 			while ((DMA_n_CHCR(2) & (1<<24)) != 0) {}
 			while (vblank_counter == 0) {}
 			frame_flip_nosync();
-			sawpads_do_read();
+			joy_update(1);
 		}
 	}
 

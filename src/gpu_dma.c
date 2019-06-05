@@ -5,7 +5,7 @@ uint32_t dma_pos_start = 0;
 uint32_t dma_start_ptr;
 
 volatile uint32_t dma_next_start = 0;
-uint32_t dma_buffer[256*512];
+uint32_t dma_buffer[DMA_BUFFER_SIZE];
 uint32_t dma_order_table[4][DMA_ORDER_MAX];
 uint32_t dma_buffer_current = 0;
 

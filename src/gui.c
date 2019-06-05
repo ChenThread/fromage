@@ -391,10 +391,10 @@ void draw_liquid_overlay(void)
 	}
 }
 
-int gui_menu(int optcount, ...)
+int gui_menu(int optcount, int optstartpos, ...)
 {
 	char *strs[optcount];
-	int curr_opt = 0;
+	int curr_opt = optstartpos % optcount;
 
 	va_list args;
 	va_start(args, optcount);
@@ -431,9 +431,8 @@ int gui_menu(int optcount, ...)
 		draw_dirt_background();
 		gpu_dma_finish();
 		frame_flip();
-		sawpads_do_read();
+		joy_update(1);
 
-		int joy_pressed = update_joy_pressed();
 		if ((joy_pressed & PAD_DOWN) != 0) {
 			curr_opt = (curr_opt + 1) % optcount;
 			while (strs[curr_opt] == NULL)
@@ -451,7 +450,6 @@ int gui_menu(int optcount, ...)
 		if ((joy_pressed & PAD_X) != 0) break;
 	}
 
-	update_joy_pressed();
 	return curr_opt;
 }
 
@@ -483,8 +481,9 @@ void gui_terrible_text_viewer(const char* text)
 		while (newlines < text_pos && (*tpos)!=0) {
 			if (*(tpos++) == 10) newlines++;
 		}
+
 		if ((*tpos) == 0) {
-			text_pos--;
+			text_pos = newlines - 1;
 			continue;
 		}
 
@@ -544,12 +543,12 @@ void gui_terrible_text_viewer(const char* text)
 		last_tp = text_pos;
 	} else {
 		wait_for_next_vblank();
-		sawpads_do_read();
 	}
 
-		int joy_pressed = update_joy_pressed();
+		joy_update(4);
+
 		if ((joy_pressed & PAD_DOWN) != 0) text_pos++;
-		if ((joy_pressed & PAD_UP) != 0) text_pos--;
+		if ((joy_pressed & PAD_UP) != 0) if (text_pos > 0) text_pos--;
 		if ((joy_pressed & (PAD_T | PAD_O)) != 0) break;
 	}
 }

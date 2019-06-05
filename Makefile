@@ -77,6 +77,7 @@ OBJS =	$(OBJDIR)/cdrom.o \
 	$(OBJDIR)/gui.o \
 	$(OBJDIR)/gpu.o \
 	$(OBJDIR)/gpu_dma.o \
+	$(OBJDIR)/joy.o \
 	$(OBJDIR)/options.o \
 	$(OBJDIR)/save.o \
 	$(OBJDIR)/sound.o \

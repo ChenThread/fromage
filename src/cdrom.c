@@ -11,7 +11,7 @@ void cdrom_isr(void) {
 #define READ16LE(secbuf,i) ((secbuf)[(i)] | ((secbuf)[(i)+1]<<8))
 #define READ32LE(secbuf,i) ((secbuf)[(i)] | ((secbuf)[(i)+1]<<8) | ((secbuf)[(i)+2]<<16) | ((secbuf)[(i)+3]<<24))
 
-#define FILE_RECORD_MAX 32
+#define FILE_RECORD_MAX 16
 
 static file_record_t files[FILE_RECORD_MAX];
 static int files_count = 0;
@@ -127,5 +127,6 @@ void cdrom_init(save_progress_callback *pc) {
 	}
 
 	if (pc != NULL) pc(5, CDROM_INIT_STEPS);
+	free(buffer);
 }
 
