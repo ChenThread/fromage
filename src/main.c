@@ -224,15 +224,6 @@ static inline void draw_one_quad(
 	if(((int16_t)(sxy2&0xFFFF)) > 512) { continue; }
 #endif
 
-#if 1
-	// Back plane cull, flag edition
-	int32_t gte_flags;
-	asm volatile ("cfc2 %0, $31\nnop\n" : "=r"(gte_flags) : : );
-
-	if((gte_flags & (1<<18)) != 0) {
-		return;
-	}
-#endif
 
 #if 0
 	// Determine face
@@ -240,7 +231,7 @@ static inline void draw_one_quad(
 	int32_t backface_mac0;
 	asm volatile ("mfc2 %0, $24\nnop\n" : "=r"(backface_mac0) : : );
 	// Backface cull
-	if(backface_mac0 < 2) { continue; }
+	if(backface_mac0 < 2) { return; }
 #endif
 
 	// Apply 4th point
@@ -263,15 +254,21 @@ static inline void draw_one_quad(
 	if(((int16_t)(sxy3&0xFFFF)) > 512) { continue; }
 #endif
 
-#if 0
-	// Back plane cull, Z edition
-	int32_t average_z;
-	//asm volatile ("cop2 0x0158002D\nnop\n" ::: ); // AVSZ3
-	asm volatile ("cop2 0x0168002E\nnop\n" ::: ); // AVSZ4
-	asm volatile ("mfc2 %0, $24\nnop\n" : "=r"(average_z) : : );
+#if 1
+	// Back plane cull, flag edition
+	int32_t gte_flags;
+	asm volatile ("cfc2 %0, $31\nnop\n" : "=r"(gte_flags) : : );
 
-	if(average_z <= 4) {
-		continue;
+	if((gte_flags & (1<<18)) != 0) {
+		// Back plane cull, Z edition
+		int32_t average_z;
+		//asm volatile ("cop2 0x0158002D\nnop\n" ::: ); // AVSZ3
+		asm volatile ("cop2 0x0168002E\nnop\n" ::: ); // AVSZ4
+		asm volatile ("mfc2 %0, $24\nnop\n" : "=r"(average_z) : : );
+
+		if(average_z <= 4) {
+			return;
+		}
 	}
 #endif
 
