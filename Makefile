@@ -104,7 +104,7 @@ clean:
 	$(RM_F) $(OBJDIR)/atlas.raw $(OBJDIR)/font.raw $(OBJDIR)/icon.raw
 	$(RM_F) $(OBJDIR)/atlas.raw.lz4
 	$(RM_F) $(OBJDIR)/soundbank.h
-	$(RM_F) $(OBJDIR)/soundbank.raw
+	$(RM_F) $(OBJDIR)/soundbank.raw $(OBJDIR)/soundbank.raw.lz4
 	$(RM_F) $(SOUNDS)
 	$(RM_F) $(MUSIC) music.hdr music.xa
 	$(RM_F) $(OBJDIR)/license_text.s $(OBJDIR)/license_text.txt
@@ -121,8 +121,8 @@ $(EXE_NAME).exe: $(OBJDIR)/$(EXE_NAME).elf
 $(OBJDIR)/$(EXE_NAME).elf: $(OBJS)
 	$(CROSS_CC) -o $(OBJDIR)/$(EXE_NAME).elf $(LDFLAGS) $(OBJS) $(LIBS)
 
-music.hdr: $(MUSIC)
-	$(PYTHON3) $(TOOLSDIR)/mkmusichdr.py music.hdr $(MUSIC)
+music.hdr: $(MUSIC) $(RESDIR)/music_volume.txt
+	$(PYTHON3) $(TOOLSDIR)/mkmusichdr.py music.hdr $(RESDIR)/music_volume.txt $(MUSIC)
 
 music.xa: $(MUSIC) $(RESDIR)/music.txt
 	$(CANDYK)/bin/xainterleave $(RESDIR)/music.txt music.xa
@@ -148,8 +148,9 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c $(INCLUDES)
 $(OBJDIR)/%.o: $(SRCDIR)/%.s
 	$(CROSS_CC) -g -c -o $@ $(CFLAGS) $<
 
-$(OBJDIR)/soundbank.h: $(OBJDIR)/soundbank.raw
-	$(PYTHON3) $(TOOLSDIR)/bin2h.py $(OBJDIR)/soundbank.raw > $(OBJDIR)/soundbank.h
+$(OBJDIR)/soundbank.h: $(OBJDIR)/soundbank.raw $(OBJDIR)/lz4pack
+	$(OBJDIR)/lz4pack -o 32 -p $(OBJDIR)/soundbank.raw $(OBJDIR)/soundbank.raw.lz4
+	$(PYTHON3) $(TOOLSDIR)/bin2h.py $(OBJDIR)/soundbank.raw.lz4 > $(OBJDIR)/soundbank.h
 
 $(OBJDIR)/lz4.o: contrib/lz4/lz4.c contrib/lz4/lz4.h
 	$(CROSS_CC) -c -o $@ $(CFLAGS) $<
@@ -164,10 +165,6 @@ $(OBJDIR)/atlas.h: $(OBJDIR)/atlas.raw $(TOOLSDIR)/bin2h.py $(OBJDIR)/lz4pack $(
 $(OBJDIR)/font.o: $(OBJDIR)/font.raw $(TOOLSDIR)/bin2s.py $(INCLUDES)
 	$(PYTHON3) $(TOOLSDIR)/bin2s.py $(OBJDIR)/font.raw > $(OBJDIR)/font.s
 	$(CROSS_AS) -o $@ $(ASFLAGS) $(OBJDIR)/font.s
-
-$(OBJDIR)/soundbank.o: $(OBJDIR)/soundbank.raw $(TOOLSDIR)/bin2s.py $(INCLUDES)
-	$(PYTHON3) $(TOOLSDIR)/bin2s.py $(OBJDIR)/soundbank.raw > $(OBJDIR)/soundbank.s
-	$(CROSS_AS) -o $@ $(ASFLAGS) $(OBJDIR)/soundbank.s
 
 $(OBJDIR)/atlas.raw: $(RESDIR)/atlas.png $(RESDIR)/water.png $(RESDIR)/lava.png
 	$(PYTHON3) $(TOOLSDIR)/mkatlas.py $(RESDIR)/atlas.png $(OBJDIR)/atlas.raw $(RESDIR)/water.png $(RESDIR)/lava.png

@@ -11,6 +11,8 @@
 
 #define ASSERT(x) if(!(x)) { for(;;) {} }
 #define ABS(x) ((x)>=0 ? (x) : -(x))
+#define READ16LE(secbuf,i) ((secbuf)[(i)] | ((secbuf)[(i)+1]<<8))
+#define READ32LE(secbuf,i) ((secbuf)[(i)] | ((secbuf)[(i)+1]<<8) | ((secbuf)[(i)+2]<<16) | ((secbuf)[(i)+3]<<24))
 
 #include "config.h"
 

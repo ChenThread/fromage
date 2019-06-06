@@ -8,15 +8,13 @@ void cdrom_isr(void) {
 	seedy_isr_cdrom();
 }
 
-#define READ16LE(secbuf,i) ((secbuf)[(i)] | ((secbuf)[(i)+1]<<8))
-#define READ32LE(secbuf,i) ((secbuf)[(i)] | ((secbuf)[(i)+1]<<8) | ((secbuf)[(i)+2]<<16) | ((secbuf)[(i)+3]<<24))
-
 #define FILE_RECORD_MAX 16
 
 static file_record_t files[FILE_RECORD_MAX];
 static int files_count = 0;
 
 static uint32_t rand_seed = 1;
+static uint16_t song_volume = 0x3FFF;
 static uint16_t song_lengths[4];
 static int32_t song_count = 0;
 static int32_t song_vblanks = 0;
@@ -51,7 +49,7 @@ void cdrom_tick_song_player(int vbls) {
 			file_record_t *record = cdrom_get_file("MUSIC.XA");
 			if (record != NULL) {
 				int val = ((rand_seed >> 16) % song_count);
-				orelei_open_cd_audio(0x3FFF, 0x3FFF);
+				orelei_open_cd_audio(song_volume, song_volume);
 				seedy_read_xa(record->lba,
 					SEEDY_PLAY_XA_37800
 					| SEEDY_PLAY_XA_STEREO
@@ -130,12 +128,17 @@ void cdrom_init(save_progress_callback *pc) {
 	{
 		file_record_t *record = cdrom_get_file("MUSIC.HDR");
 		if (record != NULL) {
-			song_count = record->size >> 1;
+			song_count = (record->size - 1) >> 1;
 			seedy_read_data_sync(record->lba, 0, buffer, record->size);
+			song_volume = READ16LE(buffer, 0);
 			for (int i = 0; i < song_count; i++) {
-				song_lengths[i] = READ16LE(buffer, (i << 1));
+				song_lengths[i] = READ16LE(buffer, (i << 1) + 2);
 			}
 		}
+	}
+
+	if (song_count == 0) {
+		seedy_drive_stop(); // we won't need you anymore, for now
 	}
 
 	if (pc != NULL) pc(5, CDROM_INIT_STEPS);
