@@ -116,6 +116,7 @@ uint32_t movement_ticks = 0;
 uint32_t tex_update_ticks = 0;
 uint32_t tex_update_blanks = 0;
 uint32_t feet_sound_ticks = 0;
+uint32_t vblank_counter_joy = 0;
 
 #define OT_WORLD 2
 
@@ -126,7 +127,6 @@ int hotbar_pos = 0;
 int32_t fps_frames = 0;
 int32_t fps_vblanks = 0;
 int32_t fps_val = 0;
-int32_t is_ticking = 1;
 
 static options_t options;
 
@@ -141,11 +141,9 @@ chenboot_exception_frame_t *isr_handler_c(chenboot_exception_frame_t *sp)
 	if((PSXREG_I_STAT & (1<<0)) != 0) {
 		// VBLANK
 		vblank_counter++;
-		if (is_ticking) {
-			tex_update_blanks++;
-			ticks++;
-		}
-
+		vblank_counter_joy++;
+		tex_update_blanks++;
+		ticks++;
 		//
 		PSXREG_I_STAT = ~(1<<0);
 		sawpads_isr_vblank();
@@ -1494,7 +1492,8 @@ int main(void)
 			while ((DMA_n_CHCR(2) & (1<<24)) != 0) {}
 			while (vblank_counter == 0) {}
 			frame_flip_nosync();
-			joy_update(1);
+			joy_update(vblank_counter_joy, 1);
+			vblank_counter_joy = 0;
 		}
 	}
 

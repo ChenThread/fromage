@@ -83,7 +83,7 @@ void draw_block(int32_t cx, int32_t cy, int32_t cz, int di, int block, uint32_t 
 // joy.c
 extern int joy_pressed;
 extern int joy_released;
-void joy_update(int autorepeat_divisor);
+void joy_update(int ticks, int autorepeat_divisor);
 
 // gpu.c
 extern volatile uint32_t vblank_counter;

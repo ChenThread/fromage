@@ -431,7 +431,7 @@ int gui_menu(int optcount, int optstartpos, ...)
 		draw_dirt_background();
 		gpu_dma_finish();
 		frame_flip();
-		joy_update(1);
+		joy_update(1, 1);
 
 		if ((joy_pressed & PAD_DOWN) != 0) {
 			curr_opt = (curr_opt + 1) % optcount;
@@ -545,7 +545,7 @@ void gui_terrible_text_viewer(const char* text)
 		wait_for_next_vblank();
 	}
 
-		joy_update(4);
+		joy_update(1, 4);
 
 		if ((joy_pressed & PAD_DOWN) != 0) text_pos++;
 		if ((joy_pressed & PAD_UP) != 0) if (text_pos > 0) text_pos--;
