@@ -60,6 +60,8 @@ void yield(void)
 	// TODO: halt
 }
 
+#include "../obj/atlas.h"
+
 extern char _end[];
 void *_cur_brk = (void *)_end;
 void __attribute__((externally_visible)) *sbrk (intptr_t incr)
@@ -1388,8 +1390,8 @@ int main(void)
 	PSXREG_I_MASK |= (1<<0);
 
 	// DMA a texture
-	gpu_dma_load(atlas_raw, 768, 256, 320/4, 256);
-	gpu_dma_load((uint32_t*) (&font_raw[64]), 64 * 0xE, 256, 128*VID_WIDTH_MULTIPLIER/4, 64);
+	gpu_dma_load((uint32_t*) (&font_raw[64]), 64 * 0xE, 256, 128*VID_WIDTH_MULTIPLIER/4, 64, 0);
+	gpu_dma_load(atlas_raw_lz4, 768, 256, 320/4, 256, sizeof(atlas_raw_lz4));
 
 	// Write font CLUT
 	gp1_command(0x04000001); // DMA mode: FIFO (1)

@@ -47,8 +47,10 @@ ISO_NAME=fromage
 OBJDIR = obj
 RESDIR ?= res
 SRCDIR = src
+TOOLSDIR = tools
+TOOLSOBJDIR = $(OBJDIR)/tools
 
-INCLUDES = src/block_info.h src/common.h src/config.h src/psx.h $(OBJDIR)/soundbank.h
+INCLUDES = src/block_info.h src/common.h src/config.h src/psx.h $(OBJDIR)/soundbank.h $(OBJDIR)/atlas.h
 
 MUSIC = \
 	$(OBJDIR)/calm1.mus \
@@ -81,10 +83,10 @@ OBJS =	$(OBJDIR)/cdrom.o \
 	$(OBJDIR)/options.o \
 	$(OBJDIR)/save.o \
 	$(OBJDIR)/sound.o \
+	$(OBJDIR)/util.o \
 	$(OBJDIR)/world.o \
 	$(OBJDIR)/worldgen.o \
 	\
-	$(OBJDIR)/atlas.o \
 	$(OBJDIR)/font.o \
 	$(OBJDIR)/icon.o \
 	$(OBJDIR)/license_text.o \
@@ -98,8 +100,9 @@ all: $(EXE_NAME).exe $(ISO_NAME).cue
 
 clean:
 	$(RM_F) $(OBJS) $(OBJDIR)/$(EXE_NAME).elf $(ISO_NAME).bin $(ISO_NAME).cue
-	$(RM_F) $(OBJDIR)/atlas.s $(OBJDIR)/font.s $(OBJDIR)/icon.s
+	$(RM_F) $(OBJDIR)/atlas.h $(OBJDIR)/font.s $(OBJDIR)/icon.s
 	$(RM_F) $(OBJDIR)/atlas.raw $(OBJDIR)/font.raw $(OBJDIR)/icon.raw
+	$(RM_F) $(OBJDIR)/atlas.raw.lz4
 	$(RM_F) $(OBJDIR)/soundbank.h
 	$(RM_F) $(OBJDIR)/soundbank.raw
 	$(RM_F) $(SOUNDS)
@@ -119,13 +122,13 @@ $(OBJDIR)/$(EXE_NAME).elf: $(OBJS)
 	$(CROSS_CC) -o $(OBJDIR)/$(EXE_NAME).elf $(LDFLAGS) $(OBJS) $(LIBS)
 
 music.hdr: $(MUSIC)
-	$(PYTHON3) tools/mkmusichdr.py music.hdr $(MUSIC)
+	$(PYTHON3) $(TOOLSDIR)/mkmusichdr.py music.hdr $(MUSIC)
 
 music.xa: $(MUSIC) $(RESDIR)/music.txt
 	$(CANDYK)/bin/xainterleave $(RESDIR)/music.txt music.xa
 
 $(OBJDIR)/soundbank.raw: $(SOUNDS)
-	$(PYTHON3) tools/mksoundbank.py $(OBJDIR)/soundbank.raw $(SOUNDS)
+	$(PYTHON3) $(TOOLSDIR)/mksoundbank.py $(OBJDIR)/soundbank.raw $(SOUNDS)
 
 $(OBJDIR)/%.snd: $(RESDIR)/%.ogg
 	$(SPUENC) -f 14700 -t spu -c 1 -b 4 $< $@
@@ -146,34 +149,37 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.s
 	$(CROSS_CC) -g -c -o $@ $(CFLAGS) $<
 
 $(OBJDIR)/soundbank.h: $(OBJDIR)/soundbank.raw
-	$(PYTHON3) tools/bin2h.py $(OBJDIR)/soundbank.raw > $(OBJDIR)/soundbank.h
+	$(PYTHON3) $(TOOLSDIR)/bin2h.py $(OBJDIR)/soundbank.raw > $(OBJDIR)/soundbank.h
 
 $(OBJDIR)/lz4.o: contrib/lz4/lz4.c contrib/lz4/lz4.h
 	$(CROSS_CC) -c -o $@ $(CFLAGS) $<
 
-$(OBJDIR)/atlas.o: $(OBJDIR)/atlas.raw tools/bin2s.py $(INCLUDES)
-	$(PYTHON3) tools/bin2s.py $(OBJDIR)/atlas.raw > $(OBJDIR)/atlas.s
-	$(CROSS_AS) -o $@ $(ASFLAGS) $(OBJDIR)/atlas.s
+$(OBJDIR)/lz4pack: contrib/lz4/lz4.c contrib/lz4/lz4.h tools/lz4pack.c
+	$(CC) -O2 -Icontrib/lz4 -o $@ contrib/lz4/lz4.c tools/lz4pack.c
 
-$(OBJDIR)/font.o: $(OBJDIR)/font.raw tools/bin2s.py $(INCLUDES)
-	$(PYTHON3) tools/bin2s.py $(OBJDIR)/font.raw > $(OBJDIR)/font.s
+$(OBJDIR)/atlas.h: $(OBJDIR)/atlas.raw $(TOOLSDIR)/bin2h.py $(OBJDIR)/lz4pack $(INCLUDES)
+	$(OBJDIR)/lz4pack $(OBJDIR)/atlas.raw $(OBJDIR)/atlas.raw.lz4
+	$(PYTHON3) $(TOOLSDIR)/bin2h.py $(OBJDIR)/atlas.raw.lz4 > $(OBJDIR)/atlas.h
+
+$(OBJDIR)/font.o: $(OBJDIR)/font.raw $(TOOLSDIR)/bin2s.py $(INCLUDES)
+	$(PYTHON3) $(TOOLSDIR)/bin2s.py $(OBJDIR)/font.raw > $(OBJDIR)/font.s
 	$(CROSS_AS) -o $@ $(ASFLAGS) $(OBJDIR)/font.s
 
-$(OBJDIR)/soundbank.o: $(OBJDIR)/soundbank.raw tools/bin2s.py $(INCLUDES)
-	$(PYTHON3) tools/bin2s.py $(OBJDIR)/soundbank.raw > $(OBJDIR)/soundbank.s
+$(OBJDIR)/soundbank.o: $(OBJDIR)/soundbank.raw $(TOOLSDIR)/bin2s.py $(INCLUDES)
+	$(PYTHON3) $(TOOLSDIR)/bin2s.py $(OBJDIR)/soundbank.raw > $(OBJDIR)/soundbank.s
 	$(CROSS_AS) -o $@ $(ASFLAGS) $(OBJDIR)/soundbank.s
 
 $(OBJDIR)/atlas.raw: $(RESDIR)/atlas.png $(RESDIR)/water.png $(RESDIR)/lava.png
-	$(PYTHON3) tools/mkatlas.py $(RESDIR)/atlas.png $(OBJDIR)/atlas.raw $(RESDIR)/water.png $(RESDIR)/lava.png
+	$(PYTHON3) $(TOOLSDIR)/mkatlas.py $(RESDIR)/atlas.png $(OBJDIR)/atlas.raw $(RESDIR)/water.png $(RESDIR)/lava.png
 
 $(OBJDIR)/font.raw: $(RESDIR)/font.png
-	$(PYTHON3) tools/mkfont.py $(RESDIR)/font.png $(OBJDIR)/font.raw
+	$(PYTHON3) $(TOOLSDIR)/mkfont.py $(RESDIR)/font.png $(OBJDIR)/font.raw
 
 $(OBJDIR)/icon.raw: $(RESDIR)/icon.png
-	$(PYTHON3) tools/mkicon.py $(RESDIR)/icon.png $(OBJDIR)/icon.raw
+	$(PYTHON3) $(TOOLSDIR)/mkicon.py $(RESDIR)/icon.png $(OBJDIR)/icon.raw
 
-$(OBJDIR)/icon.o: $(OBJDIR)/icon.raw tools/bin2s.py $(INCLUDES)
-	$(PYTHON3) tools/bin2s.py $(OBJDIR)/icon.raw > $(OBJDIR)/icon.s
+$(OBJDIR)/icon.o: $(OBJDIR)/icon.raw $(TOOLSDIR)/bin2s.py $(INCLUDES)
+	$(PYTHON3) $(TOOLSDIR)/bin2s.py $(OBJDIR)/icon.raw > $(OBJDIR)/icon.s
 	$(CROSS_AS) -o $@ $(ASFLAGS) $(OBJDIR)/icon.s
 
 $(OBJDIR)/license_text.txt: LICENSE $(RESDIR)/LICENSE contrib/lz4/LICENSE
@@ -187,6 +193,6 @@ $(OBJDIR)/license_text.txt: LICENSE $(RESDIR)/LICENSE contrib/lz4/LICENSE
 	echo "" >> $(OBJDIR)/license_text.txt
 	cat contrib/lz4/LICENSE >> $(OBJDIR)/license_text.txt
 
-$(OBJDIR)/license_text.o: $(OBJDIR)/license_text.txt tools/bin2s.py $(INCLUDES)
-	$(PYTHON3) tools/bin2s.py $(OBJDIR)/license_text.txt > $(OBJDIR)/license_text.s
+$(OBJDIR)/license_text.o: $(OBJDIR)/license_text.txt $(TOOLSDIR)/bin2s.py $(INCLUDES)
+	$(PYTHON3) $(TOOLSDIR)/bin2s.py $(OBJDIR)/license_text.txt > $(OBJDIR)/license_text.s
 	$(CROSS_AS) -o $@ $(ASFLAGS) $(OBJDIR)/license_text.s

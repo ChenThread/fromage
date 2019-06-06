@@ -38,7 +38,6 @@ typedef struct {
 } options_t;
 
 // Files
-extern uint32_t atlas_raw[];
 extern uint8_t font_raw[];
 extern uint8_t fsys_level[LEVEL_LY][LEVEL_LZ][LEVEL_LX];
 
@@ -93,7 +92,6 @@ void frame_flip(void);
 void frame_flip_nosync(void);
 void wait_for_next_vblank(void);
 void wait_for_vblanks(uint32_t count);
-void gpu_dma_load(uint32_t *buffer, int x, int y, int width, int height);
 void gp0_command(uint32_t v);
 void gp0_data(uint32_t v);
 void gp0_data_xy(uint32_t x, uint32_t y);
@@ -117,6 +115,8 @@ extern uint32_t dma_buffer_current;
 
 void gpu_dma_init(void);
 void gpu_dma_finish(void);
+
+void gpu_dma_load(uint32_t *buffer, int x, int y, int width, int height, int use_lz4);
 
 // gui.c
 #define FONT_CHARS 128
@@ -166,6 +166,9 @@ int save_level(int save_id, level_info *info, const uint8_t *data, save_progress
 void sound_init(void);
 void sound_play(int id, int vol_left, int vol_right);
 int sound_get_id(int32_t block_id);
+
+// util.c
+uint8_t *lz4_alloc_and_unpack(uint8_t *buf, int cmpsize, int size);
 
 // world.c
 uint8_t world_get_top_opaque(int32_t cx, int32_t cz);
