@@ -111,6 +111,7 @@ int32_t joy_delay = 5;
 int32_t mode = MODE_INGAME;
 int16_t blocksel_id = 1;
 
+uint32_t is_ticking = 0;
 uint32_t ticks = 0;
 uint32_t movement_ticks = 0;
 uint32_t tex_update_ticks = 0;
@@ -142,8 +143,10 @@ chenboot_exception_frame_t *isr_handler_c(chenboot_exception_frame_t *sp)
 		// VBLANK
 		vblank_counter++;
 		vblank_counter_joy++;
-		tex_update_blanks++;
-		ticks++;
+		if (is_ticking > 0) {
+			tex_update_blanks++;
+			ticks++;
+		}
 		//
 		PSXREG_I_STAT = ~(1<<0);
 		sawpads_isr_vblank();
@@ -1028,6 +1031,7 @@ void player_update(int mmul)
 
 	if ((joy_pressed & PAD_START) != 0) {
 		int is_menu_open = 1;
+		is_ticking = 0;
 		while (is_menu_open) switch (gui_menu(7, 0, "Options", "Generate new level", "Save level..", "Load level..", NULL, "Credits", "Back to game")) {
 			case 0:
 				if (gui_options_menu(&options)) is_menu_open = 0;
@@ -1057,6 +1061,7 @@ void player_update(int mmul)
 				break;
 		}
 		joy_delay = 5;
+		is_ticking = 1;
 		return;
 	}
 
@@ -1444,6 +1449,7 @@ int main(void)
 			uint32_t frames_to_run = vblank_counter;
 			//vblank_counter -= frames_to_run;
 
+			is_ticking = 1;
 			draw_everything();
 
 			fps_frames++;
