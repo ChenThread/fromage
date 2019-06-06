@@ -293,11 +293,12 @@ void draw_quads(int32_t cx, int32_t cy, int32_t cz, int di, const mesh_data_t *m
 	int32_t oz = cz*0x0100;
 
 	for (int i = 0; i < face_count; i++) {
-		if(((1<<i)&facemask) == 0) {
+		int mi = i*4;
+
+		if(((1<<mesh_data[mi+0].face)&facemask) == 0) {
 			continue;
 		}
 
-		int mi = i*4;
 		const block_info_t *block_data = &bi[mesh_data[mi+0].face];
 
 		int32_t x00 = ox+mesh_data[mi+0].x;
