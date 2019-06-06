@@ -81,26 +81,26 @@ const mesh_data_t mesh_data_block[] = {
 const mesh_data_t mesh_data_plant[] = {
 	// TODO
 	// X-Z=0 front
-	{FACE_N, FACE_N, FACE_N, 0x0F00, .face = 0,},
-	{FACE_P, FACE_N, FACE_P, 0x0F0F, .face = 0,},
-	{FACE_N, FACE_P, FACE_N, 0x0000, .face = 0,},
-	{FACE_P, FACE_P, FACE_P, 0x000F, .face = 0,},
+	{FACE_N, FACE_N, FACE_N, 0x0F00, .face = 6,},
+	{FACE_P, FACE_N, FACE_P, 0x0F0F, .face = 6,},
+	{FACE_N, FACE_P, FACE_N, 0x0000, .face = 6,},
+	{FACE_P, FACE_P, FACE_P, 0x000F, .face = 6,},
 
 	// X-Z=0 back
-	{FACE_P, FACE_P, FACE_P, 0x000F, .face = 1,},
-	{FACE_N, FACE_P, FACE_N, 0x0000, .face = 1,},
-	{FACE_P, FACE_N, FACE_P, 0x0F0F, .face = 1,},
-	{FACE_N, FACE_N, FACE_N, 0x0F00, .face = 1,},
+	{FACE_P, FACE_P, FACE_P, 0x000F, .face = 6,},
+	{FACE_P, FACE_N, FACE_P, 0x0F0F, .face = 6,},
+	{FACE_N, FACE_P, FACE_N, 0x0000, .face = 6,},
+	{FACE_N, FACE_N, FACE_N, 0x0F00, .face = 6,},
 
 	// X+Z=0 front
-	{FACE_N, FACE_N, FACE_P, 0x0F00, .face = 2,},
-	{FACE_P, FACE_N, FACE_N, 0x0F0F, .face = 2,},
-	{FACE_N, FACE_P, FACE_P, 0x0000, .face = 2,},
-	{FACE_P, FACE_P, FACE_N, 0x000F, .face = 2,},
+	{FACE_N, FACE_N, FACE_P, 0x0F00, .face = 6,},
+	{FACE_P, FACE_N, FACE_N, 0x0F0F, .face = 6,},
+	{FACE_N, FACE_P, FACE_P, 0x0000, .face = 6,},
+	{FACE_P, FACE_P, FACE_N, 0x000F, .face = 6,},
 
 	// X+Z=0 back
-	{FACE_P, FACE_P, FACE_N, 0x000F, .face = 3,},
-	{FACE_N, FACE_P, FACE_P, 0x0000, .face = 3,},
-	{FACE_P, FACE_N, FACE_N, 0x0F0F, .face = 3,},
-	{FACE_N, FACE_N, FACE_P, 0x0F00, .face = 3,},
+	{FACE_P, FACE_P, FACE_N, 0x000F, .face = 6,},
+	{FACE_P, FACE_N, FACE_N, 0x0F0F, .face = 6,},
+	{FACE_N, FACE_P, FACE_P, 0x0000, .face = 6,},
+	{FACE_N, FACE_N, FACE_P, 0x0F00, .face = 6,},
 };

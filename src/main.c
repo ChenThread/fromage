@@ -198,8 +198,16 @@ static inline void draw_one_quad(
 	asm volatile ("mtc2 %0, $5\n" : "+r"(z10) : : );
 
 	// Apply transformation
-	asm volatile ("cop2 0x00280030\n" :::); // RTPT
+	asm volatile ("cop2 0x00280030\nnop\n" :::); // RTPT
 
+	// Determine face
+	asm volatile ("cop2 0x01400006\nnop\n" :::); // NCLIP
+	int32_t backface_mac0;
+	asm volatile ("mfc2 %0, $24\nnop\n" : "=r"(backface_mac0) : : );
+	// Backface cull
+	if(backface_mac0 > 0) { return; }
+
+	// Get transformed vertices
 	uint32_t sxy00;
 	uint32_t sxy01;
 	uint32_t sxy10;
@@ -224,16 +232,6 @@ static inline void draw_one_quad(
 	if(((int16_t)(sxy2&0xFFFF)) > 512) { continue; }
 #endif
 
-
-#if 0
-	// Determine face
-	asm volatile ("cop2 0x01400006\nnop\n" :::); // NCLIP
-	int32_t backface_mac0;
-	asm volatile ("mfc2 %0, $24\nnop\n" : "=r"(backface_mac0) : : );
-	// Backface cull
-	if(backface_mac0 < 2) { return; }
-#endif
-
 	// Apply 4th point
 	int32_t xy11 = ((x11&0xFFFF)|(y11<<16));
 	asm volatile ("mtc2 %0, $0\n" : "+r"(xy11) : : );
@@ -252,24 +250,6 @@ static inline void draw_one_quad(
 	if(((int16_t)(sxy3>>16)) > 512) { continue; }
 	if(((int16_t)(sxy3&0xFFFF)) < -512) { continue; }
 	if(((int16_t)(sxy3&0xFFFF)) > 512) { continue; }
-#endif
-
-#if 1
-	// Back plane cull, flag edition
-	int32_t gte_flags;
-	asm volatile ("cfc2 %0, $31\nnop\n" : "=r"(gte_flags) : : );
-
-	if((gte_flags & (1<<18)) != 0) {
-		// Back plane cull, Z edition
-		int32_t average_z;
-		//asm volatile ("cop2 0x0158002D\nnop\n" ::: ); // AVSZ3
-		asm volatile ("cop2 0x0168002E\nnop\n" ::: ); // AVSZ4
-		asm volatile ("mfc2 %0, $24\nnop\n" : "=r"(average_z) : : );
-
-		if(average_z <= 4) {
-			return;
-		}
-	}
 #endif
 
 	// Draw a quad
@@ -355,6 +335,8 @@ void draw_block(int32_t cx, int32_t cy, int32_t cz, int di, int block, uint32_t 
 	if(block >= BLOCK_MAX || block < 0) {
 		return;
 	}
+
+	facemask |= 0x40;
 
 	switch (get_model(block)) {
 		case 0:
