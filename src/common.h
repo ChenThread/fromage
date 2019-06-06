@@ -185,7 +185,7 @@ int32_t world_is_colliding(int32_t x1, int32_t y1, int32_t z1, int32_t x2, int32
 int32_t world_is_colliding_fixed(int32_t x1, int32_t y1, int32_t z1, int32_t x2, int32_t y2, int32_t z2);
 void world_schedule_block_update(int32_t cx, int32_t cy, int32_t cz, uint32_t delay);
 void world_init();
-void world_update(uint32_t ticks);
+void world_update(uint32_t ticks, uint32_t *vblank_counter);
 
 // worldgen.c
 typedef void worldgen_stage_callback(const char *message);

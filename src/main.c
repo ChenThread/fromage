@@ -1489,7 +1489,7 @@ int main(void)
 					break;
 			}
 
-			world_update(ticks);
+			world_update(ticks, &vblank_counter);
 			cdrom_tick_song_player(mmul);
 			while ((DMA_n_CHCR(2) & (1<<24)) != 0) {}
 			while (vblank_counter == 0) {}

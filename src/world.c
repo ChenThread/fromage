@@ -13,8 +13,11 @@ static uint8_t level_opaque_height[LEVEL_LZ][LEVEL_LX];
 static uint8_t level_faces[LEVEL_LY][LEVEL_LZ][LEVEL_LX];
 static uint16_t level_has_vis_blocks[LEVEL_LY>>2][LEVEL_LZ>>2][LEVEL_LX>>2];
 static uint32_t level_time = 0;
+static uint32_t target_level_time = 0;
 static uint32_t tick_seed = 1;
-static update_entry_t* update_list;
+
+#define UPDATE_LIST_RING_SIZE 8
+static update_entry_t* update_list[UPDATE_LIST_RING_SIZE];
 
 static inline void world_update_block_cache(int32_t cx, int32_t cy, int32_t cz);
 
@@ -327,7 +330,10 @@ static bool is_liquid(int32_t b) {
 static void world_liquid_try_expand(int32_t cx, int32_t cy, int32_t cz, int32_t dir, int32_t db, uint32_t delay, bool sponges)
 {
 	(void)dir;
-	int32_t b = world_get_block(cx, cy, cz);
+	if (cx < 0 || cy < 0 || cz < 0 || cx >= LEVEL_LX || cy >= LEVEL_LY || cz >= LEVEL_LZ)
+		return;
+
+	int32_t b = world_get_block_unsafe(cx, cy, cz);
 	if (is_liquid(b)) {
 		b &= ~1;
 		db &= ~1;
@@ -449,10 +455,14 @@ static inline void world_tick() {
 			world_block_check(rx, ry, rz);
 		}
 
+		uint32_t update_time = (level_time >> 2);
+		int ring_pos = (update_time % UPDATE_LIST_RING_SIZE);
+		while (ring_pos < 0) ring_pos += UPDATE_LIST_RING_SIZE;
+
 		update_entry_t* prev = NULL;
-		update_entry_t* curr = update_list;
+		update_entry_t* curr = update_list[ring_pos];
 		while (curr != NULL) {
-			if (level_time >= curr->time) {
+			if (update_time >= curr->time) {
 				int32_t cx = curr->cx;
 				int32_t cy = curr->cy;
 				int32_t cz = curr->cz;
@@ -463,9 +473,9 @@ static inline void world_tick() {
 					world_block_update(cx, cy, cz);
 					curr = prev->next;
 				} else {
-					update_list = curr->next;
+					update_list[ring_pos] = curr->next;
 					world_block_update(cx, cy, cz);
-					curr = update_list;
+					curr = update_list[ring_pos];
 				}
 				free(f_curr);
 			} else {
@@ -483,10 +493,15 @@ void world_init() {
 		world_update_block_cache(cx, cy, cz);
 }
 
-void world_update(uint32_t ticks) {
-	while (level_time < ticks) {
+void world_update(uint32_t ticks, uint32_t *vbl_counter) {
+	target_level_time = ticks;
+	uint32_t in_vbls = (*vbl_counter);
+
+	while (level_time < target_level_time) {
 		world_tick();
 		level_time++;
+
+		if (((*vbl_counter) - in_vbls) >= 2) break;
 	}
 }
 
@@ -501,8 +516,11 @@ void world_schedule_block_update(int32_t cx, int32_t cy, int32_t cz, uint32_t de
 	entry->cx = (uint8_t) cx;
 	entry->cy = (uint8_t) cy;
 	entry->cz = (uint8_t) cz;
-	entry->time = level_time + (delay << 2);
+	entry->time = ((level_time + 3) >> 2) + delay;
 
-	entry->next = update_list;
-	update_list = entry;
+	int ring_pos = (entry->time % UPDATE_LIST_RING_SIZE);
+	while (ring_pos < 0) ring_pos += UPDATE_LIST_RING_SIZE;
+
+	entry->next = update_list[ring_pos];
+	update_list[ring_pos] = entry;
 }
