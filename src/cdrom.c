@@ -20,9 +20,26 @@ static uint32_t rand_seed = 1;
 static uint16_t song_lengths[4];
 static int32_t song_count = 0;
 static int32_t song_vblanks = 0;
+static int32_t song_stop_req = 0;
+
+void cdrom_tick_vblank(void) {
+	if (song_vblanks > 0) {
+		song_vblanks--;
+		if (song_vblanks <= 0) {
+				song_stop_req = 1;
+		}
+	}
+}
 
 void cdrom_tick_song_player(int vbls) {
 	if (song_count < 0) return;
+
+	if (song_stop_req > 0) {
+		orelei_close_cd_audio();
+		seedy_stop_xa();
+		song_stop_req = 0;
+		song_vblanks = 0;
+	}
 
 	if (song_vblanks <= 0) {
 		int it_time = 0;
@@ -45,11 +62,6 @@ void cdrom_tick_song_player(int vbls) {
 			}
 		}
 	} else {
-		song_vblanks -= vbls;
-		if (song_vblanks <= 0) {
-				orelei_close_cd_audio();
-				seedy_stop_xa();
-		}
 	}
 }
 

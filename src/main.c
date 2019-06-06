@@ -149,6 +149,7 @@ chenboot_exception_frame_t *isr_handler_c(chenboot_exception_frame_t *sp)
 		//
 		PSXREG_I_STAT = ~(1<<0);
 		sawpads_isr_vblank();
+		cdrom_tick_vblank();
 	}
 
 	if((PSXREG_I_STAT & (1<<2)) != 0) {

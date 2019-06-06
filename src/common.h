@@ -57,6 +57,7 @@ typedef struct {
 	char filename[16];
 } file_record_t;
 
+void cdrom_tick_vblank(void);
 void cdrom_tick_song_player(int vblanks);
 file_record_t *cdrom_get_file(const char *name);
 void cdrom_isr(void);
