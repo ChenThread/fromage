@@ -3,6 +3,9 @@
 #include "common.h"
 #include <stdarg.h>
 
+#define FRUSTUM_CULL 1
+#define FRUSTUM_CULL_BLOCK 1
+
 /*
 
 colouur multipliers for the keep guessing Nitori:
@@ -238,11 +241,6 @@ static inline void draw_one_quad(
 	asm volatile ("mtc2 %0, $1\n" : "+r"(z11) : : );
 	asm volatile ("nop\n");
 	asm volatile ("cop2 0x00180001\nnop\n" :::); // RTPS
-	asm volatile ("nop\n");
-	asm volatile ("nop\n");
-	asm volatile ("nop\n");
-	asm volatile ("nop\n");
-	asm volatile ("nop\n");
 	asm volatile ("mfc2 %0, $14\nnop\n" : "=r"(sxy11) : : );
 
 #if 0
@@ -490,6 +488,7 @@ void draw_world(void)
 	int yrange = ((cymax+4-cymin)>>2);
 	int zrange = ((czmax+4-czmin)>>2);
 
+#if FRUSTUM_CULL
 	// Frustum cull centre sphere distances
 	const int32_t cull_centre_chunk = 0x376cf6; // (0x200<<12) * sqrt(3)
 	const int32_t cull_centre_block = 0xddb3e; // (0x80<<12) * sqrt(3)
@@ -540,43 +539,53 @@ void draw_world(void)
 	CULL_PLANE_SETUP(1)
 	CULL_PLANE_SETUP(2)
 	CULL_PLANE_SETUP(3)
+#endif
 
 	for(int iy = 0, cy = cymin, dy = cymin-cam_cy;
 		iy < yrange; //cy < cymax+1;
 		iy++, cy+=4, dy+=4
+#if FRUSTUM_CULL
 		,cull0 += cull0ystep4
 		,cull1 += cull1ystep4
 		,cull2 += cull2ystep4
 		,cull3 += cull3ystep4
+#endif
 		) {
 	for(int iz = 0, cz = czmin, dz = czmin-cam_cz;
 		iz < zrange; //cz < czmax+1;
 		iz++, cz+=4, dz+=4
+#if FRUSTUM_CULL
 		,cull0 += cull0zstep4
 		,cull1 += cull1zstep4
 		,cull2 += cull2zstep4
 		,cull3 += cull3zstep4
+#endif
 		) {
 	for(int ix = 0, cx = cxmin, dx = cxmin-cam_cx;
 		ix < xrange; //cx < cxmax+1;
 		ix++, cx+=4, dx+=4
+#if FRUSTUM_CULL
 		,cull0 += cull0xstep4
 		,cull1 += cull1xstep4
 		,cull2 += cull2xstep4
 		,cull3 += cull3xstep4
+#endif
 		) {
 
+#if FRUSTUM_CULL
 		// Frustum culling
 		if(cull0 < -cull_centre_chunk) { continue; }
 		if(cull1 < -cull_centre_chunk) { continue; }
 		if(cull2 < -cull_centre_chunk) { continue; }
 		if(cull3 < -cull_centre_chunk) { continue; }
+#endif
 
 		uint32_t vismask = world_get_vis_blocks_unsafe(cx, cy, cz);
 		if(vismask == 0) {
 			continue;
 		}
 
+#if FRUSTUM_CULL && FRUSTUM_CULL_BLOCK
 		int bcull0 = cull0 - cull0step1_5;
 		int bcull1 = cull1 - cull1step1_5;
 		int bcull2 = cull2 - cull2step1_5;
@@ -587,6 +596,7 @@ void draw_world(void)
 		int min_bcull = (min_bcull01 < min_bcull23 ? min_bcull01 : min_bcull23);
 
 		if(min_bcull > cull_centre_chunk) {
+#endif
 			// Chunk fully in frustum
 
 			for(int biy = 0, bcy = cy, bdy = dy;
@@ -633,6 +643,7 @@ void draw_world(void)
 			}
 			}
 
+#if FRUSTUM_CULL && FRUSTUM_CULL_BLOCK
 		} else {
 			// Blocks may need culling
 
@@ -706,6 +717,7 @@ void draw_world(void)
 			}
 			}
 		}
+#endif
 	}
 	}
 	}
