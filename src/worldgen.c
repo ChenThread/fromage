@@ -80,6 +80,8 @@ void world_generate(uint8_t *map, int32_t lx, int32_t ly, int32_t lz, uint32_t s
 	uint8_t perm[256];
 	for (int i = 0; i < 256; i++) perm[i] = i;
 
+	int imax;
+
 	for (int i = 255; i > 0; i--)
 	{
 		uint8_t j = seed & 0xFF;
@@ -121,8 +123,81 @@ void world_generate(uint8_t *map, int32_t lx, int32_t ly, int32_t lz, uint32_t s
 		}
 	}
 
+	if (wc != NULL) wc("Soiling..");
+	imax = lx*lz/64;
+	for (int i = 0; i < imax; i++)
+	{
+		if (pc != NULL) pc(i,imax);
+
+		int ore_type = 14;
+		switch (seed & 0x7) {
+			case 0: break; // gold
+			case 1: case 2: case 3: ore_type += 1; break; // iron
+			default: ore_type += 2; break; // coal
+		}
+		RAND(seed);
+		int cx = seed % lx;
+		int cz = (seed / lx) % lz;
+		int cy = (seed / lx / lz) % (ly/2);
+		RAND(seed);
+		int cluster_xs = (seed & 1);
+		int cluster_ys = ((seed >> 1) & 1);
+		int cluster_zs = ((seed >> 2) & 1);
+		int cluster_xe = ((seed >> 3) & 1);
+		int cluster_ye = ((seed >> 4) & 1);
+		int cluster_ze = ((seed >> 5) & 1);
+		RAND(seed);
+		for (int dx=cx-cluster_xs; dx<=cx+cluster_xe; dx++)
+		for (int dy=cy-cluster_ys; dy<=cy+cluster_ye; dy++)
+		for (int dz=cz-cluster_zs; dz<=cz+cluster_ze; dz++)
+			if (GET(dx,dy,dz) == 1) SET(dx,dy,dz,ore_type);
+	}
+
+#if 0
+	if (wc != NULL) wc("Carving..");
+	imax = 10*(lx*lz)/(64*64);
+	for (int i = 0; i < imax; i++)
+	{
+		if (pc != NULL) pc(i,imax);
+		double tx = seed % lx;
+		double tz = (seed / lx) % lz;
+		double ty = (seed / lx / lz) % (ly*2/3);
+		RAND(seed);
+		double perlin_x = ((seed & 0xFFFF) / 256.0);
+		double perlin_z = ((seed >> 16) / 256.0);
+		double perlin_y = 0.0;
+		RAND(seed);
+		int perlin_length = (seed & 0x1F) + 8;
+		for (int i = 0; i < perlin_length; i++) {
+			int cx = (int) (tx + 0.5);
+			int cy = (int) (ty + 0.5);
+			int cz = (int) (tz + 0.5);
+			int depth = 1;
+
+			for (int dx=cx-depth; dx<=cx+depth; dx++)
+			for (int dy=cy-depth; dy<=cy+depth; dy++)
+			for (int dz=cz-depth; dz<=cz+depth; dz++)
+				SET(dx,dy,dz,0);
+
+			double noise_val_1 = perlin(perm, perlin_x, perlin_y, perlin_z) * 3.14159253565 * 2;
+			double noise_val_2 = perlin(perm, perlin_x, perlin_y, perlin_z + 1000.0) * 3.14159253565 * 2;
+			double noise_val_3 = perlin(perm, perlin_x, perlin_y, perlin_z + 2000.0) * 3.14159253565 * 2;
+			tx += sin(noise_val_1)/1.25;
+			ty += cos(noise_val_1)/1.25;
+
+			ty += sin(noise_val_2)/1.25;
+			tz += cos(noise_val_2)/1.25;
+
+			tz += sin(noise_val_3)/1.25;
+			tx += cos(noise_val_3)/1.25;
+
+			perlin_y += 0.05;
+		}
+	}
+#endif
+
 	if (wc != NULL) wc("Growing..");
-	int imax = lx*lz/256;
+	imax = lx*lz/256;
 	for (int i = 0; i < imax; i++)
 	{
 		if (pc != NULL) pc(i,imax);
