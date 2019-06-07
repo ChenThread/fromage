@@ -1041,12 +1041,17 @@ void player_update(int mmul)
 		jy0 = (int)(int8_t)(sawpads_axes[3]);
 	}
 
-	cam_ry += (jx1<<3) * mmul;
-	cam_rx += (jy1<<3) * mmul;
-	if (cam_ry < -0x8000) cam_ry += 0x10000;
-	if (cam_ry > 0x8000) cam_ry -= 0x10000;
-	if (cam_rx < -0x4000) cam_rx = -0x4000;
-	if (cam_rx > 0x4000) cam_rx = 0x4000;
+	if (jx1 != 0) {
+		cam_ry += (jx1<<3) * mmul;
+		while (cam_ry < -0x8000) cam_ry += 0x10000;
+		while (cam_ry > 0x8000) cam_ry -= 0x10000;
+	}
+
+	if (jy1 != 0) {
+		cam_rx += (jy1<<3) * mmul;
+		if (cam_rx < -0x4000) cam_rx = -0x4000;
+		if (cam_rx > 0x4000) cam_rx = 0x4000;
+	}
 
 	if ((joy_pressed & PAD_L2) != 0) {
 		int32_t sel_cx = -1;
@@ -1164,49 +1169,49 @@ void player_update(int mmul)
 	int32_t gvz = 0;
 	gvx = (lvx*mat_hr11 + lvz*mat_hr31 + 0x800)>>12;
 	gvz = (lvx*mat_hr13 + lvz*mat_hr33 + 0x800)>>12;
-if (options.pro_jumps) {
-	int acc_x = gvx;
-	int acc_z = gvz;
+	if (options.pro_jumps) {
+		int acc_x = gvx;
+		int acc_z = gvz;
 
-	// Get normalised accel vector
-	int nacc_x = acc_x;
-	int nacc_z = acc_z;
-	int nacc_len = 1;
-	while(nacc_len*nacc_len < nacc_x*nacc_x + nacc_z*nacc_z) {
-		nacc_len <<= 1;
-	}
-	nacc_len >>= 1;
-	while(nacc_len*nacc_len < nacc_x*nacc_x + nacc_z*nacc_z) {
-		nacc_len++;
-	}
-	nacc_len--;
-	nacc_x = (nacc_x<<12) / nacc_len;
-	nacc_z = (nacc_z<<12) / nacc_len;
+		// Get normalised accel vector
+		int nacc_x = acc_x;
+		int nacc_z = acc_z;
+		int nacc_len = 1;
+		while(nacc_len*nacc_len < nacc_x*nacc_x + nacc_z*nacc_z) {
+			nacc_len <<= 1;
+		}
+		nacc_len >>= 1;
+		while(nacc_len*nacc_len < nacc_x*nacc_x + nacc_z*nacc_z) {
+			nacc_len++;
+		}
+		nacc_len--;
+		nacc_x = (nacc_x<<12) / nacc_len;
+		nacc_z = (nacc_z<<12) / nacc_len;
 
-	// Cap acceleration
-	if(nacc_len > (0x1000>>6)) {
-		acc_x = (nacc_x+(1<<5))>>6;
-		acc_z = (nacc_z+(1<<5))>>6;
-	}
+		// Cap acceleration
+		if(nacc_len > (0x1000>>6)) {
+			acc_x = (nacc_x+(1<<5))>>6;
+			acc_z = (nacc_z+(1<<5))>>6;
+		}
 
-	// Apply friction
-	if (!try_move(0, -16, 0, false)) {
-		vel_x -= ((vel_x+1)>>1) + (vel_x>>31);
-		vel_z -= ((vel_z+1)>>1) + (vel_z>>31);
-	}
+		// Apply friction
+		if (!try_move(0, -16, 0, false)) {
+			vel_x -= ((vel_x+1)>>1) + (vel_x>>31);
+			vel_z -= ((vel_z+1)>>1) + (vel_z>>31);
+		}
 
-	// Get speed cap
-	int speed_cap_dot = vel_x*nacc_x + vel_z*nacc_z;
+		// Get speed cap
+		int speed_cap_dot = vel_x*nacc_x + vel_z*nacc_z;
 
-	int speed_cap = 0x100;
-	if(speed_cap_dot < speed_cap*speed_cap) {
-		vel_x += acc_x;
-		vel_z += acc_z;
+		int speed_cap = 0x100;
+		if(speed_cap_dot < speed_cap*speed_cap) {
+			vel_x += acc_x;
+			vel_z += acc_z;
+		}
+	} else if (gvx != 0 || gvz != 0) {
+		vel_x = (vel_x + gvx) / 3;
+		vel_z = (vel_z + gvz) / 3;
 	}
-} else {
-	vel_x = (vel_x + gvx) / 3;
-	vel_z = (vel_z + gvz) / 3;
-}
 
 	bool in_liquid = player_is_in_liquid();
 
@@ -1221,7 +1226,7 @@ if (options.pro_jumps) {
 	}
 
 	for (int i = 0; i < mmul; i++) {
-		if (try_move(0, vel_y, 0, true)) {
+		if (vel_y == 0 || try_move(0, vel_y, 0, true)) {
 			if (vel_y > -192) vel_y -= ((ABS(vel_y) >> 4) + 4) >> (in_liquid ? 2 : 0);
 			if (vel_y < -192) vel_y = -192;
 		} else if (vel_y > 0) {
