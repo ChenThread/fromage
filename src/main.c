@@ -281,7 +281,7 @@ void draw_quads(int32_t cx, int32_t cy, int32_t cz, int di, const mesh_data_t *m
 			continue;
 		}
 
-		const block_info_t *block_data = &bi[mesh_data[mi+0].face];
+		const block_info_t *block_data = &bi[mesh_data[mi+0].face & 0x07];
 
 		int32_t x00 = ox+mesh_data[mi+0].x;
 		int32_t y00 = oy+mesh_data[mi+0].y;
@@ -345,7 +345,7 @@ void draw_block(int32_t cx, int32_t cy, int32_t cz, int di, int block, uint32_t 
 			draw_quads(cx, cy, cz, di, mesh_data_block, block_info[block], 6, facemask, transparent || ((block&(~1)) == 8));
 			break;
 		case 1:
-			draw_quads(cx, cy, cz, di, mesh_data_plant, block_info[block], 4, facemask, false);
+			draw_quads(cx, cy, cz, di, mesh_data_plant, block_info[block], 4, 0xFFFF, false);
 			break;
 		case 2:
 			draw_quads(cx, cy, cz, di, mesh_data_slab, block_info[block], 6, facemask, transparent);
@@ -353,55 +353,21 @@ void draw_block(int32_t cx, int32_t cy, int32_t cz, int di, int block, uint32_t 
 	}
 }
 
-static inline uint32_t should_render(int32_t b, int32_t nx, int32_t ny, int32_t nz) {
-	int32_t nb = world_get_block_unsafe(nx, ny, nz);
-	if (nb == 0) {
-		return 1;
-	} else if (b != nb) {
-		return world_is_translucent(b) || world_is_translucent(nb);
-	} else {
-		return 0;
-	}
-}
-
-static inline uint32_t calc_fmask(int32_t cx, int32_t cy, int32_t cz)
-{
-	int32_t b = world_get_block_unsafe(cx, cy, cz);
-	if(b == 0) {
-		return 0;
-	}
-
-	uint32_t fmask = 0;
-	if(cz > 0 && should_render(b, cx, cy, cz-1)) {
-		fmask |= 0x01;
-	}
-	if(cz < LEVEL_LZ-1 && should_render(b, cx, cy, cz+1)) {
-		fmask |= 0x02;
-	}
-	if(cx > 0 && should_render(b, cx-1, cy, cz)) {
-		fmask |= 0x04;
-	}
-	if(cx < LEVEL_LX-1 && should_render(b, cx+1, cy, cz)) {
-		fmask |= 0x08;
-	}
-	if(cy > 0 && should_render(b, cx, cy-1, cz)) {
-		fmask |= 0x10;
-	}
-	if(cy < LEVEL_LY-1 && should_render(b, cx, cy+1, cz)) {
-		fmask |= 0x20;
-	}
-
-	return fmask;
-}
-
 inline void draw_block_in_level(int32_t cx, int32_t cy, int32_t cz, int32_t di, uint32_t nfmask)
 {
 	int block = world_get_block_unsafe(cx, cy, cz);
-	if(block != 0) {
-		uint32_t fmask = world_get_render_faces_unsafe(cx, cy, cz) & nfmask;
-		if(fmask != 0) {
-			draw_block(cx, cy, cz, di, block, fmask, false);
-		}
+	switch (block) {
+		case 0:
+			return;
+		case 6: case 37: case 38: case 39: case 40:
+			draw_block(cx, cy, cz, di, block, 0xFFFF, false);
+			return;
+		default: {
+			uint32_t fmask = world_get_render_faces_unsafe(cx, cy, cz) & nfmask;
+			if(fmask != 0) {
+				draw_block(cx, cy, cz, di, block, fmask | 0xFF00, false);
+			}
+		} return;
 	}
 }
 
@@ -417,7 +383,7 @@ inline void draw_blocks_in_range(int32_t cam_cx, int32_t cam_cy, int32_t cam_cz,
 		int cy = cam_cy + dy;
 		//if(cy < 0 || cy >= LEVEL_LY) { continue; }
 		int ady = (dy < 0 ? -dy : dy);
-		uint32_t nfmask = 0;
+		uint32_t nfmask = 0xFF00;
 		if(dy > 0) { nfmask |= 0x10; }
 		if(dy < 0) { nfmask |= 0x20; }
 
@@ -614,7 +580,7 @@ void draw_world(void)
 					continue;
 				}
 				int ady = (bdy < 0 ? -bdy : bdy);
-				uint32_t nfmask = 0;
+				uint32_t nfmask = 0xFF00;
 				if     (bdy > 0) { nfmask |= 0x10; }
 				else if(bdy < 0) { nfmask |= 0x20; }
 			for(int biz = 0, bcz = cz, bdz = dz;
@@ -670,7 +636,7 @@ void draw_world(void)
 					continue;
 				}
 				int ady = (bdy < 0 ? -bdy : bdy);
-				uint32_t nfmask = 0;
+				uint32_t nfmask = 0xFF00;
 				if     (bdy > 0) { nfmask |= 0x10; }
 				else if(bdy < 0) { nfmask |= 0x20; }
 			for(int biz = 0, bcz = cz, bdz = dz;
@@ -776,14 +742,10 @@ static void setup_matrix(bool with_y) {
 	mat_hr33 =  ryc;
 }
 
-bool block_is_in_liquid(int cx, int cy, int cz)
+bool block_is_in_liquid_unsafe(int cx, int cy, int cz)
 {
-	int32_t cb = world_get_block(cx, cy, cz);
-	if (cb >= 8 && cb <= 11) {
-		return true;
-	} else {
-		return false;
-	}
+	int32_t cb = world_get_block_unsafe(cx, cy, cz);
+	return cb >= 8 && cb <= 11;
 }
 
 bool player_is_in_liquid(void)
@@ -792,9 +754,13 @@ bool player_is_in_liquid(void)
 	int32_t cam_cy = cam_y >> 8;
 	int32_t cam_cz = cam_z >> 8;
 
-	if(block_is_in_liquid(cam_cx, cam_cy-1, cam_cz)) {
+	if(cam_cx < 0 || cam_cy < 0 || cam_cz < 0 || cam_cx >= LEVEL_LX || cam_cy > LEVEL_LY || cam_cz >= LEVEL_LZ) {
+		return false;
+	}
+
+	if(cam_cy > 0 && block_is_in_liquid_unsafe(cam_cx, cam_cy-1, cam_cz)) {
 		return true;
-	} else if(block_is_in_liquid(cam_cx, cam_cy, cam_cz)) {
+	} else if(cam_cy < LEVEL_LY && block_is_in_liquid_unsafe(cam_cx, cam_cy, cam_cz)) {
 		return true;
 	} else {
 		return false;
@@ -1244,22 +1210,23 @@ if (options.pro_jumps) {
 
 	bool in_liquid = player_is_in_liquid();
 
-	for (int i = 0; i < mmul; i++) {
-		if ((sawpads_buttons & PAD_X) == 0) {
-			if (in_liquid || !try_move(0, -16, 0, false)) {
-				if (options.pro_jumps) {
-					vel_y = in_liquid ? 48 : 96;
-				} else {
-					vel_y = in_liquid ? 32 : 64;
-				}
+	if (mmul >= 1 && (sawpads_buttons & PAD_X) == 0) {
+		if (in_liquid || !try_move(0, -16, 0, false)) {
+			if (options.pro_jumps) {
+				vel_y = in_liquid ? 48 : 96;
+			} else {
+				vel_y = in_liquid ? 32 : 64;
 			}
 		}
+	}
+
+	for (int i = 0; i < mmul; i++) {
 		if (try_move(0, vel_y, 0, true)) {
 			if (vel_y > -192) vel_y -= ((ABS(vel_y) >> 4) + 4) >> (in_liquid ? 2 : 0);
 			if (vel_y < -192) vel_y = -192;
 		} else if (vel_y > 0) {
 			vel_y = 0;
-		} else {
+		} else if (vel_y < 0) {
 			vel_y /= 2;
 			while (!try_move(0, vel_y, 0, true)) {
 				if(vel_y == 0) {
@@ -1273,7 +1240,10 @@ if (options.pro_jumps) {
 				vel_y /= 2;
 			}
 		}
-		if (try_move(vel_x, 0, vel_z, true)) {
+
+		if (vel_x == 0 && vel_z == 0) {
+			// pass
+		} else if (try_move(vel_x, 0, vel_z, true)) {
 			// pass
 		} else if (try_move(vel_x, 128, vel_z, true)) {
 			// pass
