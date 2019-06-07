@@ -26,15 +26,27 @@ void sound_play(int id, int vol_left, int vol_right) {
 	snote = (snote + 1) & 15;
 }
 
+#define SOUND_GRASS 0
+#define SOUND_GRAVEL 1
+#define SOUND_STONE 2
+#define SOUND_WOOD 3
+
+static uint8_t sound_ids[] = {
+	SOUND_GRASS,
+	SOUND_STONE, SOUND_GRASS, SOUND_GRASS, SOUND_STONE, SOUND_WOOD, // 1-5
+	SOUND_GRASS, SOUND_STONE, SOUND_GRASS, SOUND_GRASS, SOUND_GRASS, // 6-10
+	SOUND_GRASS, SOUND_GRAVEL, SOUND_GRAVEL, SOUND_STONE, SOUND_STONE, // 11-15
+	SOUND_STONE, SOUND_WOOD, SOUND_GRASS, SOUND_STONE, SOUND_STONE, // 16-20
+	SOUND_GRASS, SOUND_GRASS, SOUND_GRASS, SOUND_GRASS, SOUND_GRASS, // 21-25
+	SOUND_GRASS, SOUND_GRASS, SOUND_GRASS, SOUND_GRASS, SOUND_GRASS, // 26-30
+	SOUND_GRASS, SOUND_GRASS, SOUND_GRASS, SOUND_GRASS, SOUND_GRASS, // 31-35
+	SOUND_GRASS, SOUND_GRASS, SOUND_GRASS, SOUND_GRASS, SOUND_GRASS, // 36-40
+	SOUND_STONE, SOUND_STONE, SOUND_STONE, SOUND_STONE, SOUND_STONE, // 41-45
+	SOUND_STONE, SOUND_WOOD, SOUND_STONE, SOUND_STONE // 46-49
+};
+
 int sound_get_id(int32_t bid) {
 	int a = RAND(sound_rand) & 3;
-	int b = 0;
-	switch (bid) {
-		case 12: case 13: b = 1; break;
-		case 1: case 4: case 7: case 14: case 15: case 16:
-		case 41: case 42: case 43: case 44: case 45:
-		case 48: case 49: b = 2; break;
-		case 5: case 17: case 47: b = 3; break;
-	}
+	int b = sound_ids[bid] & 3;
 	return (b<<2) + a;
 }

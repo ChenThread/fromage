@@ -344,10 +344,26 @@ static void world_liquid_try_expand(int32_t cx, int32_t cy, int32_t cz, int32_t 
 		}
 	} else if ((b&(~1)) != (db&(~1)) && world_is_walkable(b)) {
 		if (sponges) {
-			for (int dy = -2; dy <= 2; dy++)
-			for (int dz = -2; dz <= 2; dz++)
-			for (int dx = -2; dx <= 2; dx++)
-				if (world_get_block(cx+dx, cy+dy, cz+dz) == 19)
+			int min_x = cx - 2;
+			int min_y = cy - 2;
+			int min_z = cz - 2;
+			int max_x = cx + 2;
+			int max_y = cy + 2;
+			int max_z = cz + 2;
+
+			if (min_x < 0) min_x = 0;
+			else if (max_x >= LEVEL_LX) max_x = LEVEL_LX - 1;
+
+			if (min_y < 0) min_y = 0;
+			else if (max_y >= LEVEL_LY) max_y = LEVEL_LY - 1;
+
+			if (min_z < 0) min_z = 0;
+			else if (max_z >= LEVEL_LZ) max_z = LEVEL_LZ - 1;
+
+			for (int dy = min_y; dy <= max_y; dy++)
+			for (int dz = min_z; dz <= max_z; dz++)
+			for (int dx = min_x; dx <= max_x; dx++)
+				if (world_get_block_unsafe(dx, dy, dz) == 19)
 					return;
 		}
 		world_set_block(cx, cy, cz, db, 0);
