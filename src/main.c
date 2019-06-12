@@ -241,11 +241,36 @@ static inline void draw_one_quad(
 
 	// Apply 4th point
 	int32_t xy11 = ((x11&0xFFFF)|(y11<<16));
+	uint32_t gte_rfc_0 = (0x00<<4)>>1;
+	uint32_t gte_gfc_0 = (0x00<<4)>>1;
+	uint32_t gte_bfc_0 = (0x00<<4)>>1;
+	uint32_t gte_rfc_1 = (0x7F<<4);
+	uint32_t gte_gfc_1 = (0xCB<<4);
+	uint32_t gte_bfc_1 = (0xFF<<4);
+	uint32_t command_fog = 0x2A000000;
+	asm volatile ("mtc2 %0, $6\nnop\n" : : "r"(command) : );
 	asm volatile ("mtc2 %0, $0\n" : "+r"(xy11) : : );
 	asm volatile ("mtc2 %0, $1\n" : "+r"(z11) : : );
 	asm volatile ("nop\n");
 	asm volatile ("cop2 0x00180001\nnop\n" :::); // RTPS
 	asm volatile ("mfc2 %0, $14\nnop\n" : "=r"(sxy11) : : );
+
+	asm volatile ("ctc2 %0, $21\nnop\n" : "+r"(gte_rfc_0) : : );
+	asm volatile ("ctc2 %0, $22\nnop\n" : "+r"(gte_gfc_0) : : );
+	asm volatile ("ctc2 %0, $23\nnop\n" : "+r"(gte_bfc_0) : : );
+	asm volatile ("nop\n");
+	asm volatile ("cop2 0x00780010\nnop\n" :::); // DPCS
+	asm volatile ("nop\n");
+	asm volatile ("mfc2 %0, $22\nnop\n" : "=r"(command) : : );
+
+	asm volatile ("mtc2 %0, $6\nnop\n" : : "r"(command_fog) : );
+	asm volatile ("ctc2 %0, $21\nnop\n" : "+r"(gte_rfc_1) : : );
+	asm volatile ("ctc2 %0, $22\nnop\n" : "+r"(gte_gfc_1) : : );
+	asm volatile ("ctc2 %0, $23\nnop\n" : "+r"(gte_bfc_1) : : );
+	asm volatile ("nop\n");
+	asm volatile ("cop2 0x00780010\nnop\n" :::); // DPCS
+	asm volatile ("nop\n");
+	asm volatile ("mfc2 %0, $22\nnop\n" : "=r"(command_fog) : : );
 
 #if 0
 	if(((int16_t)(sxy3>>16)) < -512) { continue; }
@@ -254,6 +279,20 @@ static inline void draw_one_quad(
 	if(((int16_t)(sxy3&0xFFFF)) > 512) { continue; }
 #endif
 
+	// Draw a fog quad
+#if 1
+	DMA_PUSH(5, OT_WORLD + di);
+	dma_buffer[dma_pos++] = command_fog;
+	dma_buffer[dma_pos++] = (sxy00);
+	dma_buffer[dma_pos++] = (sxy01);
+	dma_buffer[dma_pos++] = (sxy10);
+	dma_buffer[dma_pos++] = (sxy11);
+
+	DMA_PUSH(1, OT_WORLD + di);
+	dma_buffer[dma_pos++] = 0xE1000620;
+#endif
+
+#if 1
 	// Draw a quad
 	DMA_PUSH(9, OT_WORLD + di);
 	dma_buffer[dma_pos++] = command;
@@ -265,6 +304,7 @@ static inline void draw_one_quad(
 	dma_buffer[dma_pos++] = (t10);
 	dma_buffer[dma_pos++] = (sxy11);
 	dma_buffer[dma_pos++] = (t11);
+#endif
 
 }
 
@@ -775,6 +815,12 @@ void draw_everything(void)
 	asm volatile ("ctc2 %0, $26\nnop\n" : "+r"(gte_h) : : );
 	asm volatile ("ctc2 %0, $29\nnop\n" : "+r"(gte_zsf3) : : );
 	asm volatile ("ctc2 %0, $30\nnop\n" : "+r"(gte_zsf4) : : );
+
+	int32_t gte_dqa_div = 12<<8;
+	int32_t gte_dqa = -(((5<<20)+(gte_dqa_div-1))/gte_dqa_div);
+	int32_t gte_dqb = 1<<24;
+	asm volatile ("ctc2 %0, $27\nnop\n" : "+r"(gte_dqa) : : );
+	asm volatile ("ctc2 %0, $28\nnop\n" : "+r"(gte_dqb) : : );
 
 	// Set up GTE matrix
 	setup_matrix(true);
