@@ -102,7 +102,11 @@ void gp1_command(uint32_t v);
 
 // gpu_dma.c
 extern uint32_t dma_pos;
+#if USE_NON_MANHATTAN_DISTANCE_ORDER_TABLE
+#define DMA_ORDER_MAX 0x100
+#else
 #define DMA_ORDER_MAX 64
+#endif
 #define DMA_BUFFER_SIZE (256*384)
 
 extern uint32_t dma_buffer[DMA_BUFFER_SIZE];

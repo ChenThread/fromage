@@ -80,8 +80,9 @@ int32_t mat_hr31, mat_hr33;
 
 int32_t gte_ofx = 0x0000;
 int32_t gte_ofy = 0x0000;
-int32_t gte_zsf3 = 1;
-int32_t gte_zsf4 = 1;
+int32_t gte_zsf1 = (DMA_ORDER_MAX-3-OT_WORLD)/0x10; // not a GTE register, but still useful
+int32_t gte_zsf3 = (DMA_ORDER_MAX-3-OT_WORLD)/0x30;
+int32_t gte_zsf4 = (DMA_ORDER_MAX-3-OT_WORLD)/0x40;
 
 // FORMULA:
 // gte_h = (VID_HEIGHT/2)/tan(fov_angle/2.0);
@@ -118,8 +119,6 @@ uint32_t tex_update_ticks = 0;
 uint32_t tex_update_blanks = 0;
 uint32_t feet_sound_ticks = 0;
 uint32_t vblank_counter_joy = 0;
-
-#define OT_WORLD 2
 
 int joy_buttons_old = 0;
 int current_block[HOTBAR_MAX] = {0, 1, 4, 45, 18, 4, 3, 20, 8};
@@ -246,6 +245,24 @@ static inline void draw_one_quad(
 	asm volatile ("nop\n");
 	asm volatile ("cop2 0x00180001\nnop\n" :::); // RTPS
 	asm volatile ("mfc2 %0, $14\nnop\n" : "=r"(sxy11) : : );
+#if USE_NON_MANHATTAN_DISTANCE_ORDER_TABLE
+	int32_t otz;
+	//asm volatile ("cop2 0x0168002E\nnop\n" :::); // AVSZ4
+	int32_t zmax00, zmax01, zmax10, zmax11; 
+	asm volatile ("mfc2 %0, $16\nnop\n" : "=r"(zmax00) : : );
+	asm volatile ("mfc2 %0, $17\nnop\n" : "=r"(zmax01) : : );
+	asm volatile ("mfc2 %0, $18\nnop\n" : "=r"(zmax10) : : );
+	asm volatile ("mfc2 %0, $19\nnop\n" : "=r"(zmax11) : : );
+	int32_t zmax0, zmax1;
+	zmax0 = (zmax00 > zmax01 ? zmax00 : zmax01);
+	zmax1 = (zmax10 > zmax11 ? zmax10 : zmax11);
+	int32_t zmax = (zmax0 > zmax1 ? zmax0 : zmax1);
+	otz = (zmax*gte_zsf1*12)>>12;
+	otz += di;
+	if(otz > DMA_ORDER_MAX-OT_WORLD-2) {
+		otz = DMA_ORDER_MAX-OT_WORLD-2;
+	}
+#endif
 
 #if 0
 	if(((int16_t)(sxy3>>16)) < -512) { continue; }
@@ -255,7 +272,11 @@ static inline void draw_one_quad(
 #endif
 
 	// Draw a quad
+#if USE_NON_MANHATTAN_DISTANCE_ORDER_TABLE
+	DMA_PUSH(9, OT_WORLD + otz);
+#else
 	DMA_PUSH(9, OT_WORLD + di);
+#endif
 	dma_buffer[dma_pos++] = command;
 	dma_buffer[dma_pos++] = (sxy00);
 	dma_buffer[dma_pos++] = (t00) | (cl<<16);
@@ -342,12 +363,21 @@ void draw_block(int32_t cx, int32_t cy, int32_t cz, int di, int block, uint32_t 
 
 	switch (get_model(block)) {
 		case 0:
+#if USE_NON_MANHATTAN_DISTANCE_ORDER_TABLE
+			di = (((block&(~1))==8) ? 0 : 1);
+#endif
 			draw_quads(cx, cy, cz, di, mesh_data_block, block_info[block], 6, facemask, transparent || ((block&(~1)) == 8));
 			break;
 		case 1:
+#if USE_NON_MANHATTAN_DISTANCE_ORDER_TABLE
+			di = 0;
+#endif
 			draw_quads(cx, cy, cz, di, mesh_data_plant, block_info[block], 4, 0xFFFF, false);
 			break;
 		case 2:
+#if USE_NON_MANHATTAN_DISTANCE_ORDER_TABLE
+			di = 1;
+#endif
 			draw_quads(cx, cy, cz, di, mesh_data_slab, block_info[block], 6, facemask, transparent);
 			break;
 	}
@@ -811,6 +841,19 @@ void draw_everything(void)
 	dma_buffer[dma_pos++] = ((-(VID_WIDTH/2))&0xFFFF)|((+(VID_HEIGHT/2))<<16);
 	dma_buffer[dma_pos++] = 0x00FFF0E1;
 	dma_buffer[dma_pos++] = ((+(VID_WIDTH/2))&0xFFFF)|((+(VID_HEIGHT/2))<<16);
+
+	// Apply fog
+	for(int i = 4; i < 12; i+=4) {
+		DMA_PUSH(8, OT_WORLD+(((i<<8)*gte_zsf1*12)>>12));
+		dma_buffer[dma_pos++] = 0x3AFFCB7F;
+		dma_buffer[dma_pos++] = ((-(VID_WIDTH/2))&0xFFFF)|((-(VID_HEIGHT/2))<<16);
+		dma_buffer[dma_pos++] = 0x00FFCB7F;
+		dma_buffer[dma_pos++] = ((+(VID_WIDTH/2))&0xFFFF)|((-(VID_HEIGHT/2))<<16);
+		dma_buffer[dma_pos++] = 0x00FFF0E1;
+		dma_buffer[dma_pos++] = ((-(VID_WIDTH/2))&0xFFFF)|((+(VID_HEIGHT/2))<<16);
+		dma_buffer[dma_pos++] = 0x00FFF0E1;
+		dma_buffer[dma_pos++] = ((+(VID_WIDTH/2))&0xFFFF)|((+(VID_HEIGHT/2))<<16);
+	}
 
 	// Send VERY FIRST COMMANDS
 	frame_start();
