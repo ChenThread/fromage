@@ -1208,7 +1208,7 @@ void player_update(int mmul)
 			vel_x += acc_x;
 			vel_z += acc_z;
 		}
-	} else if (gvx != 0 || gvz != 0) {
+	} else {
 		vel_x = (vel_x + gvx) / 3;
 		vel_z = (vel_z + gvz) / 3;
 	}
