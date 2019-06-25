@@ -16,6 +16,8 @@ def main(): # type: () -> None
 	for i in range(0, len(data), 16):
 		b = data[i:i+16]
 		outfp.write("\t.byte " + ",".join("0x%02X" % (v,) for v in b) + "\n")
+	outfp.write(".global %s__end\n" % (label_name,))
+	outfp.write("%s__end:\n" % (label_name,))
 
 
 if __name__ == "__main__":
