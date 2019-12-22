@@ -80,7 +80,6 @@ OBJS_FAST = \
 	$(OBJDIR)/cdrom.o \
 	$(OBJDIR)/gpu.o \
 	$(OBJDIR)/gpu_dma.o \
-	$(OBJDIR)/gui.o \
 	$(OBJDIR)/joy.o \
 	$(OBJDIR)/sound.o \
 	$(OBJDIR)/util.o \
@@ -91,6 +90,7 @@ OBJS_FAST = \
 
 OBJS_SMALL = \
 	$(OBJDIR)/options.o \
+	$(OBJDIR)/gui.o \
 	$(OBJDIR)/save.o \
 	\
 	$(OBJDIR)/font.o \
@@ -171,7 +171,7 @@ $(OBJDIR)/font.o: $(OBJDIR)/font.raw $(TOOLSDIR)/bin2s.py $(INCLUDES)
 	$(PYTHON3) $(TOOLSDIR)/bin2s.py $(OBJDIR)/font.raw > $(OBJDIR)/font.s
 	$(CROSS_AS) -o $@ $(ASFLAGS) $(OBJDIR)/font.s
 
-$(OBJDIR)/atlas.raw: $(RESDIR)/atlas.png $(RESDIR)/water.png $(RESDIR)/lava.png
+$(OBJDIR)/atlas.raw: $(RESDIR)/atlas.png $(RESDIR)/water.png $(RESDIR)/lava.png $(TOOLSDIR)/mkatlas.py
 	$(PYTHON3) $(TOOLSDIR)/mkatlas.py $(RESDIR)/atlas.png $(OBJDIR)/atlas.raw $(RESDIR)/water.png $(RESDIR)/lava.png
 
 $(OBJDIR)/font.raw: $(RESDIR)/font.png

@@ -143,6 +143,7 @@ void gui_terrible_text_viewer(const char* text);
 
 // options.c
 int gui_options_menu(options_t *options);
+int gui_worldgen_menu(void);
 
 // save.c
 #define SAVE_ERROR_COMPRESSION -1
@@ -194,4 +195,4 @@ void world_update(uint32_t ticks, uint32_t *vblank_counter);
 
 // worldgen.c
 typedef void worldgen_stage_callback(const char *message);
-void world_generate(uint8_t *map, int32_t lx, int32_t ly, int32_t lz, uint32_t seed, worldgen_stage_callback *wc, save_progress_callback *pc);
+void world_generate(int mode, uint8_t *map, int32_t lx, int32_t ly, int32_t lz, uint32_t seed, worldgen_stage_callback *wc, save_progress_callback *pc);

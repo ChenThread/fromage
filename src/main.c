@@ -222,7 +222,7 @@ static inline void draw_one_quad(
 	int32_t backface_mac0;
 	asm volatile ("mfc2 %0, $24\nnop\n" : "=r"(backface_mac0) : : );
 	// Backface cull
-	if(backface_mac0 >= 0) { return; }
+	if(backface_mac0 > 0) { return; }
 
 	// Get transformed vertices
 	uint32_t sxy00;
@@ -971,7 +971,7 @@ void world_main_save(int slot)
 	wait_for_vblanks(90);
 }
 
-void world_main_generate(void)
+void world_main_generate(int mode)
 {
 	memset(fsys_level,0,LEVEL_LX*LEVEL_LY*LEVEL_LZ);
 
@@ -981,7 +981,7 @@ void world_main_generate(void)
 	cam_y = 0x80 + (48<<8);
 	cam_z = 0x80 + (32<<8);
 
-	world_generate(fsys_level, LEVEL_LX, LEVEL_LY, LEVEL_LZ, (*(volatile uint32_t *)0x1F801120), wgen_stage_frame, draw_status_prog_frame);
+	world_generate(mode, fsys_level, LEVEL_LX, LEVEL_LY, LEVEL_LZ, (*(volatile uint32_t *)0x1F801120), wgen_stage_frame, draw_status_prog_frame);
 	world_main_prepare();
 }
 
@@ -1009,9 +1009,12 @@ void player_update(int mmul)
 			case 0:
 				if (gui_options_menu(&options)) is_menu_open = 0;
 				break;
-			case 1:
-				world_main_generate();
+			case 1: {
+				int wgen_mode = gui_worldgen_menu();
+				if (wgen_mode < 0) break;
+				world_main_generate(wgen_mode);
 				is_menu_open = 0; break;
+			} break;
 			case 2: {
 				int slot = gui_menu(6, 0, "Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Cancel");
 				if (slot < 0 || slot >= 5) break;
@@ -1433,7 +1436,7 @@ int main(void)
 	seedy_drive_stop();
 
         // Generate a world
-	world_main_generate();
+	world_main_generate(0);
 
 	ticks = movement_ticks = 0;
 	for(;;) {

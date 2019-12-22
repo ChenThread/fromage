@@ -72,7 +72,21 @@ static float perlin(uint8_t *perm, float x, float y, float z)
 #define SET(x,y,z,b) if (x>=0&&y>=0&&z>=0&&x<lx&&y<ly&&z<lz) map[(((y) * lz + (z)) * lx + (x))] = (b)
 #define GET(x,y,z) ((x>=0&&y>=0&&z>=0&&x<lx&&y<ly&&z<lz) ? map[(((y) * lz + (z)) * lx + (x))] : 0)
 
-void world_generate(uint8_t *map, int32_t lx, int32_t ly, int32_t lz, uint32_t seed, worldgen_stage_callback *wc, save_progress_callback *pc)
+static void world_generate_flat(uint8_t *map, int32_t lx, int32_t ly, int32_t lz, worldgen_stage_callback *wc)
+{
+	if (wc != NULL) wc("Generating..");
+
+	for (int z = 0; z < lz; z++)
+	for (int x = 0; x < lx; x++)
+	{
+		SET(x,0,z,10);
+		SET(x,1,z,3);
+		SET(x,2,z,3);
+		SET(x,3,z,2);
+	}
+}
+
+static void world_generate_default(uint8_t *map, int32_t lx, int32_t ly, int32_t lz, uint32_t seed, worldgen_stage_callback *wc, save_progress_callback *pc)
 {
 	if (wc != NULL) wc("Raising..");
 
@@ -282,4 +296,13 @@ void world_generate(uint8_t *map, int32_t lx, int32_t ly, int32_t lz, uint32_t s
 	}
 
 	if (pc != NULL) pc(1,1);
+}
+
+void world_generate(int mode, uint8_t *map, int32_t lx, int32_t ly, int32_t lz, uint32_t seed, worldgen_stage_callback *wc, save_progress_callback *pc)
+{
+	switch (mode)
+	{
+		case 1: world_generate_flat(map, lx, ly, lz, wc); break;
+		default: world_generate_default(map, lx, ly, lz, seed, wc, pc); break;
+	}
 }
