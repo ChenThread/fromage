@@ -26,7 +26,7 @@ static int snote = 0;
 static int32_t sound_rand = 1;
 
 void sound_play(int id, int vol_left, int vol_right) {
-	int base_freq = 1365;
+	int base_freq = 2048;
 	int pitch_diff = (RAND(sound_rand) & 0xFF) - 0x80;
 	orelei_play_note(snote, 0x1000 + (ids[id]<<3), 0x9FC083FF, vol_left, vol_right, base_freq + pitch_diff);
 	orelei_commit_key_changes();
