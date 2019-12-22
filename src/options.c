@@ -1,6 +1,6 @@
 #include "common.h"
 
-static char *opt_renderdist_txt[] = {"Render distance: Small", "Render distance: Normal", "Render distance: Large"};
+static const char *opt_renderdist_txt[] = {"Render distance: Small", "Render distance: Normal", "Render distance: Large", "Render distance: Extreme"};
 
 int gui_options_menu(options_t *options) {
 	int last_option = 0;
@@ -9,7 +9,7 @@ int gui_options_menu(options_t *options) {
 			5, last_option,
 			options->pro_jumps ? "Movement: Quake Pro" : "Movement: Classic",
 			options->move_dpad ? "Controls: D-pad" : "Controls: Left Analog",
-			opt_renderdist_txt[options->render_distance % 3],
+			opt_renderdist_txt[options->render_distance % 4],
 			NULL,
 			"Done"
 		);
@@ -21,7 +21,7 @@ int gui_options_menu(options_t *options) {
 				options->move_dpad = !options->move_dpad;
 				break;
 			case 2:
-				options->render_distance = (options->render_distance + 1) % 3;
+				options->render_distance = (options->render_distance + 1) % 4;
 				break;
 			case 4:
 				return 0;

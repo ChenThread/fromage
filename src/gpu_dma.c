@@ -1,6 +1,6 @@
 #include "common.h"
 
-uint32_t dma_pos = 0;
+FASTMEM uint32_t dma_pos = 0;
 uint32_t dma_pos_start = 0;
 uint32_t dma_start_ptr;
 

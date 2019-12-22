@@ -14,6 +14,8 @@
 #define READ16LE(secbuf,i) ((secbuf)[(i)] | ((secbuf)[(i)+1]<<8))
 #define READ32LE(secbuf,i) ((secbuf)[(i)] | ((secbuf)[(i)+1]<<8) | ((secbuf)[(i)+2]<<16) | ((secbuf)[(i)+3]<<24))
 
+#define FASTMEM __attribute__((section(".fastmem")))
+
 #include "config.h"
 
 typedef int32_t fixed;
@@ -62,6 +64,7 @@ typedef struct {
 void cdrom_tick_vblank(void);
 void cdrom_tick_song_player(int vblanks);
 file_record_t *cdrom_get_file(const char *name);
+int cdrom_read_record(file_record_t *record, uint8_t *buffer);
 void cdrom_isr(void);
 void cdrom_init(save_progress_callback *pc);
 
@@ -102,8 +105,8 @@ void gp1_command(uint32_t v);
 
 // gpu_dma.c
 extern uint32_t dma_pos;
-#define DMA_ORDER_MAX 64
-#define DMA_BUFFER_SIZE (256*384)
+#define DMA_ORDER_MAX 80
+#define DMA_BUFFER_SIZE (256*448)
 
 extern uint32_t dma_buffer[DMA_BUFFER_SIZE];
 extern uint32_t dma_order_table[4][DMA_ORDER_MAX];

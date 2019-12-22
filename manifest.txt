@@ -5,5 +5,7 @@ lic=isolicence.pal
 # /
 dat=./system.cnf
 dat=./boot.exe
+dat=./atlas.lz4
+dat=./sounds.lz4
 dat=./music.hdr
 raw=./music.xa

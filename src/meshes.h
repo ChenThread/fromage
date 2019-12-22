@@ -40,7 +40,7 @@ const mesh_data_t mesh_data_slab[] = {
 	{FACE_P, FACE_0, FACE_P, 0x0F0F, .face = 5,},
 };
 
-const mesh_data_t mesh_data_block[] = {
+const mesh_data_t mesh_data_block_defaults[] = {
 	// -Z
 	{FACE_N, FACE_N, FACE_N, 0x0F00, .face = 0,},
 	{FACE_P, FACE_N, FACE_N, 0x0F0F, .face = 0,},

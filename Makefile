@@ -1,4 +1,4 @@
-CROSSPREFIX=mipsel-none-elf-
+CROSSPREFIX=mipsel-elf-
 
 CROSS_CC=$(CROSSPREFIX)gcc
 CROSS_AS=$(CROSSPREFIX)as
@@ -12,9 +12,8 @@ SPUENC=$(CANDYK)/bin/spuenc
 
 ASFLAGS = -g -msoft-float
 
-CFLAGS = -g -c -O3 -flto -pipe \
+CFLAGS = -g -c -flto -pipe \
 	-fomit-frame-pointer \
-	-funroll-loops \
 	-fno-stack-protector \
 	-mno-check-zero-division \
 	-msoft-float -nostdlib -mips1 -march=3000 -mtune=3000 \
@@ -22,11 +21,13 @@ CFLAGS = -g -c -O3 -flto -pipe \
 	-Wno-shift-negative-value \
 	-Wno-unused-variable -Wno-unused-function -Wno-pointer-sign \
 
-LDFLAGS = -g -O3 -flto -Wl,-Ttext-segment=0x80010000 -pipe \
+CFLAGS_FAST = -O3
+CFLAGS_SMALL = -Os
+
+LDFLAGS = -g -O3 -flto -Wl,-Tlink.ld -pipe \
 	-mtune=3000 -march=3000 \
 	-fomit-frame-pointer \
 	-fno-stack-protector \
-	-funroll-loops \
 	-mno-check-zero-division \
 	\
 	-msoft-float \
@@ -50,7 +51,7 @@ SRCDIR = src
 TOOLSDIR = tools
 TOOLSOBJDIR = $(OBJDIR)/tools
 
-INCLUDES = src/block_info.h src/common.h src/config.h src/psx.h $(OBJDIR)/soundbank.h $(OBJDIR)/atlas.h
+INCLUDES = src/block_info.h src/common.h src/config.h src/psx.h
 
 MUSIC = \
 	$(OBJDIR)/calm1.mus \
@@ -75,41 +76,44 @@ SOUNDS = \
 	$(OBJDIR)/wood3.snd \
 	$(OBJDIR)/wood4.snd
 
-OBJS =	$(OBJDIR)/cdrom.o \
-	$(OBJDIR)/gui.o \
+OBJS_FAST = \
+	$(OBJDIR)/cdrom.o \
 	$(OBJDIR)/gpu.o \
 	$(OBJDIR)/gpu_dma.o \
+	$(OBJDIR)/gui.o \
 	$(OBJDIR)/joy.o \
-	$(OBJDIR)/options.o \
-	$(OBJDIR)/save.o \
 	$(OBJDIR)/sound.o \
 	$(OBJDIR)/util.o \
 	$(OBJDIR)/world.o \
 	$(OBJDIR)/worldgen.o \
 	\
+	$(OBJDIR)/main.o
+
+OBJS_SMALL = \
+	$(OBJDIR)/options.o \
+	$(OBJDIR)/save.o \
+	\
 	$(OBJDIR)/font.o \
 	$(OBJDIR)/icon.o \
 	$(OBJDIR)/license_text.o \
 	\
-	$(OBJDIR)/lz4.o \
-	\
-	$(OBJDIR)/main.o
+	$(OBJDIR)/lz4.o
 
+OBJS =  $(OBJS_FAST) $(OBJS_SMALL)
 
 all: $(EXE_NAME).exe $(ISO_NAME).cue
 
 clean:
 	$(RM_F) $(OBJS) $(OBJDIR)/$(EXE_NAME).elf $(ISO_NAME).bin $(ISO_NAME).cue
-	$(RM_F) $(OBJDIR)/atlas.h $(OBJDIR)/font.s $(OBJDIR)/icon.s
+	$(RM_F) $(OBJDIR)/font.s $(OBJDIR)/icon.s
 	$(RM_F) $(OBJDIR)/atlas.raw $(OBJDIR)/font.raw $(OBJDIR)/icon.raw
-	$(RM_F) $(OBJDIR)/atlas.raw.lz4
-	$(RM_F) $(OBJDIR)/soundbank.h
-	$(RM_F) $(OBJDIR)/soundbank.raw $(OBJDIR)/soundbank.raw.lz4
+	$(RM_F) atlas.lz4 sounds.lz4
+	$(RM_F) $(OBJDIR)/soundbank.raw
 	$(RM_F) $(SOUNDS)
 	$(RM_F) $(MUSIC) music.hdr music.xa
 	$(RM_F) $(OBJDIR)/license_text.s $(OBJDIR)/license_text.txt
 
-$(ISO_NAME).cue: $(ISO_NAME) music.hdr music.xa manifest.txt
+$(ISO_NAME).cue: $(ISO_NAME) music.hdr music.xa atlas.lz4 sounds.lz4 manifest.txt
 	$(CANDYK)/bin/pscd-new manifest.txt
 
 $(ISO_NAME): $(EXE_NAME).exe
@@ -118,7 +122,7 @@ $(ISO_NAME): $(EXE_NAME).exe
 $(EXE_NAME).exe: $(OBJDIR)/$(EXE_NAME).elf
 	$(CANDYK)/bin/elf2psx -p $(OBJDIR)/$(EXE_NAME).elf $(EXE_NAME).exe
 
-$(OBJDIR)/$(EXE_NAME).elf: $(OBJS)
+$(OBJDIR)/$(EXE_NAME).elf: $(OBJS) link.ld
 	$(CROSS_CC) -o $(OBJDIR)/$(EXE_NAME).elf $(LDFLAGS) $(OBJS) $(LIBS)
 
 music.hdr: $(MUSIC) $(RESDIR)/music_volume.txt
@@ -142,15 +146,17 @@ $(OBJDIR)/calm2.mus: $(RESDIR)/calm2.ogg
 $(OBJDIR)/calm3.mus: $(RESDIR)/calm3.ogg
 	$(SPUENC) -f 37800 -t xacd -c 2 -b 4 -F 1 -C 2 $< $@
 
+$(OBJS_FAST): CFLAGS := $(CFLAGS) $(CFLAGS_FAST)
+$(OBJS_SMALL): CFLAGS := $(CFLAGS) $(CFLAGS_SMALL)
+
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(INCLUDES)
 	$(CROSS_CC) -c -o $@ $(CFLAGS) $<
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.s
 	$(CROSS_CC) -g -c -o $@ $(CFLAGS) $<
 
-$(OBJDIR)/soundbank.h: $(OBJDIR)/soundbank.raw $(OBJDIR)/lz4pack
-	$(OBJDIR)/lz4pack -o 32 -p $(OBJDIR)/soundbank.raw $(OBJDIR)/soundbank.raw.lz4
-	$(PYTHON3) $(TOOLSDIR)/bin2h.py $(OBJDIR)/soundbank.raw.lz4 > $(OBJDIR)/soundbank.h
+sounds.lz4: $(OBJDIR)/soundbank.raw $(OBJDIR)/lz4pack
+	$(OBJDIR)/lz4pack -o 32 -p $(OBJDIR)/soundbank.raw sounds.lz4
 
 $(OBJDIR)/lz4.o: contrib/lz4/lz4.c contrib/lz4/lz4.h
 	$(CROSS_CC) -c -o $@ $(CFLAGS) $<
@@ -158,9 +164,8 @@ $(OBJDIR)/lz4.o: contrib/lz4/lz4.c contrib/lz4/lz4.h
 $(OBJDIR)/lz4pack: contrib/lz4/lz4.c contrib/lz4/lz4.h tools/lz4pack.c
 	$(CC) -O2 -Icontrib/lz4 -o $@ contrib/lz4/lz4.c tools/lz4pack.c
 
-$(OBJDIR)/atlas.h: $(OBJDIR)/atlas.raw $(TOOLSDIR)/bin2h.py $(OBJDIR)/lz4pack $(INCLUDES)
-	$(OBJDIR)/lz4pack $(OBJDIR)/atlas.raw $(OBJDIR)/atlas.raw.lz4
-	$(PYTHON3) $(TOOLSDIR)/bin2h.py $(OBJDIR)/atlas.raw.lz4 > $(OBJDIR)/atlas.h
+atlas.lz4: $(OBJDIR)/atlas.raw $(OBJDIR)/lz4pack
+	$(OBJDIR)/lz4pack $(OBJDIR)/atlas.raw atlas.lz4
 
 $(OBJDIR)/font.o: $(OBJDIR)/font.raw $(TOOLSDIR)/bin2s.py $(INCLUDES)
 	$(PYTHON3) $(TOOLSDIR)/bin2s.py $(OBJDIR)/font.raw > $(OBJDIR)/font.s

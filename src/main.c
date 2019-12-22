@@ -32,10 +32,13 @@ uint8_t fsys_level[LEVEL_LY][LEVEL_LZ][LEVEL_LX];
 
 // Top, Side, Bottom, (reserved)
 // Texcoord, TexPage, CLUT, (reserved)
-uint8_t block_side_index[6] = {
+FASTMEM uint8_t block_side_index[6];
+FASTMEM uint32_t block_lighting[6];
+
+static const uint8_t block_side_index_defaults[6] = {
 	1, 1, 1, 1, 2, 0,
 };
-uint32_t block_lighting[6] = {
+static const uint32_t block_lighting_defaults[6] = {
 	0x010101*((0x80*8+5)/10), // -Z
 	0x010101*((0x80*8+5)/10), // +Z
 	0x010101*((0x80*6+5)/10), // -X
@@ -55,12 +58,19 @@ typedef struct mesh_data {
 
 #include "meshes.h"
 
+FASTMEM mesh_data_t mesh_data_block[24];
+
+static void init_fastmem_tables(void)
+{
+	memcpy(block_side_index, block_side_index_defaults, sizeof(block_side_index));
+	memcpy(block_lighting, block_lighting_defaults, sizeof(block_lighting));
+	memcpy(mesh_data_block, mesh_data_block_defaults, sizeof(mesh_data_block));
+}
+
 void yield(void)
 {
 	// TODO: halt
 }
-
-#include "../obj/atlas.h"
 
 extern char _end[];
 void *_cur_brk = (void *)_end;
@@ -212,7 +222,7 @@ static inline void draw_one_quad(
 	int32_t backface_mac0;
 	asm volatile ("mfc2 %0, $24\nnop\n" : "=r"(backface_mac0) : : );
 	// Backface cull
-	if(backface_mac0 > 0) { return; }
+	if(backface_mac0 >= 0) { return; }
 
 	// Get transformed vertices
 	uint32_t sxy00;
@@ -273,15 +283,14 @@ void draw_quads(int32_t cx, int32_t cy, int32_t cz, int di, const mesh_data_t *m
 	int32_t ox = cx*0x0100;
 	int32_t oy = cy*0x0100;
 	int32_t oz = cz*0x0100;
+	int mi = 0;
 
-	for (int i = 0; i < face_count; i++) {
-		int mi = i*4;
-
+	for (int i = 0; i < face_count; i++, mi+=4) {
 		if(((1<<mesh_data[mi+0].face)&facemask) == 0) {
 			continue;
 		}
 
-		const block_info_t *block_data = &bi[mesh_data[mi+0].face & 0x07];
+		const block_info_t *block_data = &bi[mesh_data[mi+0].face];
 
 		int32_t x00 = ox+mesh_data[mi+0].x;
 		int32_t y00 = oy+mesh_data[mi+0].y;
@@ -337,8 +346,6 @@ void draw_block(int32_t cx, int32_t cy, int32_t cz, int di, int block, uint32_t 
 	if(block >= BLOCK_MAX || block < 0) {
 		return;
 	}
-
-	facemask |= 0x40;
 
 	switch (get_model(block)) {
 		case 0:
@@ -1370,7 +1377,6 @@ int main(void)
 
 	// DMA a texture
 	gpu_dma_load((uint32_t*) (&font_raw[64]), 64 * 0xE, 256, 128*VID_WIDTH_MULTIPLIER/4, 64, 0);
-	gpu_dma_load(atlas_raw_lz4, 768, 256, 320/4, 256, sizeof(atlas_raw_lz4));
 
 	// Write font CLUT
 	gp1_command(0x04000001); // DMA mode: FIFO (1)
@@ -1390,6 +1396,7 @@ int main(void)
 
 	// Display enable: ON (1)
 	gp1_command(0x03000000);
+	init_fastmem_tables();
 	wait_for_next_vblank();
 
 	// Prepare options
@@ -1407,11 +1414,23 @@ int main(void)
 
 	sawpads_unlock_dualshock();
 
-	// Initialize sound
-	sound_init();
-
 	// Initialize CD data
 	cdrom_init(draw_status_prog_frame);
+
+	// Load CD assets
+	draw_status_prog_frame(0, 2);
+	sound_init();
+	draw_status_prog_frame(1, 2);
+	{
+		file_record_t *atlas_file = cdrom_get_file("ATLAS.LZ4");
+		uint8_t *atlas_raw_lz4 = malloc(atlas_file->size);
+		cdrom_read_record(atlas_file, atlas_raw_lz4);
+		gpu_dma_load(atlas_raw_lz4, 768, 256, 320/4, 256, atlas_file->size);
+		free(atlas_raw_lz4);
+	}
+	draw_status_prog_frame(2, 2);
+
+	seedy_drive_stop();
 
         // Generate a world
 	world_main_generate();

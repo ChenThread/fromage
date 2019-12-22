@@ -1,17 +1,25 @@
 #include "common.h"
 #include <orelei.h>
 
-#include "../obj/soundbank.h"
+#define SOUND_ID_COUNT 16
+
+static uint16_t ids[SOUND_ID_COUNT];
 
 void sound_init(void) {
-	int cmpbufsize = sizeof(soundbank_raw_lz4) - 32 - 4;
-	int bufsize = READ32LE(soundbank_raw_lz4, 32);
-	uint8_t *buf = lz4_alloc_and_unpack(soundbank_raw_lz4 + 32 + 4, cmpbufsize, bufsize);
+	file_record_t *file = cdrom_get_file("SOUNDS.LZ4");
+	uint8_t *cmpbuf = malloc(file->size);
+	cdrom_read_record(file, cmpbuf);
+
+	memcpy(ids, cmpbuf, SOUND_ID_COUNT * sizeof(uint16_t));
+	int cmpbufsize = file->size - SOUND_ID_COUNT*2 - 4;
+	int bufsize = READ32LE(cmpbuf, SOUND_ID_COUNT*2);
+	uint8_t *buf = lz4_alloc_and_unpack(cmpbuf + SOUND_ID_COUNT*2 + 4, cmpbufsize, bufsize);
 
 	orelei_init_spu();
 	orelei_sram_write_blocking(0x1000, buf, bufsize);
 
 	free(buf);
+	free(cmpbuf);
 }
 
 static int snote = 0;
@@ -20,7 +28,6 @@ static int32_t sound_rand = 1;
 void sound_play(int id, int vol_left, int vol_right) {
 	int base_freq = 1365;
 	int pitch_diff = (RAND(sound_rand) & 0xFF) - 0x80;
-	uint16_t *ids = (uint16_t*) soundbank_raw_lz4;
 	orelei_play_note(snote, 0x1000 + (ids[id]<<3), 0x9FC083FF, vol_left, vol_right, base_freq + pitch_diff);
 	orelei_commit_key_changes();
 	snote = (snote + 1) & 15;

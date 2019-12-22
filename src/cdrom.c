@@ -76,6 +76,10 @@ file_record_t *cdrom_get_file(const char *name) {
 	return NULL;
 }
 
+int cdrom_read_record(file_record_t *record, uint8_t *buffer) {
+	return seedy_read_data_sync(record->lba, 0, buffer, record->size);
+}
+
 #define CDROM_INIT_STEPS 5
 
 void cdrom_init(save_progress_callback *pc) {
@@ -135,10 +139,6 @@ void cdrom_init(save_progress_callback *pc) {
 				song_lengths[i] = READ16LE(buffer, (i << 1) + 2);
 			}
 		}
-	}
-
-	if (song_count == 0) {
-		seedy_drive_stop(); // we won't need you anymore, for now
 	}
 
 	if (pc != NULL) pc(5, CDROM_INIT_STEPS);
