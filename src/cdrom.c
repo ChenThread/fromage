@@ -20,6 +20,10 @@ static int32_t song_count = 0;
 static int32_t song_vblanks = 0;
 static int32_t song_stop_req = 0;
 
+int cdrom_has_songs(void) {
+	return song_count > 0;
+}
+
 void cdrom_tick_vblank(void) {
 	if (song_vblanks > 0) {
 		song_vblanks--;

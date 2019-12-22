@@ -30,7 +30,7 @@ void write_sjis_name(uint8_t *buffer, const char *format, ...)
 	va_end(args);
 
 	int pos = 0;
-	for (int i = 0; i < strlen(text); i++) {
+	for (uint32_t i = 0; i < strlen(text); i++) {
 		uint8_t c = text[i];
 		if (c >= '0' && c <= '9') { buffer[pos++] = 0x82; buffer[pos++] = 0x4F + c - '0'; }
 		else if (c >= 'A' && c <= 'Z') { buffer[pos++] = 0x82; buffer[pos++] = 0x60 + c - 'A'; }

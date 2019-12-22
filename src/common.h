@@ -66,6 +66,7 @@ void cdrom_tick_song_player(int vblanks);
 file_record_t *cdrom_get_file(const char *name);
 int cdrom_read_record(file_record_t *record, uint8_t *buffer);
 void cdrom_isr(void);
+int cdrom_has_songs(void);
 void cdrom_init(save_progress_callback *pc);
 
 // main.c

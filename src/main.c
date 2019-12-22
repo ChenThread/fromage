@@ -1,5 +1,6 @@
 #include <chenboot.h>
 #include <sawpads.h>
+#include <seedy.h>
 #include "common.h"
 #include <stdarg.h>
 
@@ -871,7 +872,7 @@ void blocksel_update(void)
 		if ((joy_pressed & PAD_DOWN) != 0) blocksel_id += 9;
 
 		while (blocksel_id < 0) blocksel_id += sizeof(block_sel_slots);
-		while (blocksel_id >= sizeof(block_sel_slots)) blocksel_id -= sizeof(block_sel_slots);
+		while (blocksel_id >= (int16_t)sizeof(block_sel_slots)) blocksel_id -= sizeof(block_sel_slots);
 	}
 
 	current_block[hotbar_pos] = block_sel_slots[blocksel_id];
@@ -1148,7 +1149,7 @@ void player_update(int mmul)
 
 	if ((joy_pressed & PAD_S) != 0) {
 		blocksel_id = 0;
-		for (int i = 0; i < sizeof(block_sel_slots); i++) {
+		for (uint32_t i = 0; i < sizeof(block_sel_slots); i++) {
 			if (current_block[hotbar_pos] == block_sel_slots[i]) {
 				blocksel_id = i;
 				break;
@@ -1435,7 +1436,9 @@ int main(void)
 	}
 	draw_status_prog_frame(2, 2);
 
-	seedy_drive_stop();
+	if (!cdrom_has_songs()) {
+		seedy_drive_stop();
+	}
 
         // Generate a world
 	world_main_generate(0);
