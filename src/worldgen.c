@@ -86,6 +86,23 @@ static void world_generate_flat(uint8_t *map, int32_t lx, int32_t ly, int32_t lz
 	}
 }
 
+static void world_generate_debug(uint8_t *map, int32_t lx, int32_t ly, int32_t lz, uint32_t seed, worldgen_stage_callback *wc)
+{
+	if (wc != NULL) wc("Generating..");
+
+	for (int z = 0; z < lz; z++)
+	for (int x = 0; x < lx; x++)
+	for (int y = 0; y < ly; y++)
+	{
+		RAND(seed);
+		if ((seed%5) == 0) {
+			SET(x, y, z, 4);
+		} else {
+			SET(x, y, z, 0);
+		}
+	}
+}
+
 static void world_generate_default(uint8_t *map, int32_t lx, int32_t ly, int32_t lz, uint32_t seed, worldgen_stage_callback *wc, save_progress_callback *pc)
 {
 	if (wc != NULL) wc("Raising..");
@@ -302,7 +319,8 @@ void world_generate(int mode, uint8_t *map, int32_t lx, int32_t ly, int32_t lz, 
 {
 	switch (mode)
 	{
-		case 1: world_generate_flat(map, lx, ly, lz, wc); break;
-		default: world_generate_default(map, lx, ly, lz, seed, wc, pc); break;
+//		case 1: world_generate_flat(map, lx, ly, lz, wc); break;
+//		default: world_generate_default(map, lx, ly, lz, seed, wc, pc); break;
+		default: world_generate_debug(map, lx, ly, lz, seed, wc); break;
 	}
 }

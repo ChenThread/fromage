@@ -10,7 +10,7 @@ uint32_t dma_order_table[4][DMA_ORDER_MAX];
 uint32_t dma_buffer_current = 0;
 
 void gpu_dma_init(void) {
-	if(dma_pos_start >= sizeof(dma_buffer)*2/sizeof(dma_buffer[0])/3) {
+	if(dma_pos_start >= sizeof(dma_buffer)/sizeof(dma_buffer[0])/2) {
 		dma_pos = 0;
 	}
 
@@ -26,7 +26,7 @@ void gpu_dma_init(void) {
 	}
 }
 
-void gpu_dma_finish(void) {
+int gpu_dma_finish(void) {
 	DMA_PUSH(1, 0);
 	dma_buffer[dma_pos++] = 0x00000000;
 
@@ -39,6 +39,12 @@ void gpu_dma_finish(void) {
 	DMA_n_BCR(2)  = 0;
 	DMA_DPCR |= (0x8<<(4*2)); // Enable DMA
 	DMA_n_CHCR(2) = 0x01000401;
+
+	if (dma_pos_start > dma_pos) {
+		return (sizeof(dma_buffer)/sizeof(int32_t)) + dma_pos - dma_pos_start;
+	} else {
+		return dma_pos - dma_pos_start;
+	}
 }
 
 void gpu_dma_load(uint32_t *buffer, int x, int y, int width, int height, int use_lz4)

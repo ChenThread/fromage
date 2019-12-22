@@ -1,6 +1,6 @@
 #include "common.h"
 
-static const char *opt_renderdist_txt[] = {"Render distance: Small", "Render distance: Normal", "Render distance: Large", "Render distance: Extreme"};
+static const char *opt_renderdist_txt[] = {"Render distance: Small", "Render distance: Normal", "Render distance: Large"};
 static const char *opt_genmodes_txt[] = {"Generator: Default", "Generator: Flat"};
 
 int gui_options_menu(options_t *options) {

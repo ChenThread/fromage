@@ -139,6 +139,7 @@ int hotbar_pos = 0;
 int32_t fps_frames = 0;
 int32_t fps_vblanks = 0;
 int32_t fps_val = 0;
+int32_t dma_size_used = 0;
 
 static options_t options;
 
@@ -844,7 +845,14 @@ void draw_everything(void)
 
 	draw_hotbar();
 	draw_text(1, 1, 0xFFFFFF, "0.30");
-	draw_text(1, 11, 0xFFFFFF, "%d FPS", fps_val);
+	if (options.debug_mode) {
+		draw_text(1, 11, 0xFFFFFF, "%d FPS, BS: %d", fps_val, dma_size_used);
+		draw_text(1, 21, 0xFFFFFF, "XYZ: %.2f / %.2f / %.2f", (float)cam_x / 256.0f, (float)cam_y / 256.0f, (float)cam_z / 256.0f);
+	} else {
+		if (options.show_fps) {
+			draw_text(1, 11, 0xFFFFFF, "%d FPS", fps_val);
+		}
+	}
 
 	draw_liquid_overlay();
 
@@ -855,7 +863,7 @@ void draw_everything(void)
 	gp0_data_xy(rx0-8/2, ry0-8/2);
 	*/
 
-	gpu_dma_finish();
+	dma_size_used = gpu_dma_finish();
 }
 
 void blocksel_update(void)
@@ -978,13 +986,20 @@ void world_main_generate(int mode)
 {
 	memset(fsys_level,0,LEVEL_LX*LEVEL_LY*LEVEL_LZ);
 
+	world_generate(mode, fsys_level, LEVEL_LX, LEVEL_LY, LEVEL_LZ, (*(volatile uint32_t *)0x1F801120), wgen_stage_frame, draw_status_prog_frame);
+
 	cam_ry = 0x0000;
 	cam_rx = 0x0000;
-	cam_x = 0x80 + (32<<8);
-	cam_y = 0x80 + (48<<8);
-	cam_z = 0x80 + (32<<8);
+	cam_x = 0x80 + ((LEVEL_LX>>1)<<8);
+	cam_y = 0x80 + (LEVEL_LY<<8);
+	for (int i = LEVEL_LY - 1; i >= 0; i--) {
+		if (!world_is_walkable(world_get_block(LEVEL_LX>>1, i, LEVEL_LZ>>1))) {
+			cam_y = 0x80 + ((i+3)<<8);
+			break;
+		}
+	}
+	cam_z = 0x80 + ((LEVEL_LZ>>1)<<8);
 
-	world_generate(mode, fsys_level, LEVEL_LX, LEVEL_LY, LEVEL_LZ, (*(volatile uint32_t *)0x1F801120), wgen_stage_frame, draw_status_prog_frame);
 	world_main_prepare();
 }
 
@@ -1442,6 +1457,8 @@ int main(void)
 
         // Generate a world
 	world_main_generate(0);
+
+	options.debug_mode = 1;
 
 	ticks = movement_ticks = 0;
 	for(;;) {

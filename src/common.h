@@ -39,6 +39,8 @@ typedef struct {
 	bool pro_jumps;
 	bool move_dpad;
 	uint8_t render_distance;
+	uint8_t show_fps;
+	uint8_t debug_mode;
 } options_t;
 
 // Files
@@ -106,14 +108,16 @@ void gp1_command(uint32_t v);
 
 // gpu_dma.c
 extern uint32_t dma_pos;
-#define DMA_ORDER_MAX 80
+#define DMA_ORDER_MAX 72
 #define DMA_BUFFER_SIZE (256*448)
 
 extern uint32_t dma_buffer[DMA_BUFFER_SIZE];
 extern uint32_t dma_order_table[4][DMA_ORDER_MAX];
 extern uint32_t dma_buffer_current;
 #define DMA_PUSH(len, ot) \
-	while(dma_pos >= (sizeof(dma_buffer)/sizeof(int32_t))) {} \
+	if(dma_pos >= ((sizeof(dma_buffer)-32)/sizeof(int32_t))) { \
+		dma_pos = 0; \
+	} \
 	dma_buffer[dma_pos] = \
 		(dma_order_table[dma_buffer_current][ot] & 0x00FFFFFF) \
 		| ((len)<<24); \
@@ -121,7 +125,7 @@ extern uint32_t dma_buffer_current;
 	dma_pos++; \
 
 void gpu_dma_init(void);
-void gpu_dma_finish(void);
+int gpu_dma_finish(void);
 
 void gpu_dma_load(uint32_t *buffer, int x, int y, int width, int height, int use_lz4);
 
