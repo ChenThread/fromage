@@ -25,11 +25,22 @@ Fromage OST - Copyright (c) 2019 GreaseMonkey
 
 == fromage resources - sounds ==
 
-Derived from the Minetest project (https://www.minetest.net/)
+The following sounds come from freesound:
+
+grass1 by Snoman ( https://freesound.org/people/Snoman/sounds/9904/ )
+grass2 by Snoman ( https://freesound.org/people/Snoman/sounds/9905/ )
+grass3 by Snoman ( https://freesound.org/people/Snoman/sounds/9906/ )
+grass4 by Snoman ( https://freesound.org/people/Snoman/sounds/9907/ )
+
+Creative Commons Attribution 3.0 Unported (CC BY 3.0)
+
+http://creativecommons.org/licenses/by/3.0/
+
+Remaining sounds come from the Minetest project (https://www.minetest.net/)
 
 Copyright (c) 2010-2016 Mito551
 
-Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0)
+Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0)
 
 http://creativecommons.org/licenses/by-sa/3.0/
 

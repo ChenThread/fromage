@@ -137,6 +137,9 @@ $(OBJDIR)/soundbank.raw: $(SOUNDS)
 $(OBJDIR)/%.snd: $(RESDIR)/%.ogg
 	$(SPUENC) -f 22050 -t spu -c 1 -b 4 $< $@
 
+$(OBJDIR)/%.snd: $(RESDIR)/%.wav
+	$(SPUENC) -f 22050 -t spu -c 1 -b 4 $< $@
+
 $(OBJDIR)/calm1.mus: $(RESDIR)/calm1.ogg
 	$(SPUENC) -f 37800 -t xacd -c 2 -b 4 -F 1 -C 0 $< $@
 
