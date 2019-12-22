@@ -290,7 +290,7 @@ void draw_quads(int32_t cx, int32_t cy, int32_t cz, int di, const mesh_data_t *m
 			continue;
 		}
 
-		const block_info_t *block_data = &bi[mesh_data[mi+0].face];
+		const block_info_t *block_data = &bi[mesh_data[mi+0].face & 0x07];
 
 		int32_t x00 = ox+mesh_data[mi+0].x;
 		int32_t y00 = oy+mesh_data[mi+0].y;
@@ -346,6 +346,8 @@ void draw_block(int32_t cx, int32_t cy, int32_t cz, int di, int block, uint32_t 
 	if(block >= BLOCK_MAX || block < 0) {
 		return;
 	}
+
+	facemask |= 0x40;
 
 	switch (get_model(block)) {
 		case 0:
