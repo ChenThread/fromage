@@ -397,7 +397,7 @@ int gui_menu(int optcount, int optstartpos, ...)
 	int curr_opt = optstartpos % optcount;
 
 	va_list args;
-	va_start(args, optcount);
+	va_start(args, optstartpos);
 	for (int i = 0; i < optcount; i++)
 		strs[i] = va_arg(args, char*);
 	va_end(args);
