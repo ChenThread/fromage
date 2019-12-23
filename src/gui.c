@@ -377,14 +377,14 @@ void draw_liquid_overlay(void)
 	if ((cam_cb & (~1)) == 8) {
 		for (int i = 0; i < 2; i++) {
 			DMA_PUSH(3, 1);
-			dma_buffer[dma_pos++] = 0x62501000;
+			dma_buffer[dma_pos++] = 0x628D6F2E;
 			dma_buffer[dma_pos++] = (((-(VID_HEIGHT/2))&0xFFFF) << 16) | ((-(VID_WIDTH/2))&0xFFFF);
 			dma_buffer[dma_pos++] = (VID_HEIGHT << 16) | (VID_WIDTH << 0);
 		}
 	} else if ((cam_cb & (~1)) == 10) {
 		for (int i = 0; i < 3; i++) {
 			DMA_PUSH(3, 1);
-			dma_buffer[dma_pos++] = 0x62081CB0;
+			dma_buffer[dma_pos++] = 0x621460EE;
 			dma_buffer[dma_pos++] = (((-(VID_HEIGHT/2))&0xFFFF) << 16) | ((-(VID_WIDTH/2))&0xFFFF);
 			dma_buffer[dma_pos++] = (VID_HEIGHT << 16) | (VID_WIDTH << 0);
 		}

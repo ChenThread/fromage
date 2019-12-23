@@ -828,13 +828,13 @@ void draw_everything(void)
 
 	// Clear screen
 	DMA_PUSH(8, DMA_ORDER_MAX-1);
-	dma_buffer[dma_pos++] = 0x38FFCB7F;
+	dma_buffer[dma_pos++] = 0x38FFD0B7;
 	dma_buffer[dma_pos++] = ((-(VID_WIDTH/2))&0xFFFF)|((-(VID_HEIGHT/2))<<16);
-	dma_buffer[dma_pos++] = 0x00FFCB7F;
+	dma_buffer[dma_pos++] = 0x00FFD0B7;
 	dma_buffer[dma_pos++] = ((+(VID_WIDTH/2))&0xFFFF)|((-(VID_HEIGHT/2))<<16);
-	dma_buffer[dma_pos++] = 0x00FFF0E1;
+	dma_buffer[dma_pos++] = 0x00FFF8F4;
 	dma_buffer[dma_pos++] = ((-(VID_WIDTH/2))&0xFFFF)|((+(VID_HEIGHT/2))<<16);
-	dma_buffer[dma_pos++] = 0x00FFF0E1;
+	dma_buffer[dma_pos++] = 0x00FFF8F4;
 	dma_buffer[dma_pos++] = ((+(VID_WIDTH/2))&0xFFFF)|((+(VID_HEIGHT/2))<<16);
 
 	// Send VERY FIRST COMMANDS
@@ -861,7 +861,8 @@ void draw_everything(void)
 	draw_text(1, 1, 0xFFFFFF, "0.30");
 	if (options.debug_mode) {
 		draw_text(1, 11, 0xFFFFFF, "%d FPS, BS: %d", fps_val, dma_size_used);
-		draw_text(1, 21, 0xFFFFFF, "RD: %d", render_distance);
+		draw_text(1, 21, 0xFFFFFF, "RD: %d, J: %02X%02X%02X%02X", render_distance, sawpads_controller[0].axes[0], sawpads_controller[0].axes[1],
+			sawpads_controller[0].axes[2], sawpads_controller[0].axes[3]);
 		draw_text(1, 31, 0xFFFFFF, "XYZ: %.2f / %.2f / %.2f", (float)cam_x / 256.0f, (float)cam_y / 256.0f, (float)cam_z / 256.0f);
 	} else {
 		if (options.show_fps) {
@@ -1054,8 +1055,8 @@ void player_update(int mmul)
 {
 	int jx0 = 0x00;
 	int jy0 = 0x00;
-	int jx1 = (int)(int8_t)(sawpads_controller[0].axes[0]);
-	int jy1 = (int)(int8_t)(sawpads_controller[0].axes[1]);
+	int jx1 = 0x00;
+	int jy1 = 0x00;
 
 	int prev_feet_x = cam_x >> 8;
 	int prev_feet_y = (cam_y - 443) >> 8;
@@ -1063,6 +1064,7 @@ void player_update(int mmul)
 	int prev_vel_y = vel_y;
 
 	int has_mouse = sawpads_controller[1].id == 0x12 && sawpads_controller[1].hid == 0x5A;
+	int has_analogs = !(sawpads_controller[0].id == 0x41 && sawpads_controller[0].hid == 0x5A);
 
 	if (joy_delay > 0) {
 		joy_delay--;
@@ -1108,7 +1110,6 @@ void player_update(int mmul)
 		return;
 	}
 
-	int has_analogs = !(sawpads_controller[0].id == 0x41 && sawpads_controller[0].hid == 0x5A);
 	int use_dpad = options.move_dpad || !has_analogs;
 	if (use_dpad) {
 		if (!has_analogs && ((sawpads_controller[0].buttons & PAD_T) == 0)) {
@@ -1125,11 +1126,13 @@ void player_update(int mmul)
 	} else {
 		jx0 = (int)(int8_t)(sawpads_controller[0].axes[2]);
 		jy0 = (int)(int8_t)(sawpads_controller[0].axes[3]);
+		jx1 = (int)(int8_t)(sawpads_controller[0].axes[0]);
+		jy1 = (int)(int8_t)(sawpads_controller[0].axes[1]);
 
-		if (has_mouse) {
-			jx1 += (int)(int8_t)(sawpads_controller[1].axes[0]);
-			jy1 += (int)(int8_t)(sawpads_controller[1].axes[1]);
-		}
+//		if (has_mouse) {
+//			jx1 += (int)(int8_t)(sawpads_controller[1].axes[0]);
+//			jy1 += (int)(int8_t)(sawpads_controller[1].axes[1]);
+//		}
 
 	}
 
@@ -1519,10 +1522,11 @@ int main(void)
 		seedy_drive_stop();
 	}
 
+	sawpads_do_read();
+	options.debug_mode = ((sawpads_controller[0].buttons & PAD_SELECT) == 0) ? 1 : 0;
+
         // Generate a world
 	world_main_generate(0);
-
-	options.debug_mode = 1;
 
 	ticks = movement_ticks = 0;
 	for(;;) {
@@ -1552,15 +1556,15 @@ int main(void)
 			movement_ticks = ticks;
 #if defined(LAVA_ANIMATION_START) || defined(WATER_ANIMATION_START)
 			uint32_t last_tut = tex_update_ticks;
-			while (tex_update_blanks >= VBLANKS_PER_SEC/5) {
-				tex_update_blanks -= VBLANKS_PER_SEC/5;
+			while (tex_update_blanks >= VBLANKS_PER_SEC/10) {
+				tex_update_blanks -= VBLANKS_PER_SEC/10;
 				tex_update_ticks++;
 			}
 			if (tex_update_ticks != last_tut) {
 				int water_tex = (tex_update_ticks % WATER_ANIMATION_FRAMES) + WATER_ANIMATION_START;
-				int lava_tex = (tex_update_ticks % (LAVA_ANIMATION_FRAMES * 2 - 1));
-				if (lava_tex >= LAVA_ANIMATION_FRAMES) lava_tex = ((LAVA_ANIMATION_FRAMES * 2 - 2) - lava_tex);
-				lava_tex += LAVA_ANIMATION_START;
+				int lava_tex = ((tex_update_ticks >> 1) % LAVA_ANIMATION_FRAMES) + LAVA_ANIMATION_START;
+//				if (lava_tex >= LAVA_ANIMATION_FRAMES) lava_tex = ((LAVA_ANIMATION_FRAMES * 2 - 2) - lava_tex);
+//				lava_tex += LAVA_ANIMATION_START;
 				for (int i = 0; i < 6; i++) {
 					block_info[8][i] = (block_info_t)QUAD(water_tex & 15, water_tex >> 4);
 					block_info[9][i] = (block_info_t)QUAD(water_tex & 15, water_tex >> 4);

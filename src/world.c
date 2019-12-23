@@ -183,7 +183,8 @@ inline uint32_t world_is_translucent(int32_t b) {
 }
 
 inline uint32_t world_is_translucent_render(int32_t b) {
-	return world_is_translucent(b) || (b >= 8 && b <= 9);
+	// TODO: We could probably handle lava a bit more economically?
+	return world_is_translucent(b) || (b >= 8 && b <= 11);
 }
 
 inline uint32_t world_is_walkable(int32_t b) {
@@ -247,6 +248,8 @@ static inline uint32_t should_render(int32_t b, int32_t nx, int32_t ny, int32_t 
 			return 1;
 		case 8:
 		case 9: // water
+		case 10:
+		case 11: // lava
 			return (b&(~1)) != (nb&(~1)) && world_is_translucent_render(nb);
 		case 18: // leaves
 		case 20: // glass

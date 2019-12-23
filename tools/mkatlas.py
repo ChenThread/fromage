@@ -34,9 +34,9 @@ def draw_4bit(im, ix, iy, iw, ih, tx, ty):
 	centroids,_ = vq.kmeans(img_data, 15 if has_translucent else 16)
 	palette = [0x0000] * 16
 	for pl in range(len(centroids)):
-		r = max(0, min(31, int(centroids[pl][0])))
-		g = max(0, min(31, int(centroids[pl][1])))
-		b = max(0, min(31, int(centroids[pl][2])))
+		r = max(0, min(31, int(centroids[pl][0] + 0.5)))
+		g = max(0, min(31, int(centroids[pl][1] + 0.5)))
+		b = max(0, min(31, int(centroids[pl][2] + 0.5)))
 		palette[pl] = 0x8000|(r<<0)|(g<<5)|(b<<10)
 	# TODO: floyd-steinberg
 	indexes,_ = vq.vq(img_data,centroids)
@@ -78,9 +78,9 @@ for i in range(256):
 	add_texture(im, tx, ty, i)
 
 if imlava != None:
-	for i in range(20):
+	for i in range(16):
 		add_texture(imlava, 0, i*16, 80+i)
-	for i in range(32):
+	for i in range(16):
 		add_texture(imwater, 0, i*16, 100+i)
 
 for iy in range(256):
