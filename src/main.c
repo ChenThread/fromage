@@ -832,9 +832,9 @@ void draw_everything(void)
 	dma_buffer[dma_pos++] = ((-(VID_WIDTH/2))&0xFFFF)|((-(VID_HEIGHT/2))<<16);
 	dma_buffer[dma_pos++] = 0x00FFD0B7;
 	dma_buffer[dma_pos++] = ((+(VID_WIDTH/2))&0xFFFF)|((-(VID_HEIGHT/2))<<16);
-	dma_buffer[dma_pos++] = 0x00FFF8F4;
+	dma_buffer[dma_pos++] = 0x00FFF4E0;
 	dma_buffer[dma_pos++] = ((-(VID_WIDTH/2))&0xFFFF)|((+(VID_HEIGHT/2))<<16);
-	dma_buffer[dma_pos++] = 0x00FFF8F4;
+	dma_buffer[dma_pos++] = 0x00FFF4E0;
 	dma_buffer[dma_pos++] = ((+(VID_WIDTH/2))&0xFFFF)|((+(VID_HEIGHT/2))<<16);
 
 	// Send VERY FIRST COMMANDS
@@ -1027,7 +1027,10 @@ void world_main_save(int slot)
 	}
 	gpu_dma_finish();
 	frame_flip();
-	wait_for_vblanks(90);
+	// TODO FIXME: The cache at Y=10 corrupts every time we save a level?
+	// At least on Mednafen it does...
+	world_init();
+	wait_for_vblanks(30);
 }
 
 void world_main_generate(int mode)
