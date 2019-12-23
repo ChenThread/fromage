@@ -20,7 +20,7 @@ void joy_update(int ticks, int autorepeat_divisor)
 
 	for (int i = 0; i < 16; i++) {
 		int mask = 1 << i;
-		int pressed = (sawpads_buttons & mask) == 0;
+		int pressed = (sawpads_controller[0].buttons & mask) == 0;
 		if (pressed) {
 			press_time[i] = (press_time[i] + ticks);
 		} else {

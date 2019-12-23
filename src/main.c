@@ -1054,8 +1054,8 @@ void player_update(int mmul)
 {
 	int jx0 = 0x00;
 	int jy0 = 0x00;
-	int jx1 = (int)(int8_t)(sawpads_axes[0]);
-	int jy1 = (int)(int8_t)(sawpads_axes[1]);
+	int jx1 = (int)(int8_t)(sawpads_controller[0].axes[0]);
+	int jy1 = (int)(int8_t)(sawpads_controller[0].axes[1]);
 
 	int prev_feet_x = cam_x >> 8;
 	int prev_feet_y = (cam_y - 443) >> 8;
@@ -1106,15 +1106,23 @@ void player_update(int mmul)
 		return;
 	}
 
-	int use_dpad = options.move_dpad || (sawpads_id == 0x41 && sawpads_hid == 0x5A);
+	int has_analogs = !(sawpads_controller[0].id == 0x41 && sawpads_controller[0].hid == 0x5A);
+	int use_dpad = options.move_dpad || !has_analogs;
 	if (use_dpad) {
-		if ((sawpads_buttons & PAD_UP) == 0) jy0 = -0x7F;
-		if ((sawpads_buttons & PAD_DOWN) == 0) jy0 = 0x7F;
-		if ((sawpads_buttons & PAD_LEFT) == 0) jx0 = -0x7F;
-		if ((sawpads_buttons & PAD_RIGHT) == 0) jx0 = 0x7F;
+		if (!has_analogs && ((sawpads_controller[0].buttons & PAD_T) == 0)) {
+			if ((sawpads_controller[0].buttons & PAD_UP) == 0) jy1 = -0x7F;
+			if ((sawpads_controller[0].buttons & PAD_DOWN) == 0) jy1 = 0x7F;
+			if ((sawpads_controller[0].buttons & PAD_LEFT) == 0) jx1 = -0x7F;
+			if ((sawpads_controller[0].buttons & PAD_RIGHT) == 0) jx1 = 0x7F;
+		} else {
+			if ((sawpads_controller[0].buttons & PAD_UP) == 0) jy0 = -0x7F;
+			if ((sawpads_controller[0].buttons & PAD_DOWN) == 0) jy0 = 0x7F;
+			if ((sawpads_controller[0].buttons & PAD_LEFT) == 0) jx0 = -0x7F;
+			if ((sawpads_controller[0].buttons & PAD_RIGHT) == 0) jx0 = 0x7F;
+		}
 	} else {
-		jx0 = (int)(int8_t)(sawpads_axes[2]);
-		jy0 = (int)(int8_t)(sawpads_axes[3]);
+		jx0 = (int)(int8_t)(sawpads_controller[0].axes[2]);
+		jy0 = (int)(int8_t)(sawpads_controller[0].axes[3]);
 	}
 
 	if (jx1 != 0) {
@@ -1228,7 +1236,7 @@ void player_update(int mmul)
 	int32_t lvy = 0;
 	int32_t lvz = -(jy0 >> 1);
 
-	if ((sawpads_buttons & PAD_R3) == 0) { } else { lvx >>= 1; lvz >>= 1; }
+	if ((sawpads_controller[0].buttons & PAD_R3) == 0) { } else { lvx >>= 1; lvz >>= 1; }
 
 #if 0
 	int32_t gvx = 0;
@@ -1291,7 +1299,7 @@ void player_update(int mmul)
 
 	bool in_liquid = player_is_in_liquid();
 
-	if (mmul >= 1 && (sawpads_buttons & PAD_X) == 0) {
+	if (mmul >= 1 && (sawpads_controller[0].buttons & PAD_X) == 0) {
 		if (in_liquid || !try_move(0, -16, 0, false)) {
 			if (options.pro_jumps) {
 				vel_y = in_liquid ? 48 : 96;
