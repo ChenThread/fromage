@@ -179,7 +179,7 @@ int32_t world_cast_ray(int32_t px, int32_t py, int32_t pz, int32_t vx, int32_t v
 }
 
 inline uint32_t world_is_translucent(int32_t b) {
-	return b == 0 || b == 6 || b == 18 || b == 20 || (b >= 37 && b <= 40);
+	return b == 0 || b == 6 || b == 18 || b == 20 || (b >= 37 && b <= 40) || b == 44;
 }
 
 inline uint32_t world_is_translucent_render(int32_t b) {

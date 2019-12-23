@@ -1106,7 +1106,8 @@ void player_update(int mmul)
 		return;
 	}
 
-	if (options.move_dpad) {
+	int use_dpad = options.move_dpad || (sawpads_id == 0x41 && sawpads_hid == 0x5A);
+	if (use_dpad) {
 		if ((sawpads_buttons & PAD_UP) == 0) jy0 = -0x7F;
 		if ((sawpads_buttons & PAD_DOWN) == 0) jy0 = 0x7F;
 		if ((sawpads_buttons & PAD_LEFT) == 0) jx0 = -0x7F;
@@ -1480,7 +1481,7 @@ int main(void)
 	PSXREG_I_STAT = ~(1<<7);
 	PSXREG_I_MASK |= (1<<7);
 
-	sawpads_unlock_dualshock();
+//	sawpads_unlock_dualshock();
 
 	// Initialize CD data
 	cdrom_init(draw_status_prog_frame);
