@@ -226,7 +226,7 @@ void draw_dirt_background(void)
 	draw_block_background(&block_info[3][5]);
 }
 
-void draw_status_window(const char *format, ...)
+void draw_status_window(int style, const char *format, ...)
 {
 	char buffer[256];
 
@@ -238,7 +238,17 @@ void draw_status_window(const char *format, ...)
 	int width = get_text_width_buffer(buffer);
 	draw_text_buffer((VID_WIDTH - width) / 2, (VID_HEIGHT - 8) / 2, 0xFFFFFF, buffer);
 
-	draw_dirt_background();
+	switch (style) {
+		case 0:
+			draw_dirt_background();
+			break;
+		case 1:
+			DMA_PUSH(3, 1);
+			dma_buffer[dma_pos++] = 0x600A0A0A;
+			dma_buffer[dma_pos++] = (-(VID_HEIGHT/2) << 16) | (-(VID_WIDTH/2) & 0xFFFF);
+			dma_buffer[dma_pos++] = ((VID_HEIGHT) << 16) | ((VID_WIDTH) & 0xFFFF);
+			break;
+	}
 
 	va_end(args);
 }

@@ -138,7 +138,7 @@ void draw_status_progress(int progress, int max);
 void draw_block_icon(int bx, int by, int bw, int bh, int bid);
 void draw_block_background(block_info_t *bi);
 void draw_dirt_background(void);
-void draw_status_window(const char *format, ...);
+void draw_status_window(int style, const char *format, ...);
 void draw_block_sel_menu(int pos, uint8_t *slots, int slotcount);
 void draw_current_block(void);
 void draw_hotbar(void);

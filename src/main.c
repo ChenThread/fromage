@@ -43,7 +43,7 @@ static void change_render_distance(int delta) {
 	// ok
 	last_rd_delta = delta;
 	render_distance += delta;
-	rd_delta_cooldown = VBLANKS_PER_SEC*3/4;
+	rd_delta_cooldown = VBLANKS_PER_SEC;
 }
 
 // Top, Side, Bottom, (reserved)
@@ -449,7 +449,7 @@ void draw_world(void)
 	int cam_cy = cam_y >> 8;
 	int cam_cz = cam_z >> 8;
 	int cam_real_dist = render_distance;
-	int cd = cam_real_dist & (~3);
+	int cd = (cam_real_dist + 3) & (~3);
 	int cdy = cd;
 	/*
 	for(int cd = cam_dist; cd != 0; cd--) {
@@ -605,6 +605,7 @@ void draw_world(void)
 					continue;
 				}
 				int ady = (bdy < 0 ? -bdy : bdy);
+				if (ady > cam_real_dist) continue;
 				uint32_t nfmask = 0xFF00;
 				if     (bdy > 0) { nfmask |= 0x10; }
 				else if(bdy < 0) { nfmask |= 0x20; }
@@ -661,6 +662,7 @@ void draw_world(void)
 					continue;
 				}
 				int ady = (bdy < 0 ? -bdy : bdy);
+				if (ady > cam_real_dist) continue;
 				uint32_t nfmask = 0xFF00;
 				if     (bdy > 0) { nfmask |= 0x10; }
 				else if(bdy < 0) { nfmask |= 0x20; }
@@ -944,7 +946,7 @@ void wgen_stage_frame(const char* format) {
 	gpu_dma_init();
 	frame_start();
 	draw_status_progress(0, 1);
-	draw_status_window(format);
+	draw_status_window(0, format);
 	gpu_dma_finish();
 	frame_flip();
 }
@@ -953,7 +955,7 @@ void world_main_prepare(void)
 {
 	gpu_dma_init();
 	frame_start();
-	draw_status_window("Reticulating splines..");
+	draw_status_window(0, "Reticulating splines..");
 	gpu_dma_finish();
 	frame_flip();
 
@@ -966,7 +968,7 @@ void world_main_load(int slot)
 {
 	gpu_dma_init();
 	frame_start();
-	draw_status_window("Loading level..");
+	draw_status_window(0, "Loading level..");
 	gpu_dma_finish();
 	frame_flip();
 
@@ -989,7 +991,7 @@ void world_main_load(int slot)
 		// TODO: add error msgs
 		gpu_dma_init();
 		frame_start();
-		draw_status_window("Error: %s", save_get_error_string(ret));
+		draw_status_window(0, "Error: %s", save_get_error_string(ret));
 		gpu_dma_finish();
 		frame_flip();
 		wait_for_vblanks(90);
@@ -1000,7 +1002,7 @@ void world_main_save(int slot)
 {
 	gpu_dma_init();
 	frame_start();
-	draw_status_window("Saving level..");
+	draw_status_window(0, "Saving level..");
 	gpu_dma_finish();
 	frame_flip();
 
@@ -1021,9 +1023,9 @@ void world_main_save(int slot)
 	gpu_dma_init();
 	frame_start();
 	if (ret >= 0) {
-		draw_status_window("Level saved!");
+		draw_status_window(0, "Level saved!");
 	} else {
-		draw_status_window("Error: %s", save_get_error_string(ret));
+		draw_status_window(0, "Error: %s", save_get_error_string(ret));
 	}
 	gpu_dma_finish();
 	frame_flip();
@@ -1489,7 +1491,7 @@ int main(void)
 	frame_start();
 	draw_text(TEXT_BORDER_X, TEXT_BORDER_Y, 0xFFFFFF, "NOTICE: This product is NOT licensed or endorsed");
 	draw_text(TEXT_BORDER_X, TEXT_BORDER_Y + 10, 0xFFFFFF, "by Sony Computer Entertainment Inc.");
-	draw_status_window("Initializing..");
+	draw_status_window(1, "Initializing..");
 	gpu_dma_finish();
 	frame_flip();
 
@@ -1535,7 +1537,8 @@ int main(void)
 		seedy_drive_stop();
 	}
 
-
+	sawpads_do_read();
+	options.debug_mode = ((sawpads_controller[0].buttons & PAD_SELECT) == 0) ? 1 : 0;
 
 	// Ensure notice is displayed for long enough
 	while (vblank_counter < VBLANKS_PER_SEC*8) {
@@ -1548,9 +1551,6 @@ int main(void)
 		draw_text(TEXT_BORDER_X, VID_HEIGHT - 10 - TEXT_BORDER_Y, 0xFFFFFF, "Press any button to continue");
 		gpu_dma_finish();
 	}
-
-	sawpads_do_read();
-	options.debug_mode = ((sawpads_controller[0].buttons & PAD_SELECT) == 0) ? 1 : 0;
 
         // Generate a world
 	world_main_generate(0);
