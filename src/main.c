@@ -858,15 +858,15 @@ void draw_everything(void)
 	}
 
 	draw_hotbar();
-	draw_text(1, 1, 0xFFFFFF, "0.30");
+	draw_text(TEXT_BORDER_X, TEXT_BORDER_Y, 0xFFFFFF, "0.30");
 	if (options.debug_mode) {
-		draw_text(1, 11, 0xFFFFFF, "%d FPS, BS: %d", fps_val, dma_size_used);
-		draw_text(1, 21, 0xFFFFFF, "RD: %d, J: %02X%02X%02X%02X", render_distance, sawpads_controller[0].axes[0], sawpads_controller[0].axes[1],
+		draw_text(TEXT_BORDER_X, TEXT_BORDER_Y + 10, 0xFFFFFF, "%d FPS, BS: %d", fps_val, dma_size_used);
+		draw_text(TEXT_BORDER_X, TEXT_BORDER_Y + 20, 0xFFFFFF, "RD: %d, J: %02X%02X%02X%02X", render_distance, sawpads_controller[0].axes[0], sawpads_controller[0].axes[1],
 			sawpads_controller[0].axes[2], sawpads_controller[0].axes[3]);
-		draw_text(1, 31, 0xFFFFFF, "XYZ: %.2f / %.2f / %.2f", (float)cam_x / 256.0f, (float)cam_y / 256.0f, (float)cam_z / 256.0f);
+		draw_text(TEXT_BORDER_X, TEXT_BORDER_Y + 30, 0xFFFFFF, "XYZ: %.2f / %.2f / %.2f", (float)cam_x / 256.0f, (float)cam_y / 256.0f, (float)cam_z / 256.0f);
 	} else {
 		if (options.show_fps) {
-			draw_text(1, 11, 0xFFFFFF, "%d FPS", fps_val);
+			draw_text(TEXT_BORDER_X, TEXT_BORDER_Y + 10, 0xFFFFFF, "%d FPS", fps_val);
 		}
 	}
 
@@ -1484,9 +1484,11 @@ int main(void)
 	gp0_command(0x01000000);
 	gp1_command(0x04000002); // DMA mode: DMA to GPU (2)
 
-	// Draw status window
+	// Draw initial message
 	gpu_dma_init();
 	frame_start();
+	draw_text(TEXT_BORDER_X, TEXT_BORDER_Y, 0xFFFFFF, "NOTICE: This product is NOT licensed or endorsed");
+	draw_text(TEXT_BORDER_X, TEXT_BORDER_Y + 10, 0xFFFFFF, "by Sony Computer Entertainment Inc.");
 	draw_status_window("Initializing..");
 	gpu_dma_finish();
 	frame_flip();
@@ -1531,6 +1533,20 @@ int main(void)
 
 	if (!cdrom_has_songs()) {
 		seedy_drive_stop();
+	}
+
+
+
+	// Ensure notice is displayed for long enough
+	while (vblank_counter < VBLANKS_PER_SEC*8) {
+		sawpads_do_read();
+		if (sawpads_controller[0].buttons != 0xFFFF) {
+			break;
+		}
+		wait_for_next_vblank();
+		gpu_dma_init();
+		draw_text(TEXT_BORDER_X, VID_HEIGHT - 10 - TEXT_BORDER_Y, 0xFFFFFF, "Press any button to continue");
+		gpu_dma_finish();
 	}
 
 	sawpads_do_read();

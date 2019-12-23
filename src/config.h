@@ -19,6 +19,9 @@
 #define VID_HEIGHT 240
 #define VID_HEIGHT_MULTIPLIER 1
 
+#define TEXT_BORDER_X 6
+#define TEXT_BORDER_Y 3
+
 #ifdef TV_PAL
 #define VBLANKS_PER_SEC 50
 #else
