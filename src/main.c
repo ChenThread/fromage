@@ -1118,10 +1118,10 @@ void player_update(int mmul)
 	int use_dpad = options.move_dpad || !has_analogs;
 	if (use_dpad) {
 		if (!has_analogs && ((sawpads_controller[0].buttons & PAD_T) == 0)) {
-			if ((sawpads_controller[0].buttons & PAD_UP) == 0) jy1 = -0x7F;
-			if ((sawpads_controller[0].buttons & PAD_DOWN) == 0) jy1 = 0x7F;
-			if ((sawpads_controller[0].buttons & PAD_LEFT) == 0) jx1 = -0x7F;
-			if ((sawpads_controller[0].buttons & PAD_RIGHT) == 0) jx1 = 0x7F;
+			if ((sawpads_controller[0].buttons & PAD_UP) == 0) jy1 = -0x3F;
+			if ((sawpads_controller[0].buttons & PAD_DOWN) == 0) jy1 = 0x3F;
+			if ((sawpads_controller[0].buttons & PAD_LEFT) == 0) jx1 = -0x3F;
+			if ((sawpads_controller[0].buttons & PAD_RIGHT) == 0) jx1 = 0x3F;
 		} else {
 			if ((sawpads_controller[0].buttons & PAD_UP) == 0) jy0 = -0x7F;
 			if ((sawpads_controller[0].buttons & PAD_DOWN) == 0) jy0 = 0x7F;
