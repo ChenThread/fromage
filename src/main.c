@@ -1062,6 +1062,8 @@ void player_update(int mmul)
 	int prev_feet_z = cam_z >> 8;
 	int prev_vel_y = vel_y;
 
+	int has_mouse = sawpads_controller[1].id == 0x12 && sawpads_controller[1].hid == 0x5A;
+
 	if (joy_delay > 0) {
 		joy_delay--;
 		return;
@@ -1123,6 +1125,12 @@ void player_update(int mmul)
 	} else {
 		jx0 = (int)(int8_t)(sawpads_controller[0].axes[2]);
 		jy0 = (int)(int8_t)(sawpads_controller[0].axes[3]);
+
+		if (has_mouse) {
+			jx1 += (int)(int8_t)(sawpads_controller[1].axes[0]);
+			jy1 += (int)(int8_t)(sawpads_controller[1].axes[1]);
+		}
+
 	}
 
 	if (jx1 != 0) {
@@ -1137,7 +1145,7 @@ void player_update(int mmul)
 		if (cam_rx > 0x4000) cam_rx = 0x4000;
 	}
 
-	if ((joy_pressed & PAD_L2) != 0) {
+	if ((joy_pressed & PAD_L2) != 0 || (has_mouse && (joy_pressed & (PAD_MOUSE_L << 16)) != 0)) {
 		int32_t sel_cx = -1;
 		int32_t sel_cy = -1;
 		int32_t sel_cz = -1;
@@ -1187,7 +1195,7 @@ void player_update(int mmul)
 		}
 	}
 
-	if ((joy_pressed & PAD_R2) != 0) {
+	if ((joy_pressed & PAD_R2) != 0 || (has_mouse && (joy_pressed & (PAD_MOUSE_R << 16)) != 0)) {
 		int32_t sel_cx = -1;
 		int32_t sel_cy = -1;
 		int32_t sel_cz = -1;

@@ -89,8 +89,7 @@ extern int current_block[HOTBAR_MAX];
 void draw_block(int32_t cx, int32_t cy, int32_t cz, int di, int block, uint32_t facemask, bool transparent);
 
 // joy.c
-extern int joy_pressed;
-extern int joy_released;
+extern int32_t joy_pressed;
 void joy_update(int ticks, int autorepeat_divisor);
 
 // gpu.c

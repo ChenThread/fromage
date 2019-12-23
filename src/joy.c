@@ -8,8 +8,8 @@
 #define MAX_PRESS_TIME 15
 #endif
 
-int joy_pressed;
-static uint8_t press_time[16];
+int32_t joy_pressed;
+static uint8_t press_time[32];
 static int jbp = 0;
 
 void joy_update(int ticks, int autorepeat_divisor)
@@ -18,9 +18,10 @@ void joy_update(int ticks, int autorepeat_divisor)
 	sawpads_do_read();
 	joy_pressed = 0;
 
-	for (int i = 0; i < 16; i++) {
+	for (int i = 0; i < 32; i++) {
+		int joy_mask = 1 << (i & 15);
 		int mask = 1 << i;
-		int pressed = (sawpads_controller[0].buttons & mask) == 0;
+		int pressed = (sawpads_controller[i >> 4].buttons & joy_mask) == 0;
 		if (pressed) {
 			press_time[i] = (press_time[i] + ticks);
 		} else {
