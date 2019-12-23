@@ -1172,7 +1172,9 @@ void player_update(int mmul)
 				world_set_block(sel_cx, sel_cy, sel_cz, 0, 1);
 			}
 			if (!world_is_walkable(bl)) {
-				sound_play(sound_get_id(bl), 0x3FFF, 0x3FFF);
+				if (options.sound_on) {
+					sound_play(sound_get_id(bl), 0x3FFF, 0x3FFF);
+				}
 			}
 		}
 	}
@@ -1227,7 +1229,9 @@ void player_update(int mmul)
 			}
 
 			if (!world_is_walkable(current_block[hotbar_pos])) {
-				sound_play(sound_get_id(current_block[hotbar_pos]), 0x3FFF, 0x3FFF);
+				if (options.sound_on) {
+					sound_play(sound_get_id(current_block[hotbar_pos]), 0x3FFF, 0x3FFF);
+				}
 			}
 		}
 	}
@@ -1371,7 +1375,9 @@ void player_update(int mmul)
 		if (force_feet_sound) feet_sound_ticks = VBLANKS_PER_SEC;
 		if (!world_is_walkable(bid) && feet_sound_ticks >= VBLANKS_PER_SEC) {
 			feet_sound_ticks %= VBLANKS_PER_SEC;
-			sound_play(sound_get_id(bid), 0x1FFF, 0x1FFF);
+			if (options.sound_on) {
+				sound_play(sound_get_id(bid), 0x1FFF, 0x1FFF);
+			}
 		}
 	}
 #endif
@@ -1493,6 +1499,8 @@ int main(void)
 	// Prepare options
 	memset(&options, 0, sizeof(options_t));
 	options.render_distance = 1;
+	options.sound_on = 1;
+	options.music_on = 1;
 
 	// Prepare joypad
 	PSXREG_JOY_CTRL = 0x0010;
@@ -1587,7 +1595,7 @@ int main(void)
 			}
 
 			world_update(ticks, &vblank_counter);
-			cdrom_tick_song_player(mmul);
+			cdrom_tick_song_player(mmul, options.music_on);
 			while ((DMA_n_CHCR(2) & (1<<24)) != 0) {}
 			while (vblank_counter == 0) {}
 			frame_flip_nosync();

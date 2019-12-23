@@ -12,7 +12,7 @@ SPUENC=$(CANDYK)/bin/spuenc
 
 ASFLAGS = -g -msoft-float
 
-CFLAGS = -g -c -flto -pipe \
+CFLAGS = -g -c -flto -pipe -DREGION_EUROPE \
 	-fomit-frame-pointer \
 	-fno-stack-protector \
 	-mno-check-zero-division \

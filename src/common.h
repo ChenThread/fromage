@@ -41,6 +41,8 @@ typedef struct {
 	uint8_t render_distance;
 	uint8_t show_fps;
 	uint8_t debug_mode;
+	uint8_t sound_on;
+	uint8_t music_on;
 } options_t;
 
 // Files
@@ -64,7 +66,7 @@ typedef struct {
 } file_record_t;
 
 void cdrom_tick_vblank(void);
-void cdrom_tick_song_player(int vblanks);
+void cdrom_tick_song_player(int vblanks, int music_on);
 file_record_t *cdrom_get_file(const char *name);
 int cdrom_read_record(file_record_t *record, uint8_t *buffer);
 void cdrom_isr(void);

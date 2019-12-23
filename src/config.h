@@ -1,7 +1,3 @@
-// #define REGION_JAPAN
-// #define REGION_USA
-#define REGION_EUROPE
-
 #if defined(REGION_JAPAN)
 #define REGION_SAVE_FILENAME "BICHEN-00001_%d"
 #elif defined(REGION_USA)

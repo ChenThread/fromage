@@ -1,17 +1,19 @@
 #include "common.h"
 
-static const char *opt_renderdist_txt[] = {"Render distance: Tiny", "Render distance: Short", "Render distance: Normal", "Render distance: Extreme"};
+static const char *opt_renderdist_txt[] = {"Render distance: Short", "Render distance: Normal", "Render distance: Far", "Render distance: Extreme"};
 static const char *opt_genmodes_txt[] = {"Generator: Default", "Generator: Flat"};
 
 int gui_options_menu(options_t *options) {
 	int last_option = 0;
 	while (1) {
 		last_option = gui_menu(
-			6, last_option,
+			8, last_option,
 			options->pro_jumps ? "Movement: Quake Pro" : "Movement: Classic",
 			options->move_dpad ? "Controls: D-Pad" : "Controls: Left Analog",
 			opt_renderdist_txt[options->render_distance % 4],
 			options->show_fps ? "Show FPS: On" : "Show FPS: Off",
+			options->sound_on ? "Sound: On" : "Sound: Off",
+			options->music_on ? "Music: On" : "Music: Off",
 			NULL,
 			"Done"
 		);
@@ -28,7 +30,13 @@ int gui_options_menu(options_t *options) {
 			case 3:
 				options->show_fps = !options->show_fps;
 				break;
+			case 4:
+				options->sound_on = !options->sound_on;
+				break;
 			case 5:
+				options->music_on = !options->music_on;
+				break;
+			case 7:
 				return 0;
 			default:
 				return -1;
@@ -41,8 +49,9 @@ int gui_worldgen_menu(void) {
 	int wgen_mode = 0;
 	while (1) {
 		last_option = gui_menu(
-			3, last_option,
+			4, last_option,
 			opt_genmodes_txt[wgen_mode],
+			NULL,
 			"Generate",
 			"Return"
 		);
@@ -50,7 +59,7 @@ int gui_worldgen_menu(void) {
 			case 0:
 				wgen_mode = (wgen_mode + 1) % 2;
 				break;
-			case 1:
+			case 2:
 				return wgen_mode;
 			default:
 				return -1;

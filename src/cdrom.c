@@ -33,17 +33,17 @@ void cdrom_tick_vblank(void) {
 	}
 }
 
-void cdrom_tick_song_player(int vbls) {
-	if (song_count < 0) return;
+void cdrom_tick_song_player(int vbls, int music_on) {
+	if (song_count <= 0) return;
 
-	if (song_stop_req > 0) {
+	if (song_stop_req > 0 || !music_on) {
 		orelei_close_cd_audio();
 		seedy_stop_xa();
 		song_stop_req = 0;
 		song_vblanks = 0;
 	}
 
-	if (song_vblanks <= 0) {
+	if (song_vblanks <= 0 && music_on) {
 		int it_time = 0;
 		for (int i = 0; i < vbls; i++) {
 			if ((RAND(rand_seed) & 0x3FF) == 0x121) it_time++;
