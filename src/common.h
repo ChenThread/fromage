@@ -108,8 +108,8 @@ void gp1_command(uint32_t v);
 
 // gpu_dma.c
 extern uint32_t dma_pos;
-#define DMA_ORDER_MAX 72
-#define DMA_BUFFER_SIZE (256*448)
+#define DMA_ORDER_MAX 128
+#define DMA_BUFFER_SIZE (256*384)
 
 extern uint32_t dma_buffer[DMA_BUFFER_SIZE];
 extern uint32_t dma_order_table[4][DMA_ORDER_MAX];

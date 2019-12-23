@@ -319,8 +319,7 @@ void world_generate(int mode, uint8_t *map, int32_t lx, int32_t ly, int32_t lz, 
 {
 	switch (mode)
 	{
-//		case 1: world_generate_flat(map, lx, ly, lz, wc); break;
-//		default: world_generate_default(map, lx, ly, lz, seed, wc, pc); break;
-		default: world_generate_debug(map, lx, ly, lz, seed, wc); break;
+		case 1: world_generate_flat(map, lx, ly, lz, wc); break;
+		default: world_generate_default(map, lx, ly, lz, seed, wc, pc); break;
 	}
 }

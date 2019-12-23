@@ -142,11 +142,11 @@ int load_level(int save_id, level_info *info, uint8_t *target, int32_t target_si
 	uint8_t opt1 = secbuf[0x0B];
 	info->options.pro_jumps = (opt1 & 0x01) != 0;
 	info->options.move_dpad = (opt1 & 0x02) != 0;
-	if (secbuf[0x0C] < 12) {
+	/* if (secbuf[0x0C] < 12) {
 		info->options.render_distance = 0;
 	} else {
 		info->options.render_distance = ((secbuf[0x0C] + 3 - 12) >> 2);
-	}
+	} */
 
 	int target_data_size = info->xsize * info->ysize * info->zsize;
 	if (target_data_size > target_size) return SAVE_ERROR_MAP_TOO_LARGE;
@@ -345,7 +345,7 @@ int save_level(int save_id, level_info *info, const uint8_t *data, save_progress
 	secbuf[0x0A] = ((level_cmp_size + 127) & 0x7F);
 	secbuf[0x0B] = info->options.pro_jumps ? 0x01 : 0x00;
 	secbuf[0x0B] |= info->options.move_dpad ? 0x02 : 0x00;
-	secbuf[0x0C] = info->options.render_distance * 4 + 12;
+//	secbuf[0x0C] = info->options.render_distance * 4 + 12;
 	WRITE32(0x10, info->cam_x);
 	WRITE32(0x14, info->cam_y);
 	WRITE32(0x18, info->cam_z);

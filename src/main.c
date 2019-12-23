@@ -30,6 +30,21 @@ const int16_t sintab[256] = {
 
 extern const char license_text_txt[];
 uint8_t fsys_level[LEVEL_LY][LEVEL_LZ][LEVEL_LX];
+int render_distance = 12;
+int last_rd_delta = 0;
+int rd_delta_cooldown = 0;
+
+static void change_render_distance(int delta) {
+	// prevent render distance from going below or above certain values
+	if (render_distance <= 12 && delta < 0) return;
+	if (render_distance >= 40 && delta > 0) return;
+	// prevent oscillations
+	if (last_rd_delta != delta && rd_delta_cooldown > 0) return;
+	// ok
+	last_rd_delta = delta;
+	render_distance += delta;
+	rd_delta_cooldown = VBLANKS_PER_SEC*3/4;
+}
 
 // Top, Side, Bottom, (reserved)
 // Texcoord, TexPage, CLUT, (reserved)
@@ -433,15 +448,14 @@ void draw_world(void)
 	int cam_cx = cam_x >> 8;
 	int cam_cy = cam_y >> 8;
 	int cam_cz = cam_z >> 8;
-	int cam_real_dist = 12 + (options.render_distance << 2);
-	int cam_dist = cam_real_dist + 3;
+	int cam_real_dist = render_distance;
+	int cd = cam_real_dist & (~3);
+	int cdy = cd;
 	/*
 	for(int cd = cam_dist; cd != 0; cd--) {
 		draw_blocks_in_range(cam_cx, cam_cy, cam_cz, cd);
 	}
 	*/
-	int cd = cam_dist;
-	int cdy = cam_real_dist & (~3);
 
 	int cymin = cam_cy - cdy;
 	int cymax = cam_cy + cdy;
@@ -847,7 +861,8 @@ void draw_everything(void)
 	draw_text(1, 1, 0xFFFFFF, "0.30");
 	if (options.debug_mode) {
 		draw_text(1, 11, 0xFFFFFF, "%d FPS, BS: %d", fps_val, dma_size_used);
-		draw_text(1, 21, 0xFFFFFF, "XYZ: %.2f / %.2f / %.2f", (float)cam_x / 256.0f, (float)cam_y / 256.0f, (float)cam_z / 256.0f);
+		draw_text(1, 21, 0xFFFFFF, "RD: %d", render_distance);
+		draw_text(1, 31, 0xFFFFFF, "XYZ: %.2f / %.2f / %.2f", (float)cam_x / 256.0f, (float)cam_y / 256.0f, (float)cam_z / 256.0f);
 	} else {
 		if (options.show_fps) {
 			draw_text(1, 11, 0xFFFFFF, "%d FPS", fps_val);
@@ -864,6 +879,38 @@ void draw_everything(void)
 	*/
 
 	dma_size_used = gpu_dma_finish();
+
+	switch (options.render_distance) {
+		case 0:
+			if (dma_size_used > 3500) {
+				change_render_distance(-1);
+			} else if (dma_size_used < 2500) {
+				change_render_distance(+1);
+			}
+			break;
+		case 1:
+		default:
+			if (dma_size_used > 8500) {
+				change_render_distance(-1);
+			} else if (dma_size_used < 5500) {
+				change_render_distance(+1);
+			}
+			break;
+		case 2:
+			if (dma_size_used > 13000) {
+				change_render_distance(-1);
+			} else if (dma_size_used < 9000) {
+				change_render_distance(+1);
+			}
+			break;
+		case 3:
+			if (dma_size_used > 19500) {
+				change_render_distance(-1);
+			} else if (dma_size_used < 14500) {
+				change_render_distance(+1);
+			}
+			break;
+	}
 }
 
 void blocksel_update(void)
@@ -1470,6 +1517,9 @@ int main(void)
 
 			is_ticking = 1;
 			draw_everything();
+
+			rd_delta_cooldown -= vblank_counter;
+			if (rd_delta_cooldown < 0) rd_delta_cooldown = 0;
 
 			fps_frames++;
 			fps_vblanks += vblank_counter;
