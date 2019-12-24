@@ -180,7 +180,6 @@ chenboot_exception_frame_t *isr_handler_c(chenboot_exception_frame_t *sp)
 		}
 		//
 		PSXREG_I_STAT = ~(1<<0);
-		sawpads_isr_vblank();
 		cdrom_tick_vblank();
 	}
 
@@ -1083,7 +1082,12 @@ void player_update(int mmul)
 	if ((joy_pressed & PAD_START) != 0) {
 		int is_menu_open = 1;
 		is_ticking = 0;
+
+#ifdef SAVING_ENABLED
 		while (is_menu_open) switch (gui_menu(7, 0, "Options", "Generate new level", "Save level..", "Load level..", NULL, "Credits", "Back to game")) {
+#else
+		while (is_menu_open) switch (gui_menu(5, 0, "Options", "Generate new level", NULL, "Credits", "Back to game")) {
+#endif
 			case 0:
 				if (gui_options_menu(&options)) is_menu_open = 0;
 				break;
@@ -1093,6 +1097,7 @@ void player_update(int mmul)
 				world_main_generate(wgen_mode);
 				is_menu_open = 0; break;
 			} break;
+#ifdef SAVING_ENABLED
 			case 2: {
 				int slot = gui_menu(6, 0, "Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Cancel");
 				if (slot < 0 || slot >= 5) break;
@@ -1106,10 +1111,12 @@ void player_update(int mmul)
 				is_menu_open = 0; break;
 			}
 			case 5: {
+#else
+			case 3: {
+#endif
 				gui_terrible_text_viewer(license_text_txt);
 				is_menu_open = 0; break;
 			}
-			case 6:
 			default:
 				is_menu_open = 0;
 				break;

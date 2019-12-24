@@ -1,3 +1,5 @@
+// #define SAVING_ENABLED
+
 #if defined(REGION_JAPAN)
 #define REGION_SAVE_FILENAME "BICHEN-00001_%d"
 #elif defined(REGION_USA)
@@ -19,13 +21,14 @@
 #define VID_HEIGHT 240
 #define VID_HEIGHT_MULTIPLIER 1
 
-#define TEXT_BORDER_X 6
-#define TEXT_BORDER_Y 3
-
 #ifdef TV_PAL
 #define VBLANKS_PER_SEC 50
+#define TEXT_BORDER_X 6
+#define TEXT_BORDER_Y 3
 #else
 #define VBLANKS_PER_SEC 60
+#define TEXT_BORDER_X 6
+#define TEXT_BORDER_Y 9
 #endif
 
 #define LAVA_ANIMATION_START 80
