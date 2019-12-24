@@ -6,6 +6,17 @@ static const char *opt_genmodes_txt[] = {"Generator: Default", "Generator: Flat"
 int gui_options_menu(options_t *options) {
 	int last_option = 0;
 	while (1) {
+#ifdef STANDALONE_EXE
+		last_option = gui_menu(
+			6, last_option,
+			options->pro_jumps ? "Movement: Quake Pro" : "Movement: Classic",
+			options->move_dpad ? "Controls: D-Pad" : "Controls: Left Analog",
+			opt_renderdist_txt[options->render_distance % 4],
+			options->show_fps ? "Show FPS: On" : "Show FPS: Off",
+			NULL,
+			"Done"
+		);
+#else
 		last_option = gui_menu(
 			8, last_option,
 			options->pro_jumps ? "Movement: Quake Pro" : "Movement: Classic",
@@ -17,6 +28,7 @@ int gui_options_menu(options_t *options) {
 			NULL,
 			"Done"
 		);
+#endif
 		switch (last_option) {
 			case 0:
 				options->pro_jumps = !options->pro_jumps;
@@ -30,6 +42,10 @@ int gui_options_menu(options_t *options) {
 			case 3:
 				options->show_fps = !options->show_fps;
 				break;
+#ifdef STANDALONE_EXE
+			case 5:
+				return 0;
+#else
 			case 4:
 				options->sound_on = !options->sound_on;
 				break;
@@ -38,6 +54,7 @@ int gui_options_menu(options_t *options) {
 				break;
 			case 7:
 				return 0;
+#endif
 			default:
 				return -1;
 		}

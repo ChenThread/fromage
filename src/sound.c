@@ -4,6 +4,7 @@
 #define SOUND_ID_COUNT 16
 
 static uint16_t ids[SOUND_ID_COUNT];
+static uint8_t sounds_loaded = 0;
 
 void sound_init(void) {
 	file_record_t *file = cdrom_get_file("SOUNDS.LZ4");
@@ -20,12 +21,15 @@ void sound_init(void) {
 
 	free(buf);
 	free(cmpbuf);
+
+	sounds_loaded = 1;
 }
 
 static int snote = 0;
 static int32_t sound_rand = 1;
 
 void sound_play(int id, int vol_left, int vol_right) {
+	if (!sounds_loaded) return;
 	int base_freq = 2048;
 	int pitch_diff = (RAND(sound_rand) & 0xFF) - 0x80;
 	orelei_play_note(snote, 0x1000 + (ids[id]<<3), 0x9FC083FF, vol_left, vol_right, base_freq + pitch_diff);

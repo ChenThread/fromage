@@ -7,6 +7,10 @@
 #define FRUSTUM_CULL 1
 #define FRUSTUM_CULL_BLOCK 1
 
+#ifdef STANDALONE_EXE
+#include "../obj/atlas.lz4.h"
+#endif
+
 /*
 
 colouur multipliers for the keep guessing Nitori:
@@ -1435,7 +1439,7 @@ int main(void)
 #if VID_WIDTH == 640
 		| (3<<0) | (0<<6) // X resolution (640)
 #elif VID_WIDTH == 320
-		| (1<<0) | (0<<6) // X resolution (640)
+		| (1<<0) | (0<<6) // X resolution (320)
 #else
 #error "Given VID_WIDTH not supported - cannot set a valid video mode!"
 #endif
@@ -1518,18 +1522,26 @@ int main(void)
 //	sawpads_unlock_dualshock();
 
 	// Initialize CD data
+#ifndef STANDALONE_EXE
 	cdrom_init(draw_status_prog_frame);
+#endif
 
 	// Load CD assets
 	draw_status_prog_frame(0, 2);
+#ifndef STANDALONE_EXE
 	sound_init();
 	draw_status_prog_frame(1, 2);
+#endif
 	{
+#ifndef STANDALONE_EXE
 		file_record_t *atlas_file = cdrom_get_file("ATLAS.LZ4");
-		uint8_t *atlas_raw_lz4 = malloc(atlas_file->size);
-		cdrom_read_record(atlas_file, atlas_raw_lz4);
-		gpu_dma_load(atlas_raw_lz4, 768, 256, 320/4, 256, atlas_file->size);
-		free(atlas_raw_lz4);
+		uint8_t *atlas_lz4 = malloc(atlas_file->size);
+		cdrom_read_record(atlas_file, atlas_lz4);
+		gpu_dma_load(atlas_lz4, 768, 256, 320/4, 256, atlas_file->size);
+		free(atlas_lz4);
+#else
+		gpu_dma_load(atlas_lz4, 768, 256, 320/4, 256, sizeof(atlas_lz4));
+#endif
 	}
 	draw_status_prog_frame(2, 2);
 

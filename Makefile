@@ -12,7 +12,7 @@ SPUENC=$(CANDYK)/bin/spuenc
 
 ASFLAGS = -g -msoft-float
 
-CFLAGS = -g -c -flto -pipe -DREGION_EUROPE \
+CFLAGS = -g -c -flto -pipe \
 	-fomit-frame-pointer \
 	-fno-stack-protector \
 	-mno-check-zero-division \
@@ -23,6 +23,7 @@ CFLAGS = -g -c -flto -pipe -DREGION_EUROPE \
 
 CFLAGS_FAST = -O3
 CFLAGS_SMALL = -Os
+ELF2PSXFLAGS =
 
 LDFLAGS = -g -O3 -flto -Wl,-Tlink.ld -pipe \
 	-mtune=3000 -march=3000 \
@@ -99,6 +100,17 @@ OBJS_SMALL = \
 	\
 	$(OBJDIR)/lz4.o
 
+# uncomment for standalone boot.exe build
+#CFLAGS += -DSTANDALONE_EXE
+
+# uncomment for PAL build
+CFLAGS += -DREGION_EUROPE
+ELF2PSXFLAGS += -p
+
+# uncomment for NTSC build
+#CFLAGS += -DREGION_USA
+#ELF2PSXFLAGS += -n
+
 OBJS =  $(OBJS_FAST) $(OBJS_SMALL)
 
 all: $(EXE_NAME).exe $(ISO_NAME).cue
@@ -107,7 +119,7 @@ clean:
 	$(RM_F) $(OBJS) $(OBJDIR)/$(EXE_NAME).elf $(ISO_NAME).bin $(ISO_NAME).cue
 	$(RM_F) $(OBJDIR)/font.s $(OBJDIR)/icon.s
 	$(RM_F) $(OBJDIR)/atlas.raw $(OBJDIR)/font.raw $(OBJDIR)/icon.raw
-	$(RM_F) atlas.lz4 sounds.lz4
+	$(RM_F) atlas.lz4 sounds.lz4 $(OBJDIR)/atlas.lz4.h
 	$(RM_F) $(OBJDIR)/soundbank.raw
 	$(RM_F) $(SOUNDS)
 	$(RM_F) $(MUSIC) music.hdr music.xa
@@ -120,7 +132,7 @@ $(ISO_NAME): $(EXE_NAME).exe
 	$(MKISOFS) -o $(ISO_NAME) system.cnf $(EXE_NAME).exe
 
 $(EXE_NAME).exe: $(OBJDIR)/$(EXE_NAME).elf
-	$(CANDYK)/bin/elf2psx -p $(OBJDIR)/$(EXE_NAME).elf $(EXE_NAME).exe
+	$(CANDYK)/bin/elf2psx $(ELF2PSXFLAGS) $(OBJDIR)/$(EXE_NAME).elf $(EXE_NAME).exe
 
 $(OBJDIR)/$(EXE_NAME).elf: $(OBJS) link.ld
 	$(CROSS_CC) -o $(OBJDIR)/$(EXE_NAME).elf $(LDFLAGS) $(OBJS) $(LIBS)
@@ -152,7 +164,7 @@ $(OBJDIR)/calm3.mus: $(RESDIR)/calm3.ogg
 $(OBJS_FAST): CFLAGS := $(CFLAGS) $(CFLAGS_FAST)
 $(OBJS_SMALL): CFLAGS := $(CFLAGS) $(CFLAGS_SMALL)
 
-$(OBJDIR)/%.o: $(SRCDIR)/%.c $(INCLUDES)
+$(OBJDIR)/%.o: $(SRCDIR)/%.c $(INCLUDES) atlas.lz4
 	$(CROSS_CC) -c -o $@ $(CFLAGS) $<
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.s
@@ -167,8 +179,9 @@ $(OBJDIR)/lz4.o: contrib/lz4/lz4.c contrib/lz4/lz4.h
 $(OBJDIR)/lz4pack: contrib/lz4/lz4.c contrib/lz4/lz4.h tools/lz4pack.c
 	$(CC) -O2 -Icontrib/lz4 -o $@ contrib/lz4/lz4.c tools/lz4pack.c
 
-atlas.lz4: $(OBJDIR)/atlas.raw $(OBJDIR)/lz4pack
+atlas.lz4: $(OBJDIR)/atlas.raw $(OBJDIR)/lz4pack $(TOOLSDIR)/bin2h.py
 	$(OBJDIR)/lz4pack $(OBJDIR)/atlas.raw atlas.lz4
+	$(PYTHON3) $(TOOLSDIR)/bin2h.py atlas.lz4 > $(OBJDIR)/atlas.lz4.h
 
 $(OBJDIR)/font.o: $(OBJDIR)/font.raw $(TOOLSDIR)/bin2s.py $(INCLUDES)
 	$(PYTHON3) $(TOOLSDIR)/bin2s.py $(OBJDIR)/font.raw > $(OBJDIR)/font.s
