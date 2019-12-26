@@ -2,27 +2,32 @@
 
 static const char *opt_renderdist_txt[] = {"Render distance: Short", "Render distance: Normal", "Render distance: Far", "Render distance: Extreme"};
 static const char *opt_genmodes_txt[] = {"Generator: Default", "Generator: Flat"};
+static const char *opt_fovmodes_txt[] = {"FOV: Narrow", "FOV: Normal", "FOV: Wide"};
 
 int gui_options_menu(options_t *options) {
 	int last_option = 0;
 	while (1) {
 #ifdef STANDALONE_EXE
 		last_option = gui_menu(
-			6, last_option,
-			options->pro_jumps ? "Movement: Quake Pro" : "Movement: Classic",
-			options->move_dpad ? "Controls: D-Pad" : "Controls: Left Analog",
-			opt_renderdist_txt[options->render_distance % 4],
-			options->show_fps ? "Show FPS: On" : "Show FPS: Off",
-			NULL,
-			"Done"
-		);
-#else
-		last_option = gui_menu(
 			8, last_option,
 			options->pro_jumps ? "Movement: Quake Pro" : "Movement: Classic",
 			options->move_dpad ? "Controls: D-Pad" : "Controls: Left Analog",
 			opt_renderdist_txt[options->render_distance % 4],
 			options->show_fps ? "Show FPS: On" : "Show FPS: Off",
+			options->fog_on ? "Fog: On" : "Fog: Off",
+			opt_fovmodes_txt[options->fov_mode % 3],
+			NULL,
+			"Done"
+		);
+#else
+		last_option = gui_menu(
+			10, last_option,
+			options->pro_jumps ? "Movement: Quake Pro" : "Movement: Classic",
+			options->move_dpad ? "Controls: D-Pad" : "Controls: Left Analog",
+			opt_renderdist_txt[options->render_distance % 4],
+			options->show_fps ? "Show FPS: On" : "Show FPS: Off",
+			options->fog_on ? "Fog: On" : "Fog: Off",
+			opt_fovmodes_txt[options->fov_mode % 3],
 			options->sound_on ? "Sound: On" : "Sound: Off",
 			options->music_on ? "Music: On" : "Music: Off",
 			NULL,
@@ -42,17 +47,23 @@ int gui_options_menu(options_t *options) {
 			case 3:
 				options->show_fps = !options->show_fps;
 				break;
-#ifdef STANDALONE_EXE
+			case 4:
+				options->fog_on = !options->fog_on;
+				break;
 			case 5:
+				options->fov_mode = (options->fov_mode + 1) % 3;
+				break;
+#ifdef STANDALONE_EXE
+			case 7:
 				return 0;
 #else
-			case 4:
+			case 6:
 				options->sound_on = !options->sound_on;
 				break;
-			case 5:
+			case 7:
 				options->music_on = !options->music_on;
 				break;
-			case 7:
+			case 9:
 				return 0;
 #endif
 			default:

@@ -37,6 +37,7 @@ uint8_t fsys_level[LEVEL_LY][LEVEL_LZ][LEVEL_LX];
 int render_distance = 12;
 int last_rd_delta = 0;
 int rd_delta_cooldown = 0;
+FASTMEM int max_calced_di = 0;
 
 static void change_render_distance(int delta) {
 	// prevent render distance from going below or above certain values
@@ -120,10 +121,11 @@ int32_t gte_zsf4 = 1;
 //int32_t gte_h = 208; // 60 deg
 //int32_t gte_h = 156; // 75 deg
 //int32_t gte_h = 120; // 90 deg
-int32_t gte_h = VID_HEIGHT/2; // 90 deg
+//int32_t gte_h = VID_HEIGHT/2; // 90 deg
 //int32_t gte_h = 69; // 120 deg
 //int32_t gte_h = 50; // 135 deg
 //int32_t gte_h = 32; // 150 deg
+int32_t gte_h = VID_HEIGHT/2;
 
 int32_t cam_ry = 0x0000;
 int32_t cam_rx = 0x0000;
@@ -382,8 +384,20 @@ void draw_block(int32_t cx, int32_t cy, int32_t cz, int di, int block, uint32_t 
 	}
 }
 
+static inline int get_block_render_distance(int32_t dx, int32_t dy, int32_t dz) {
+	int x = (dx + dy + dz) << 1;
+	int xs = (dx*dx + dy*dy + dz*dz) * 9;
+
+	x = x - (((x*x) - xs) / (x<<1));
+	x = x - (((x*x) - xs) / (x<<1));
+	return x;
+
+	//return (int) (sqrt(x*x + y*y + z*z) * 2);
+}
+
 inline void draw_block_in_level(int32_t cx, int32_t cy, int32_t cz, int32_t di, uint32_t nfmask)
 {
+	if (di > max_calced_di) return;
 	int block = world_get_block_unsafe(cx, cy, cz);
 	switch (block) {
 		case 0:
@@ -459,6 +473,8 @@ void draw_world(void)
 		draw_blocks_in_range(cam_cx, cam_cy, cam_cz, cd);
 	}
 	*/
+
+	max_calced_di = get_block_render_distance(cam_real_dist, 0, 0) + 1;
 
 	int cymin = cam_cy - cdy;
 	int cymax = cam_cy + cdy;
@@ -637,7 +653,7 @@ void draw_world(void)
 				nfmask &= ~0x0C;
 				if(bdx > 0)      { nfmask |= 0x04; }
 				else if(bdx < 0) { nfmask |= 0x08; }
-				draw_block_in_level(bcx, bcy, bcz, adx+ady+adz, nfmask);
+				draw_block_in_level(bcx, bcy, bcz, get_block_render_distance(adx, ady, adz), nfmask);
 			}
 			}
 			}
@@ -712,7 +728,7 @@ void draw_world(void)
 				nfmask &= ~0x0C;
 				if(bdx > 0)      { nfmask |= 0x04; }
 				else if(bdx < 0) { nfmask |= 0x08; }
-				draw_block_in_level(bcx, bcy, bcz, adx+ady+adz, nfmask);
+				draw_block_in_level(bcx, bcy, bcz, get_block_render_distance(adx, ady, adz), nfmask);
 			}
 			}
 			}
@@ -842,11 +858,31 @@ void draw_everything(void)
 	dma_buffer[dma_pos++] = 0x00FFF4E0;
 	dma_buffer[dma_pos++] = ((+(VID_WIDTH/2))&0xFFFF)|((+(VID_HEIGHT/2))<<16);
 
+	// Set FOV
+	switch (options.fov_mode) {
+		case 0: gte_h = 208; break;
+		case 1: default: gte_h = VID_HEIGHT/2; break;
+		case 2: gte_h = 69; break;
+	}
+
 	// Send VERY FIRST COMMANDS
 	frame_start();
 
 	// Load mesh data into GTE
 	draw_world();
+
+	// Draw fog
+	if (options.fog_on) {
+		DMA_PUSH(8, OT_WORLD + (max_calced_di * 15 / 16));
+		dma_buffer[dma_pos++] = 0x3AFFD0B7;
+		dma_buffer[dma_pos++] = ((-(VID_WIDTH/2))&0xFFFF)|((-(VID_HEIGHT/2))<<16);
+		dma_buffer[dma_pos++] = 0x00FFD0B7;
+		dma_buffer[dma_pos++] = ((+(VID_WIDTH/2))&0xFFFF)|((-(VID_HEIGHT/2))<<16);
+		dma_buffer[dma_pos++] = 0x00FFF4E0;
+		dma_buffer[dma_pos++] = ((-(VID_WIDTH/2))&0xFFFF)|((+(VID_HEIGHT/2))<<16);
+		dma_buffer[dma_pos++] = 0x00FFF4E0;
+		dma_buffer[dma_pos++] = ((+(VID_WIDTH/2))&0xFFFF)|((+(VID_HEIGHT/2))<<16);
+	}
 
 	int32_t cam_cx = cam_x >> 8;
 	int32_t cam_cy = cam_y >> 8;
@@ -1516,6 +1552,8 @@ int main(void)
 	options.render_distance = 1;
 	options.sound_on = 1;
 	options.music_on = 1;
+	options.fog_on = 1;
+	options.fov_mode = 1;
 
 	// Prepare joypad
 	PSXREG_JOY_CTRL = 0x0010;
@@ -1555,6 +1593,10 @@ int main(void)
 	if (!cdrom_has_songs()) {
 		seedy_drive_stop();
 	}
+
+#ifdef STANDALONE_EXE
+	while (vblank_counter < VBLANKS_PER_SEC*1) { }
+#endif
 
 	sawpads_do_read();
 	options.debug_mode = ((sawpads_controller[0].buttons & PAD_SELECT) == 0) ? 1 : 0;

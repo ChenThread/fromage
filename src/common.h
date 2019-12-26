@@ -43,6 +43,8 @@ typedef struct {
 	uint8_t debug_mode;
 	uint8_t sound_on;
 	uint8_t music_on;
+	uint8_t fog_on;
+	uint8_t fov_mode;
 } options_t;
 
 // Files

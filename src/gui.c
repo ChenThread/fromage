@@ -417,9 +417,13 @@ int gui_menu(int optcount, int optstartpos, ...)
 		frame_start();
 
 		int opt_height = 20;
+		int opt_distance = opt_height + 8;
+		if (optcount >= 9) {
+			opt_height -= 2;
+			opt_distance -= 4;
+		}
 		int opt_width = VID_WIDTH * 3 / 4;
 		int opt_text_y = (opt_height - 8) / 2;
-		int opt_distance = opt_height + 8;
 		int opt_allheight = (opt_distance * (optcount - 1)) + opt_height;
 		int opt_x = (VID_WIDTH - opt_width) / 2;
 		int opt_y = (VID_HEIGHT - opt_allheight) / 2;
