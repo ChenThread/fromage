@@ -19,12 +19,13 @@ static void init_card(save_progress_callback *pc)
 
 	if (card_initialized == 0)
 	{
-		for (uint32_t i = 0; i < 20; i++) {
-			if (sawpads_read_card_sector(i, secbuf) >= 4) {
-				card_sector_map[i] = ((uint32_t*) secbuf)[0];
-			}
-		}
 		card_initialized = 1;
+	}
+
+	for (uint32_t i = 0; i < 20; i++) {
+		if (sawpads_read_card_sector(i, secbuf) >= 4) {
+			card_sector_map[i] = ((uint32_t*) secbuf)[0];
+		}
 	}
 }
 
@@ -132,6 +133,8 @@ int load_level(int save_id, level_info *info, uint8_t *target, int32_t target_si
 
 	if (save_id < 0) return SAVE_ERROR_INVALID_ARGUMENTS;
 	snprintf(filename, sizeof(filename), REGION_SAVE_FILENAME, save_id);
+
+	init_card(pc);
 
 	// find start block and nexts
 	for (int i = 1; i < 16; i++) {
