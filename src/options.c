@@ -9,24 +9,24 @@ int gui_options_menu(options_t *options) {
 	while (1) {
 #ifdef STANDALONE_EXE
 		last_option = gui_menu(
-			8, last_option,
+			7, last_option,
 			options->pro_jumps ? "Movement: Quake Pro" : "Movement: Classic",
 			options->move_dpad ? "Controls: D-Pad" : "Controls: Left Analog",
 			opt_renderdist_txt[options->render_distance % 4],
 			options->show_fps ? "Show FPS: On" : "Show FPS: Off",
-			options->fog_on ? "Fog: On" : "Fog: Off",
+//			options->fog_on ? "Fog: On" : "Fog: Off",
 			opt_fovmodes_txt[options->fov_mode % 3],
 			NULL,
 			"Done"
 		);
 #else
 		last_option = gui_menu(
-			10, last_option,
+			9, last_option,
 			options->pro_jumps ? "Movement: Quake Pro" : "Movement: Classic",
 			options->move_dpad ? "Controls: D-Pad" : "Controls: Left Analog",
 			opt_renderdist_txt[options->render_distance % 4],
 			options->show_fps ? "Show FPS: On" : "Show FPS: Off",
-			options->fog_on ? "Fog: On" : "Fog: Off",
+//			options->fog_on ? "Fog: On" : "Fog: Off",
 			opt_fovmodes_txt[options->fov_mode % 3],
 			options->sound_on ? "Sound: On" : "Sound: Off",
 			options->music_on ? "Music: On" : "Music: Off",
@@ -47,23 +47,23 @@ int gui_options_menu(options_t *options) {
 			case 3:
 				options->show_fps = !options->show_fps;
 				break;
+//			case 4:
+//				options->fog_on = !options->fog_on;
+//				break;
 			case 4:
-				options->fog_on = !options->fog_on;
-				break;
-			case 5:
 				options->fov_mode = (options->fov_mode + 1) % 3;
 				break;
 #ifdef STANDALONE_EXE
-			case 7:
+			case 6:
 				return 0;
 #else
-			case 6:
+			case 5:
 				options->sound_on = !options->sound_on;
 				break;
-			case 7:
+			case 6:
 				options->music_on = !options->music_on;
 				break;
-			case 9:
+			case 8:
 				return 0;
 #endif
 			default:

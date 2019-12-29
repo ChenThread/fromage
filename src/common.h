@@ -111,11 +111,12 @@ void gp1_command(uint32_t v);
 
 // gpu_dma.c
 extern uint32_t dma_pos;
+#define DMA_BUFFER_COUNT 4
 #define DMA_ORDER_MAX 128
 #define DMA_BUFFER_SIZE (256*384)
 
 extern uint32_t dma_buffer[DMA_BUFFER_SIZE];
-extern uint32_t dma_order_table[4][DMA_ORDER_MAX];
+extern uint32_t dma_order_table[DMA_BUFFER_COUNT][DMA_ORDER_MAX];
 extern uint32_t dma_buffer_current;
 #define DMA_PUSH(len, ot) \
 	if(dma_pos >= ((sizeof(dma_buffer)-32)/sizeof(int32_t))) { \

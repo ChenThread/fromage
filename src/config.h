@@ -1,4 +1,4 @@
-// #define SAVING_ENABLED
+#define SAVING_ENABLED
 
 #if defined(REGION_JAPAN)
 #define REGION_SAVE_FILENAME "BICHEN-00001_%d"
@@ -30,6 +30,8 @@
 #define TEXT_BORDER_X 6
 #define TEXT_BORDER_Y 9
 #endif
+
+#define VBLANKS_PER_CARD_WRITE 2
 
 #define LAVA_ANIMATION_START 80
 #define LAVA_ANIMATION_FRAMES 16

@@ -6,6 +6,7 @@
 
 #define FRUSTUM_CULL 1
 #define FRUSTUM_CULL_BLOCK 1
+// #define SPHERICAL_DISTANCE 1
 
 #ifdef STANDALONE_EXE
 #include "../obj/atlas.lz4.h"
@@ -384,20 +385,26 @@ void draw_block(int32_t cx, int32_t cy, int32_t cz, int di, int block, uint32_t 
 	}
 }
 
+#ifdef SPHERICAL_DISTANCE
 static inline int get_block_render_distance(int32_t dx, int32_t dy, int32_t dz) {
-	int x = (dx + dy + dz) << 1;
-	int xs = (dx*dx + dy*dy + dz*dz) * 9;
+	int x = (dx + dy + dz) << 7;
+	int xs = ((dx*dx + dy*dy + dz*dz) * 9) << 12;
 
 	x = x - (((x*x) - xs) / (x<<1));
 	x = x - (((x*x) - xs) / (x<<1));
-	return x;
+	return ((x + 32) >> 6);
 
 	//return (int) (sqrt(x*x + y*y + z*z) * 2);
 }
+#else
+#define get_block_render_distance(dx, dy, dz) ((dx)+(dy)+(dz))
+#endif
 
 inline void draw_block_in_level(int32_t cx, int32_t cy, int32_t cz, int32_t di, uint32_t nfmask)
 {
+#ifdef SPHERICAL_DISTANCE
 	if (di > max_calced_di) return;
+#endif
 	int block = world_get_block_unsafe(cx, cy, cz);
 	switch (block) {
 		case 0:
@@ -872,6 +879,7 @@ void draw_everything(void)
 	draw_world();
 
 	// Draw fog
+#ifdef FOG_ENABLED
 	if (options.fog_on) {
 		DMA_PUSH(8, OT_WORLD + (max_calced_di * 15 / 16));
 		dma_buffer[dma_pos++] = 0x3AFFD0B7;
@@ -883,6 +891,7 @@ void draw_everything(void)
 		dma_buffer[dma_pos++] = 0x00FFF4E0;
 		dma_buffer[dma_pos++] = ((+(VID_WIDTH/2))&0xFFFF)|((+(VID_HEIGHT/2))<<16);
 	}
+#endif
 
 	int32_t cam_cx = cam_x >> 8;
 	int32_t cam_cy = cam_y >> 8;
@@ -955,8 +964,45 @@ void draw_everything(void)
 	}
 }
 
-void blocksel_update(void)
+static int joy_has_analogs(void)
 {
+	return !(sawpads_controller[0].id == 0x41 && sawpads_controller[0].hid == 0x5A);
+}
+
+static int blocksel_jx0 = 0;
+static int blocksel_jy0 = 0;
+#define BLOCKSEL_JSTEP 0x280
+
+void blocksel_update(int mmul)
+{
+	if (joy_has_analogs())
+	{
+		blocksel_jx0 += (int)(int8_t)(sawpads_controller[0].axes[2]) * mmul;
+		blocksel_jy0 += (int)(int8_t)(sawpads_controller[0].axes[3]) * mmul;
+
+		while (blocksel_jx0 < -BLOCKSEL_JSTEP) {
+			blocksel_jx0 += BLOCKSEL_JSTEP;
+			if ((blocksel_id % 9) == 0) blocksel_id += 8;
+			else blocksel_id--;
+		}
+
+		while (blocksel_jx0 > BLOCKSEL_JSTEP) {
+			blocksel_jx0 -= BLOCKSEL_JSTEP;
+			if ((blocksel_id % 9) == 8) blocksel_id -= 8;
+			else blocksel_id++;
+		}
+
+		while (blocksel_jy0 < -BLOCKSEL_JSTEP) {
+			blocksel_jy0 += BLOCKSEL_JSTEP;
+			blocksel_id -= 9;
+		}
+
+		while (blocksel_jy0 > BLOCKSEL_JSTEP) {
+			blocksel_jy0 -= BLOCKSEL_JSTEP;
+			blocksel_id += 9;
+		}
+	}
+
 	if (joy_pressed != 0) {
 		if ((joy_pressed & (PAD_T | PAD_S | PAD_O | PAD_X)) != 0) {
 			mode = MODE_INGAME;
@@ -964,13 +1010,19 @@ void blocksel_update(void)
 		}
 
 		if ((joy_pressed & PAD_UP) != 0) blocksel_id -= 9;
-		if ((joy_pressed & PAD_LEFT) != 0) blocksel_id--;
-		if ((joy_pressed & PAD_RIGHT) != 0) blocksel_id++;
+		if ((joy_pressed & PAD_LEFT) != 0) {
+			if ((blocksel_id % 9) == 0) blocksel_id += 8;
+			else blocksel_id--;
+		}
+		if ((joy_pressed & PAD_RIGHT) != 0) {
+			if ((blocksel_id % 9) == 8) blocksel_id -= 8;
+			else blocksel_id++;
+		}
 		if ((joy_pressed & PAD_DOWN) != 0) blocksel_id += 9;
-
-		while (blocksel_id < 0) blocksel_id += sizeof(block_sel_slots);
-		while (blocksel_id >= (int16_t)sizeof(block_sel_slots)) blocksel_id -= sizeof(block_sel_slots);
 	}
+
+	while (blocksel_id < 0) blocksel_id += sizeof(block_sel_slots);
+	while (blocksel_id >= (int16_t)sizeof(block_sel_slots)) blocksel_id -= sizeof(block_sel_slots);
 
 	current_block[hotbar_pos] = block_sel_slots[blocksel_id];
 }
@@ -1108,7 +1160,7 @@ void player_update(int mmul)
 	int prev_vel_y = vel_y;
 
 	int has_mouse = sawpads_controller[1].id == 0x12 && sawpads_controller[1].hid == 0x5A;
-	int has_analogs = !(sawpads_controller[0].id == 0x41 && sawpads_controller[0].hid == 0x5A);
+	int has_analogs = joy_has_analogs();
 
 	if (joy_delay > 0) {
 		joy_delay--;
@@ -1552,7 +1604,9 @@ int main(void)
 	options.render_distance = 1;
 	options.sound_on = 1;
 	options.music_on = 1;
+#ifdef FOG_ENABLED
 	options.fog_on = 1;
+#endif
 	options.fov_mode = 1;
 
 	// Prepare joypad
@@ -1667,14 +1721,12 @@ int main(void)
 					player_update(mmul);
 					break;
 				case MODE_BLOCKSEL:
-					blocksel_update();
+					blocksel_update(mmul);
 					break;
 			}
 
 			world_update(ticks, &vblank_counter);
 			cdrom_tick_song_player(mmul, options.music_on);
-			while ((DMA_n_CHCR(2) & (1<<24)) != 0) {}
-			while (vblank_counter == 0) {}
 			frame_flip_nosync();
 			joy_update(vblank_counter_joy, 1);
 			vblank_counter_joy = 0;

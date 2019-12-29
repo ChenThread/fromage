@@ -11,11 +11,19 @@
 extern uint8_t icon_raw[];
 
 static int card_initialized = 0;
+static uint32_t card_sector_map[20];
 
 static void init_card(save_progress_callback *pc)
 {
+	uint8_t secbuf[128];
+
 	if (card_initialized == 0)
 	{
+		for (uint32_t i = 0; i < 20; i++) {
+			if (sawpads_read_card_sector(i, secbuf) >= 4) {
+				card_sector_map[i] = ((uint32_t*) secbuf)[0];
+			}
+		}
 		card_initialized = 1;
 	}
 }
@@ -93,6 +101,25 @@ const char *save_get_error_string(int value)
 	}
 }
 
+static uint16_t sawpads_adjust_card_address(uint16_t address) {
+	for (uint32_t i = 0; i < 20; i++) {
+		if (card_sector_map[i] == address) {
+			return 36 + i;
+		}
+	}
+
+	return address;
+}
+
+static int32_t fromage_read_card_safe(uint16_t address, uint8_t *buffer) {
+	return sawpads_read_card_sector(sawpads_adjust_card_address(address), buffer);
+}
+
+static int32_t fromage_write_card_safe(uint16_t address, uint8_t *buffer) {
+	wait_for_vblanks(VBLANKS_PER_CARD_WRITE);
+	return sawpads_write_card_sector(sawpads_adjust_card_address(address), buffer);
+}
+
 int load_level(int save_id, level_info *info, uint8_t *target, int32_t target_size, save_progress_callback *pc)
 {
 	uint8_t secbuf[128];
@@ -108,7 +135,7 @@ int load_level(int save_id, level_info *info, uint8_t *target, int32_t target_si
 
 	// find start block and nexts
 	for (int i = 1; i < 16; i++) {
-		if (sawpads_read_card_sector(i, secbuf) <= 0) return SAVE_ERROR_CARD;
+		if (fromage_read_card_safe(i, secbuf) <= 0) return SAVE_ERROR_CARD;
 
 		if ((secbuf[0] & 0x5C) == 0x50) {
 			if (start_block < 0 && strcmp(secbuf + 10, filename) == 0) {
@@ -121,7 +148,7 @@ int load_level(int save_id, level_info *info, uint8_t *target, int32_t target_si
 	if (start_block < 0) return SAVE_ERROR_NOT_FOUND;
 
 	// read header and parse it
-	if (sawpads_read_card_sector((start_block + 1) * 64 + 2, secbuf) <= 0) return SAVE_ERROR_CARD;
+	if (fromage_read_card_safe((start_block + 1) * 64 + 2, secbuf) <= 0) return SAVE_ERROR_CARD;
 
 	if (secbuf[0] != VERSION_MAJOR || secbuf[1] != VERSION_MINOR) return SAVE_ERROR_UNSUPPORTED_DATA;
 
@@ -164,7 +191,7 @@ int load_level(int save_id, level_info *info, uint8_t *target, int32_t target_si
 			if (pc != NULL) pc(sectors_read, sector_count);
 			if (sectors_read >= sector_count) break;
 
-			if (sawpads_read_card_sector((start_block + 1) * 64 + start_sector, buffer + (sectors_read * 128)) <= 0) return SAVE_ERROR_CARD;
+			if (fromage_read_card_safe((start_block + 1) * 64 + start_sector, buffer + (sectors_read * 128)) <= 0) return SAVE_ERROR_CARD;
 			start_sector++; sectors_read++;
 		}
 
@@ -222,7 +249,7 @@ int save_level(int save_id, level_info *info, const uint8_t *data, save_progress
 	// also write down the list of connected sectors, as well as
 	// any sectors to be deleted
 	for (int i = 1; i < 16; i++) {
-		if (sawpads_read_card_sector(i, secbuf) <= 0) {
+		if (fromage_read_card_safe(i, secbuf) <= 0) {
 			free(level_cmp_data);
 			return SAVE_ERROR_CARD;
 		}
@@ -244,13 +271,13 @@ int save_level(int save_id, level_info *info, const uint8_t *data, save_progress
 		if (block_delete[i] == 1) {
 			int j = i;
 			while (j >= 0) {
-				if (sawpads_read_card_sector(j + 1, secbuf) <= 0) {
+				if (fromage_read_card_safe(j + 1, secbuf) <= 0) {
 					free(level_cmp_data);
 					return SAVE_ERROR_CARD_FATAL;
 				}
 				secbuf[0] = (secbuf[0] & 0x0F) | 0xA0;
 				checksum_card_frame(secbuf);
-				if (sawpads_write_card_sector(j + 1, secbuf) <= 0) {
+				if (fromage_write_card_safe(j + 1, secbuf) <= 0) {
 					free(level_cmp_data);
 					return SAVE_ERROR_CARD_FATAL;
 				}
@@ -286,7 +313,7 @@ int save_level(int save_id, level_info *info, const uint8_t *data, save_progress
 		}
 
 		checksum_card_frame(secbuf);
-		if (sawpads_write_card_sector(block_ids[i], secbuf) <= 0) {
+		if (fromage_write_card_safe(block_ids[i], secbuf) <= 0) {
 			free(level_cmp_data);
 			return i == 0 ? -3 : -5;
 		}
@@ -301,7 +328,7 @@ int save_level(int save_id, level_info *info, const uint8_t *data, save_progress
 	write_sjis_name(secbuf + 4, "Fromage Level (Slot %d)", save_id);
 	memcpy(secbuf + 0x60, icon_raw, 0x20);
 
-	if (sawpads_write_card_sector(block_ids[0] * 64, secbuf) <= 0) {
+	if (fromage_write_card_safe(block_ids[0] * 64, secbuf) <= 0) {
 		free(level_cmp_data);
 		return SAVE_ERROR_CARD_FATAL;
 	}
@@ -327,7 +354,7 @@ int save_level(int save_id, level_info *info, const uint8_t *data, save_progress
 		}
 	}
 
-	if (sawpads_write_card_sector(block_ids[0] * 64 + 1, secbuf) <= 0) {
+	if (fromage_write_card_safe(block_ids[0] * 64 + 1, secbuf) <= 0) {
 		free(level_cmp_data);
 		return SAVE_ERROR_CARD_FATAL;
 	}
@@ -355,7 +382,7 @@ int save_level(int save_id, level_info *info, const uint8_t *data, save_progress
 	for (int i = 0; i < HOTBAR_MAX; i++)
 		secbuf[0x21 + i] = info->hotbar_blocks[i];
 
-	if (sawpads_write_card_sector(block_ids[0] * 64 + 2, secbuf) <= 0) {
+	if (fromage_write_card_safe(block_ids[0] * 64 + 2, secbuf) <= 0) {
 		free(level_cmp_data);
 		return SAVE_ERROR_CARD_FATAL;
 	}
@@ -364,7 +391,7 @@ int save_level(int save_id, level_info *info, const uint8_t *data, save_progress
 	for (int i = 3; i < sectors_required; i++) {
 		if (pc != NULL) pc(i + 4, progress_max);
 		uint8_t *ptr = level_cmp_data + (128 * (i - 3));
-		if (sawpads_write_card_sector(block_ids[i >> 6] * 64 + (i & 0x3F), ptr) <= 0) {
+		if (fromage_write_card_safe(block_ids[i >> 6] * 64 + (i & 0x3F), ptr) <= 0) {
 			free(level_cmp_data);
 			return SAVE_ERROR_CARD_FATAL;
 		}
