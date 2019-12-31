@@ -331,7 +331,7 @@ void draw_hotbar(void)
 {
 	const int bw = 16 * VID_WIDTH_MULTIPLIER;
 	const int bh = 16;
-	const int by = 103 + 8;
+	const int by = 120 - 6 - TEXT_BORDER_Y;
 
 	{
 		int bx = -((bw*(HOTBAR_MAX-1))/2) + (hotbar_pos*bw);

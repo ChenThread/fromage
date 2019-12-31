@@ -16,7 +16,7 @@ void gpu_dma_init(void) {
 
 	dma_pos_start = dma_pos;
 	dma_buffer_current += 1;
-	dma_buffer_current &= (DMA_BUFFER_COUNT-1);
+	dma_buffer_current &= 3;
 	dma_start_ptr = 0x00FFFFFF&(uint32_t)&dma_order_table[dma_buffer_current][DMA_ORDER_MAX-1];
 
 	for(int i = 0; i < DMA_ORDER_MAX; i++) {

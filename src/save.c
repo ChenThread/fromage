@@ -23,6 +23,7 @@ static void init_card(save_progress_callback *pc)
 	}
 
 	for (uint32_t i = 0; i < 20; i++) {
+		wait_for_vblanks(VBLANKS_PER_CARD_WRITE);
 		if (sawpads_read_card_sector(i, secbuf) >= 4) {
 			card_sector_map[i] = ((uint32_t*) secbuf)[0];
 		}
@@ -113,6 +114,7 @@ static uint16_t sawpads_adjust_card_address(uint16_t address) {
 }
 
 static int32_t fromage_read_card_safe(uint16_t address, uint8_t *buffer) {
+	wait_for_vblanks(VBLANKS_PER_CARD_WRITE);
 	return sawpads_read_card_sector(sawpads_adjust_card_address(address), buffer);
 }
 
@@ -337,9 +339,10 @@ int save_level(int save_id, level_info *info, const uint8_t *data, save_progress
 	}
 	if (pc != NULL) pc(2, progress_max);
 
-	// write icon frame
-	memcpy(secbuf, icon_raw + 0x20, 0x80);
 	{
+		// write icon frame
+		memcpy(secbuf, icon_raw + 0x20, 0x80);
+
 		// overlay icon slot id (clut index 15 = white)
 		int fx = ((save_id + '0') & 0xF) * 4 * VID_WIDTH_MULTIPLIER;
 		int fy = ((save_id + '0') >> 4) * 8;

@@ -1728,8 +1728,10 @@ int main(void)
 			world_update(ticks, &vblank_counter);
 			cdrom_tick_song_player(mmul, options.music_on);
 			frame_flip_nosync();
-			joy_update(vblank_counter_joy, 1);
-			vblank_counter_joy = 0;
+			if (vblank_counter_joy > 0) {
+				joy_update(vblank_counter_joy, 1);
+				vblank_counter_joy = 0;
+			}
 		}
 	}
 
