@@ -7,6 +7,9 @@
 #define FRUSTUM_CULL 1
 #define FRUSTUM_CULL_BLOCK 1
 // #define SPHERICAL_DISTANCE 1
+#define RENDER_DISTANCE_MIN 12
+#define RENDER_DISTANCE_MAX 32
+#define RENDER_DISTANCE_COOLDOWN VBLANKS_PER_SEC
 
 #ifdef STANDALONE_EXE
 #include "../obj/atlas.lz4.h"
@@ -42,14 +45,14 @@ FASTMEM int max_calced_di = 0;
 
 static void change_render_distance(int delta) {
 	// prevent render distance from going below or above certain values
-	if (render_distance <= 12 && delta < 0) return;
-	if (render_distance >= 40 && delta > 0) return;
+	if (render_distance <= RENDER_DISTANCE_MIN && delta < 0) return;
+	if (render_distance >= RENDER_DISTANCE_MAX && delta > 0) return;
 	// prevent oscillations
 	if (last_rd_delta != delta && rd_delta_cooldown > 0) return;
 	// ok
 	last_rd_delta = delta;
 	render_distance += delta;
-	rd_delta_cooldown = VBLANKS_PER_SEC;
+	rd_delta_cooldown = RENDER_DISTANCE_COOLDOWN;
 }
 
 // Top, Side, Bottom, (reserved)

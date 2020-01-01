@@ -24,7 +24,7 @@ static void init_card(save_progress_callback *pc)
 
 	for (uint32_t i = 0; i < 20; i++) {
 		wait_for_vblanks(VBLANKS_PER_CARD_WRITE);
-		if (sawpads_read_card_sector(i, secbuf) >= 4) {
+		if (sawpads_read_card_sector(0, i, secbuf) >= 4) {
 			card_sector_map[i] = ((uint32_t*) secbuf)[0];
 		}
 	}
@@ -115,12 +115,12 @@ static uint16_t sawpads_adjust_card_address(uint16_t address) {
 
 static int32_t fromage_read_card_safe(uint16_t address, uint8_t *buffer) {
 	wait_for_vblanks(VBLANKS_PER_CARD_WRITE);
-	return sawpads_read_card_sector(sawpads_adjust_card_address(address), buffer);
+	return sawpads_read_card_sector(0, sawpads_adjust_card_address(address), buffer);
 }
 
 static int32_t fromage_write_card_safe(uint16_t address, uint8_t *buffer) {
 	wait_for_vblanks(VBLANKS_PER_CARD_WRITE);
-	return sawpads_write_card_sector(sawpads_adjust_card_address(address), buffer);
+	return sawpads_write_card_sector(0, sawpads_adjust_card_address(address), buffer);
 }
 
 int load_level(int save_id, level_info *info, uint8_t *target, int32_t target_size, save_progress_callback *pc)
