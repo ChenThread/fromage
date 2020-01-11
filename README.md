@@ -4,13 +4,14 @@ fromage is a voxel engine implementation for the PlayStation 1 video game consol
 
 ## Compilation
 
-First, you need to download certain additional files from other repositories and put them in the root 
-directory.
+Requirements:
 
-* isolicence.pal - available [here](https://github.com/ChenThread/candyk/blob/master/dat/isolicence.pal)
+  * candyk-psx
+  * python3
+  * python3-numpy
+  * python3-scipy
+  * python3-Pillow
 
-TODO - setting up toolchain
-
-To edit the atlas, use:
-
-    python2 tools/32to4.py dat/atlas.tga dat/atlas.raw
+   [ edit Makefile and/or src/config.h to configure options ]
+   $ mkdir obj
+   $ make

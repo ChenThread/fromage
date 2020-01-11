@@ -8,7 +8,7 @@ RM_F=rm -f
 MKISOFS=mkisofs
 PYTHON3=python3
 
-SPUENC=$(CANDYK)/bin/spuenc
+SPUENC=$(CANDYK)/bin/psxavenc
 
 ASFLAGS = -g -msoft-float
 
@@ -120,6 +120,7 @@ clean:
 	$(RM_F) $(OBJDIR)/font.s $(OBJDIR)/icon.s
 	$(RM_F) $(OBJDIR)/atlas.raw $(OBJDIR)/font.raw $(OBJDIR)/icon.raw
 	$(RM_F) atlas.lz4 sounds.lz4 $(OBJDIR)/atlas.lz4.h
+	$(RM_F) $(OBJDIR)/atlas.lz4.o
 	$(RM_F) $(OBJDIR)/soundbank.raw
 	$(RM_F) $(SOUNDS)
 	$(RM_F) $(MUSIC) music.hdr music.xa
