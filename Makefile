@@ -52,7 +52,7 @@ SRCDIR = src
 TOOLSDIR = tools
 TOOLSOBJDIR = $(OBJDIR)/tools
 
-INCLUDES = src/block_info.h src/common.h src/config.h src/psx.h
+INCLUDES = src/block_info.h src/common.h src/config.h
 
 MUSIC = \
 	$(OBJDIR)/calm1.mus \

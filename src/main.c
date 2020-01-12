@@ -1493,7 +1493,7 @@ int main(void)
 	int x, y, xc, yc;
 
 	// Disable DMA
-	DMA_DPCR &= ~0x08888888;
+	PSXREG_DPCR &= ~0x08888888;
 
 	// Configure ISR
 	chenboot_isr_disable();
