@@ -56,12 +56,9 @@ def draw_4bit(im, ix, iy, iw, ih, tx, ty):
 				imgdata[((ty>>irm)+iry)*imgwidth + ((tx>>irm)+irx)] = impc
 	single_pixel = img[mipmap_levels].getpixel((0, 0))
 	single_pixel_color = 0
-#	single_pixel_color |= int(int(single_pixel[2] * 31 / 255.0) * 128 / 31.0) << 16
-#	single_pixel_color |= int(int(single_pixel[1] * 31 / 255.0) * 128 / 31.0) << 8
-#	single_pixel_color |= int(int(single_pixel[0] * 31 / 255.0) * 128 / 31.0)
-	single_pixel_color |= int(single_pixel[2] * 128.0 / 255.0) << 16
-	single_pixel_color |= int(single_pixel[1] * 128.0 / 255.0) << 8
-	single_pixel_color |= int(single_pixel[0] * 128.0 / 255.0)
+	single_pixel_color |= int(single_pixel[2]) << 16
+	single_pixel_color |= int(single_pixel[1]) << 8
+	single_pixel_color |= int(single_pixel[0])
 	return palette, single_pixel_color
 
 #	imgp = img.convert(mode='P', palette=Image.ADAPTIVE, colors=16)

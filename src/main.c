@@ -440,7 +440,7 @@ void draw_quads(int32_t cx, int32_t cy, int32_t cz, int di, const mesh_data_t *m
 				x10, y10, z10,
 				x11, y11, z11,
 				texture_to_color_map[block_data->idx]);
-			return;
+			continue;
 		}
 #endif
 
@@ -479,18 +479,12 @@ void draw_quads(int32_t cx, int32_t cy, int32_t cz, int di, const mesh_data_t *m
 }
 
 static int get_model(int block) {
-	if (block == 44) return 2;
-	return (block == 6) || (block >= 37 && block <= 40) ? 1 : 0;
+       if (block == 44) return 2;
+       return (block == 6) || (block >= 37 && block <= 40) ? 1 : 0;
 }
 
 void draw_block(int32_t cx, int32_t cy, int32_t cz, int di, int block, uint32_t facemask, bool transparent)
 {
-	if(block >= BLOCK_MAX || block < 0) {
-		return;
-	}
-
-	facemask |= 0x40;
-
 	switch (get_model(block)) {
 		case 0:
 #ifdef MIPMAPPING
