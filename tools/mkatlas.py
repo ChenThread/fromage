@@ -4,34 +4,40 @@ import scipy.cluster.vq as vq
 from PIL import Image, ImageOps, ImageColor
 
 im = Image.open(sys.argv[1])
-imwater = None
-imlava = None
-if len(sys.argv) >= 5:
-	imwater = Image.open(sys.argv[3])
-	imlava = Image.open(sys.argv[4])
 fp = open(sys.argv[2], "wb")
 clut = [None] * 256
+single_pixel_colors = [None] * 256
 imgdata = [None] * (256*256)
 imgwidth = 256
+mipmap_levels = 4
 
 def draw_4bit(im, ix, iy, iw, ih, tx, ty):
 	# generate palette
-	img = im.crop((ix, iy, ix+iw, iy+ih)).convert("RGBA")
-	img_data = np.zeros((iw * ih, 3))
-	img_translucent = np.zeros((iw * ih))
+	img = [None] * (mipmap_levels+1)
+	img_data = [None] * (mipmap_levels+1)
+	img_translucent = [None] * (mipmap_levels+1)
+
+	img[0] = im.crop((ix, iy, ix+iw, iy+ih)).convert("RGBA")
+	img_data[0] = np.zeros((iw * ih, 3))
+	img_translucent[0] = np.zeros((iw * ih))
+	for irm in range(1,mipmap_levels+1):
+		img[irm] = img[0].resize((iw>>irm, ih>>irm), Image.ANTIALIAS)
+		img_data[irm] = np.zeros(((iw>>irm) * (ih>>irm), 3))
+		img_translucent[irm] = np.zeros(((iw>>irm) * (ih>>irm)))
 	has_translucent = False
-	for iry in range(ih):
-		for irx in range(iw):
-			img_pixel = img.getpixel((irx, iry))
-			img_data[iry * iw + irx] = [
-				int(img_pixel[0] * 31 / 255),
-				int(img_pixel[1] * 31 / 255),
-				int(img_pixel[2] * 31 / 255)
-			]
-			if img_pixel[3] <= 1:
-				img_translucent[iry * iw + irx] = 1
-				has_translucent = True
-	centroids,_ = vq.kmeans(img_data, 15 if has_translucent else 16)
+	for irm in range(0,mipmap_levels+1):
+		for iry in range(ih>>irm):
+			for irx in range(iw>>irm):
+				img_pixel = img[irm].getpixel((irx, iry))
+				img_data[irm][iry * (iw>>irm) + irx] = [
+					int(img_pixel[0] * 31 / 255.0),
+					int(img_pixel[1] * 31 / 255.0),
+					int(img_pixel[2] * 31 / 255.0)
+				]
+				if img_pixel[3] <= 1:
+					img_translucent[irm][iry * (iw>>irm) + irx] = 1
+					has_translucent = True
+	centroids,_ = vq.kmeans(img_data[0], 15 if has_translucent else 16)
 	palette = [0x0000] * 16
 	for pl in range(len(centroids)):
 		r = max(0, min(31, int(centroids[pl][0] + 0.5)))
@@ -39,15 +45,24 @@ def draw_4bit(im, ix, iy, iw, ih, tx, ty):
 		b = max(0, min(31, int(centroids[pl][2] + 0.5)))
 		palette[pl] = 0x8000|(r<<0)|(g<<5)|(b<<10)
 	# TODO: floyd-steinberg
-	indexes,_ = vq.vq(img_data,centroids)
-	for iry in range(ih):
-		for irx in range(iw):
-			iridx = iry * iw + irx
-			impc = 15
-			if img_translucent[iridx] == 0:
-				impc = indexes[iridx]
-			imgdata[(ty+iry)*imgwidth + tx+irx] = impc
-	return palette
+	for irm in range(0,mipmap_levels+1):
+		indexes,_ = vq.vq(img_data[irm],centroids)
+		for iry in range(ih>>irm):
+			for irx in range(iw>>irm):
+				iridx = iry * (iw>>irm) + irx
+				impc = 15
+				if img_translucent[irm][iridx] == 0:
+					impc = indexes[iridx]
+				imgdata[((ty>>irm)+iry)*imgwidth + ((tx>>irm)+irx)] = impc
+	single_pixel = img[mipmap_levels].getpixel((0, 0))
+	single_pixel_color = 0
+#	single_pixel_color |= int(int(single_pixel[2] * 31 / 255.0) * 128 / 31.0) << 16
+#	single_pixel_color |= int(int(single_pixel[1] * 31 / 255.0) * 128 / 31.0) << 8
+#	single_pixel_color |= int(int(single_pixel[0] * 31 / 255.0) * 128 / 31.0)
+	single_pixel_color |= int(single_pixel[2] * 128.0 / 255.0) << 16
+	single_pixel_color |= int(single_pixel[1] * 128.0 / 255.0) << 8
+	single_pixel_color |= int(single_pixel[0] * 128.0 / 255.0)
+	return palette, single_pixel_color
 
 #	imgp = img.convert(mode='P', palette=Image.ADAPTIVE, colors=16)
 #	imgpalr = imgp.getpalette()
@@ -70,18 +85,15 @@ def write_palette(fp, palette):
 def add_texture(im, ix, iy, i):
 	tx = (i & 15) << 4
 	ty = (i & 240)
-	clut[i] = draw_4bit(im, ix, iy, 16, 16, tx, ty)
+	clut[i], single_pixel_colors[i] = draw_4bit(im, ix, iy, 16, 16, tx, ty)
 
 for i in range(256):
 	tx = (i & 15) << 4
 	ty = (i & 240)
 	add_texture(im, tx, ty, i)
 
-if imlava != None:
-	for i in range(16):
-		add_texture(imlava, 0, i*16, 80+i)
-	for i in range(16):
-		add_texture(imwater, 0, i*16, 100+i)
+for iy in range(128):
+	fp.write(struct.pack("<I", single_pixel_colors[iy + 128]))
 
 for iy in range(256):
 	for ix in range(0, imgwidth, 2):

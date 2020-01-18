@@ -1,4 +1,4 @@
-#define QUAD(x,y) {((y)<<12)|((x)<<4), 0x001C, 0x4034 | ( ((y) * 16 + (x)) << 6), 0x0000}
+#define QUAD(x,y) {(((y)+8)<<12)|((x)<<4), 0x001C, 0x4034 | ( (((y)+8) * 16 + (x)) << 6), (((y) << 4) + (x))}
 
 #define INFO_BLOCK_CUBE(x,y) {QUAD(x,y),QUAD(x,y),QUAD(x,y),QUAD(x,y),QUAD(x,y),QUAD(x,y)}
 #define INFO_BLOCK_CUBE_TB(x,y,xt,yt,xb,yb) {QUAD(x,y),QUAD(x,y),QUAD(x,y),QUAD(x,y),QUAD(xb,yb),QUAD(xt,yt)}

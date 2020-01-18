@@ -34,7 +34,7 @@ LDFLAGS = -g -O3 -flto -Wl,-Tlink.ld -pipe \
 	-msoft-float \
 	-L$(CANDYK)/lib
 
-LIBS = -lm -lorelei -lsawpads -lseedy -lc -lgcc -lchenboot
+LIBS = -lm -lorelei -lsawpads -lseedy -lc -lgcc -lchenboot -lnosys
 
 # stuff omitted:
 # O2:
@@ -101,7 +101,7 @@ OBJS_SMALL = \
 	$(OBJDIR)/lz4.o
 
 # uncomment for standalone boot.exe build
-#CFLAGS += -DSTANDALONE_EXE
+CFLAGS += -DSTANDALONE_EXE
 
 # uncomment for PAL build
 CFLAGS += -DREGION_EUROPE
@@ -188,8 +188,8 @@ $(OBJDIR)/font.o: $(OBJDIR)/font.raw $(TOOLSDIR)/bin2s.py $(INCLUDES)
 	$(PYTHON3) $(TOOLSDIR)/bin2s.py $(OBJDIR)/font.raw > $(OBJDIR)/font.s
 	$(CROSS_AS) -o $@ $(ASFLAGS) $(OBJDIR)/font.s
 
-$(OBJDIR)/atlas.raw: $(RESDIR)/atlas.png $(RESDIR)/water.png $(RESDIR)/lava.png $(TOOLSDIR)/mkatlas.py
-	$(PYTHON3) $(TOOLSDIR)/mkatlas.py $(RESDIR)/atlas.png $(OBJDIR)/atlas.raw $(RESDIR)/water.png $(RESDIR)/lava.png
+$(OBJDIR)/atlas.raw: $(RESDIR)/atlas.png $(TOOLSDIR)/mkatlas.py
+	$(PYTHON3) $(TOOLSDIR)/mkatlas.py $(RESDIR)/atlas.png $(OBJDIR)/atlas.raw
 
 $(OBJDIR)/font.raw: $(RESDIR)/font.png
 	$(PYTHON3) $(TOOLSDIR)/mkfont.py $(RESDIR)/font.png $(OBJDIR)/font.raw

@@ -7,6 +7,7 @@
 #define FRUSTUM_CULL 1
 #define FRUSTUM_CULL_BLOCK 1
 // #define SPHERICAL_DISTANCE 1
+#define MIPMAPPING 1
 #define RENDER_DISTANCE_MIN 12
 #define RENDER_DISTANCE_MAX 32
 #define RENDER_DISTANCE_COOLDOWN VBLANKS_PER_SEC
@@ -42,6 +43,10 @@ int render_distance = 12;
 int last_rd_delta = 0;
 int rd_delta_cooldown = 0;
 FASTMEM int max_calced_di = 0;
+
+#ifdef MIPMAPPING
+uint32_t texture_to_color_map[128];
+#endif
 
 static void change_render_distance(int delta) {
 	// prevent render distance from going below or above certain values
@@ -221,6 +226,16 @@ static inline bool is_face_lit(int32_t cx, int32_t cy, int32_t cz, uint32_t i) {
 	}
 }
 
+#ifdef MIPMAPPING
+static int32_t mipmap_mask[] = {
+	0xFFFF,
+	0x7F7F,
+	0x3F3F,
+	0x1F1F,
+	0x0F0F
+};
+#endif
+
 static inline void draw_one_quad(
 	uint32_t command, int di,
 	int32_t x00, int32_t y00, int32_t z00, int32_t t00,
@@ -304,6 +319,66 @@ static inline void draw_one_quad(
 
 }
 
+static inline void draw_one_quad_notex(
+	uint32_t command, int di,
+	int32_t x00, int32_t y00, int32_t z00,
+	int32_t x01, int32_t y01, int32_t z01,
+	int32_t x10, int32_t y10, int32_t z10,
+	int32_t x11, int32_t y11, int32_t z11,
+	uint32_t color)
+{
+	int32_t xy00 = ((x00&0xFFFF)|(y00<<16));
+	int32_t xy01 = ((x01&0xFFFF)|(y01<<16));
+	int32_t xy10 = ((x10&0xFFFF)|(y10<<16));
+
+	asm volatile ("mtc2 %0, $0\n" : "+r"(xy00) : : );
+	asm volatile ("mtc2 %0, $1\n" : "+r"(z00) : : );
+	asm volatile ("mtc2 %0, $2\n" : "+r"(xy01) : : );
+	asm volatile ("mtc2 %0, $3\n" : "+r"(z01) : : );
+	asm volatile ("mtc2 %0, $4\n" : "+r"(xy10) : : );
+	asm volatile ("mtc2 %0, $5\n" : "+r"(z10) : : );
+
+	// Apply transformation
+	asm volatile ("cop2 0x00280030\nnop\n" :::); // RTPT
+
+	// Determine face
+	asm volatile ("cop2 0x01400006\nnop\n" :::); // NCLIP
+	int32_t backface_mac0;
+	asm volatile ("mfc2 %0, $24\nnop\n" : "=r"(backface_mac0) : : );
+	// Backface cull
+	if(backface_mac0 > 0) { return; }
+
+	// Get transformed vertices
+	uint32_t sxy00;
+	uint32_t sxy01;
+	uint32_t sxy10;
+	uint32_t sxy11;
+	asm volatile ("mfc2 %0, $12\nnop\n" : "=r"(sxy00) : : );
+	asm volatile ("mfc2 %0, $13\nnop\n" : "=r"(sxy01) : : );
+	asm volatile ("mfc2 %0, $14\nnop\n" : "=r"(sxy10) : : );
+
+	// Apply 4th point
+	int32_t xy11 = ((x11&0xFFFF)|(y11<<16));
+	asm volatile ("mtc2 %0, $0\n" : "+r"(xy11) : : );
+	asm volatile ("mtc2 %0, $1\n" : "+r"(z11) : : );
+	asm volatile ("nop\n");
+	asm volatile ("cop2 0x00180001\nnop\n" :::); // RTPS
+	asm volatile ("mfc2 %0, $14\nnop\n" : "=r"(sxy11) : : );
+
+	// Draw a quad
+	uint32_t nc = (command & 0xFF000000);
+	nc |= (((command & 0xFF) * (color & 0xFF00FF)) >> 7) & 0xFF00FF;
+	nc |= (((command & 0xFF) * (color & 0xFF00)) >> 7) & 0xFF00;
+
+	DMA_PUSH(5, OT_WORLD + di);
+	dma_buffer[dma_pos++] = nc;
+	dma_buffer[dma_pos++] = (sxy00);
+	dma_buffer[dma_pos++] = (sxy01);
+	dma_buffer[dma_pos++] = (sxy10);
+	dma_buffer[dma_pos++] = (sxy11);
+
+}
+
 void draw_quads(int32_t cx, int32_t cy, int32_t cz, int di, const mesh_data_t *mesh_data, const block_info_t *bi, int face_count, uint32_t facemask, bool semitrans)
 {
 	int32_t ox = cx*0x0100;
@@ -317,25 +392,22 @@ void draw_quads(int32_t cx, int32_t cy, int32_t cz, int di, const mesh_data_t *m
 		}
 
 		const block_info_t *block_data = &bi[mesh_data[mi+0].face & 0x07];
+#ifdef MIPMAPPING
+		int32_t miplevel = (facemask&0x80) ? ((di - 9) >> 3) : 0;
+#endif
 
 		int32_t x00 = ox+mesh_data[mi+0].x;
 		int32_t y00 = oy+mesh_data[mi+0].y;
 		int32_t z00 = oz+mesh_data[mi+0].z;
-		int32_t t00 = mesh_data[mi+0].tc+block_data->tc;
-		int32_t cl = block_data->cl;
 		int32_t x01 = ox+mesh_data[mi+1].x;
 		int32_t y01 = oy+mesh_data[mi+1].y;
 		int32_t z01 = oz+mesh_data[mi+1].z;
-		int32_t t01 = mesh_data[mi+1].tc+block_data->tc;
-		int32_t tp = block_data->tp;
 		int32_t x10 = ox+mesh_data[mi+2].x;
 		int32_t y10 = oy+mesh_data[mi+2].y;
 		int32_t z10 = oz+mesh_data[mi+2].z;
-		int32_t t10 = mesh_data[mi+2].tc+block_data->tc;
 		int32_t x11 = ox+mesh_data[mi+3].x;
 		int32_t y11 = oy+mesh_data[mi+3].y;
 		int32_t z11 = oz+mesh_data[mi+3].z;
-		int32_t t11 = mesh_data[mi+3].tc+block_data->tc;
 
 		uint32_t lighting = block_lighting[i];
 		if(!is_face_lit(cx, cy, cz, i)) {
@@ -344,6 +416,43 @@ void draw_quads(int32_t cx, int32_t cy, int32_t cz, int di, const mesh_data_t *m
 		} else {
 			lighting &= 0xFFFFFF;
 		}
+
+
+#ifdef MIPMAPPING
+		if (miplevel >= 3) {
+			uint32_t command;
+			if(semitrans) {
+				command = 0x2A000000 | lighting;
+			} else {
+				command = 0x28000000 | lighting;
+			}
+			draw_one_quad_notex(
+				command, di,
+				x00, y00, z00,
+				x01, y01, z01,
+				x10, y10, z10,
+				x11, y11, z11,
+				texture_to_color_map[block_data->idx]);
+			return;
+		}
+#endif
+
+		int32_t t00 = mesh_data[mi+0].tc+block_data->tc;
+		int32_t t01 = mesh_data[mi+1].tc+block_data->tc;
+		int32_t t10 = mesh_data[mi+2].tc+block_data->tc;
+		int32_t t11 = mesh_data[mi+3].tc+block_data->tc;
+		int32_t cl = block_data->cl;
+		int32_t tp = block_data->tp;
+
+#ifdef MIPMAPPING
+		if (miplevel > 0) {
+			int32_t svm = mipmap_mask[miplevel];
+			t00 = (t00 >> miplevel) & svm;
+			t01 = (t01 >> miplevel) & svm;
+			t10 = (t10 >> miplevel) & svm;
+			t11 = (t11 >> miplevel) & svm;
+		}
+#endif
 
 		uint32_t command;
 		if(semitrans) {
@@ -377,12 +486,20 @@ void draw_block(int32_t cx, int32_t cy, int32_t cz, int di, int block, uint32_t 
 
 	switch (get_model(block)) {
 		case 0:
+#ifdef MIPMAPPING
+			if (block != 18 && block != 20) {
+				facemask |= 0x80;
+			}
+#endif
 			draw_quads(cx, cy, cz, di, mesh_data_block, block_info[block], 6, facemask, transparent || ((block&(~1)) == 8));
 			break;
 		case 1:
-			draw_quads(cx, cy, cz, di, mesh_data_plant, block_info[block], 4, 0xFFFF, false);
+			draw_quads(cx, cy, cz, di, mesh_data_plant, block_info[block], 4, 0xFF7F, false);
 			break;
 		case 2:
+#ifdef MIPMAPPING
+			facemask |= 0x80;
+#endif
 			draw_quads(cx, cy, cz, di, mesh_data_slab, block_info[block], 6, facemask, transparent);
 			break;
 	}
@@ -390,14 +507,21 @@ void draw_block(int32_t cx, int32_t cy, int32_t cz, int di, int block, uint32_t 
 
 #ifdef SPHERICAL_DISTANCE
 static inline int get_block_render_distance(int32_t dx, int32_t dy, int32_t dz) {
-	int x = (dx + dy + dz) << 7;
-	int xs = ((dx*dx + dy*dy + dz*dz) * 9) << 12;
+        int x = (dx + dy + dz) << 7;
 
-	x = x - (((x*x) - xs) / (x<<1));
-	x = x - (((x*x) - xs) / (x<<1));
-	return ((x + 32) >> 6);
+	asm volatile ("mtc2 %0, $9\n" : "+r"(dx) : : );
+	asm volatile ("mtc2 %0, $10\n" : "+r"(dy) : : );
+	asm volatile ("mtc2 %0, $11\n" : "+r"(dz) : : );
+	asm volatile ("cop2 0x00A00428\nnop\n" :::); // SQR
+	asm volatile ("mfc2 %0, $9\nnop\n" : "=r"(dx) : : );
+	asm volatile ("mfc2 %0, $10\nnop\n" : "=r"(dy) : : );
+	asm volatile ("mfc2 %0, $11\nnop\n" : "=r"(dz) : : );
 
-	//return (int) (sqrt(x*x + y*y + z*z) * 2);
+        int xs = ((dx + dy + dz) * 9) << 12;
+
+        x = x - (((x*x) - xs) / (x<<1));
+        x = x - (((x*x) - xs) / (x<<1));
+        return ((x + 32) >> 6);
 }
 #else
 #define get_block_render_distance(dx, dy, dz) ((dx)+(dy)+(dz))
@@ -413,7 +537,7 @@ inline void draw_block_in_level(int32_t cx, int32_t cy, int32_t cz, int32_t di, 
 		case 0:
 			return;
 		case 6: case 37: case 38: case 39: case 40:
-			draw_block(cx, cy, cz, di, block, 0xFFFF, false);
+			draw_block(cx, cy, cz, di, block, 0xFF7F, false);
 			return;
 		default: {
 			uint32_t fmask = world_get_render_faces_unsafe(cx, cy, cz) & nfmask;
@@ -1487,6 +1611,16 @@ void player_update(int mmul)
 #endif
 }
 
+static void load_texture_atlas(uint8_t *cmp_data, int cmp_data_len)
+{
+	uint8_t *decmp_data = lz4_alloc_and_unpack(cmp_data, cmp_data_len, (320/4) * 256 * 2 + (128 * 4));
+#ifdef MIPMAPPING
+	memcpy(texture_to_color_map, decmp_data, 128 * 4);
+#endif
+	gpu_dma_load(decmp_data + 512, 768, 256, 320/4, 256, 0);
+	free(decmp_data);
+}
+
 int main(void)
 {
 	int i;
@@ -1639,10 +1773,10 @@ int main(void)
 		file_record_t *atlas_file = cdrom_get_file("ATLAS.LZ4");
 		uint8_t *atlas_lz4 = malloc(atlas_file->size);
 		cdrom_read_record(atlas_file, atlas_lz4);
-		gpu_dma_load(atlas_lz4, 768, 256, 320/4, 256, atlas_file->size);
+		load_texture_atlas(atlas_lz4, atlas_file->size);
 		free(atlas_lz4);
 #else
-		gpu_dma_load(atlas_lz4, 768, 256, 320/4, 256, sizeof(atlas_lz4));
+		load_texture_atlas(atlas_lz4, sizeof(atlas_lz4));
 #endif
 	}
 	draw_status_prog_frame(2, 2);
@@ -1656,7 +1790,8 @@ int main(void)
 #endif
 
 	sawpads_do_read();
-	options.debug_mode = ((sawpads_controller[0].buttons & PAD_SELECT) == 0) ? 1 : 0;
+//	options.debug_mode = ((sawpads_controller[0].buttons & PAD_SELECT) == 0) ? 1 : 0;
+	options.debug_mode = 1;
 
 	// Ensure notice is displayed for long enough
 	while (vblank_counter < VBLANKS_PER_SEC*8) {
@@ -1706,8 +1841,8 @@ int main(void)
 				tex_update_ticks++;
 			}
 			if (tex_update_ticks != last_tut) {
-				int water_tex = (tex_update_ticks % WATER_ANIMATION_FRAMES) + WATER_ANIMATION_START;
-				int lava_tex = ((tex_update_ticks >> 1) % LAVA_ANIMATION_FRAMES) + LAVA_ANIMATION_START;
+				int water_tex = (tex_update_ticks % WATER_ANIMATION_FRAMES) + WATER_ANIMATION_START - (8<<4);
+				int lava_tex = ((tex_update_ticks >> 1) % LAVA_ANIMATION_FRAMES) + LAVA_ANIMATION_START - (8<<4);
 //				if (lava_tex >= LAVA_ANIMATION_FRAMES) lava_tex = ((LAVA_ANIMATION_FRAMES * 2 - 2) - lava_tex);
 //				lava_tex += LAVA_ANIMATION_START;
 				for (int i = 0; i < 6; i++) {

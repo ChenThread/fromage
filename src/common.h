@@ -53,7 +53,7 @@ extern uint8_t fsys_level[LEVEL_LY][LEVEL_LZ][LEVEL_LX];
 #define BLOCK_MAX 50
 #define QUAD_MAX 6
 typedef struct block_info {
-	uint16_t tc, tp, cl, pad0;
+	uint16_t tc, tp, cl, idx;
 } block_info_t;
 
 extern block_info_t block_info[BLOCK_MAX][QUAD_MAX];
