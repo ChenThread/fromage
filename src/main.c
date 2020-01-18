@@ -170,6 +170,7 @@ int32_t fps_frames = 0;
 int32_t fps_vblanks = 0;
 int32_t fps_val = 0;
 int32_t dma_size_used = 0;
+uint32_t rendering_calc_cycles = 0;
 
 static options_t options;
 
@@ -204,6 +205,12 @@ chenboot_exception_frame_t *isr_handler_c(chenboot_exception_frame_t *sp)
 		// JOY
 		PSXREG_I_STAT = ~(1<<7);
 		sawpads_isr_joy();
+	}
+
+	if((PSXREG_I_STAT & (1<<6)) != 0) {
+		// TIMER2
+		PSXREG_I_STAT = ~(1<<6);
+		rendering_calc_cycles += 0x10000;
 	}
 
 	// Work around GTE bug
@@ -1003,7 +1010,11 @@ void draw_everything(void)
 	frame_start();
 
 	// Load mesh data into GTE
+	rendering_calc_cycles = 0;
+	PSXREG_Tn_MODE(2) = 2 | (1 << 6) | (1 << 5) | (2 << 8);
 	draw_world();
+	rendering_calc_cycles = (rendering_calc_cycles + (PSXREG_Tn_VALUE(2) & 0xFFFF)) << 3;
+	PSXREG_Tn_MODE(2) = (2 << 8);
 
 	// Draw fog
 #ifdef FOG_ENABLED
@@ -1037,7 +1048,7 @@ void draw_everything(void)
 	draw_hotbar();
 	draw_text(TEXT_BORDER_X, TEXT_BORDER_Y, 0xFFFFFF, "0.30");
 	if (options.debug_mode) {
-		draw_text(TEXT_BORDER_X, TEXT_BORDER_Y + 10, 0xFFFFFF, "%d FPS, BS: %d", fps_val, dma_size_used);
+		draw_text(TEXT_BORDER_X, TEXT_BORDER_Y + 10, 0xFFFFFF, "%d FPS, BS: %d, RT: %d", fps_val, dma_size_used, rendering_calc_cycles);
 		draw_text(TEXT_BORDER_X, TEXT_BORDER_Y + 20, 0xFFFFFF, "RD: %d, J: %02X%02X%02X%02X", render_distance, sawpads_controller[0].axes[0], sawpads_controller[0].axes[1],
 			sawpads_controller[0].axes[2], sawpads_controller[0].axes[3]);
 		draw_text(TEXT_BORDER_X, TEXT_BORDER_Y + 30, 0xFFFFFF, "XYZ: %.2f / %.2f / %.2f", (float)cam_x / 256.0f, (float)cam_y / 256.0f, (float)cam_z / 256.0f);
