@@ -1,13 +1,29 @@
 #include "common.h"
 
-#define ELEVATION_MUL 0.025
-#define ROUGHNESS_MUL 0.05
-#define DETAIL_MUL 0.15
+#define ELEVATION_MUL 102 // 0.025 << 12
+#define ROUGHNESS_MUL 205 // 0.05 << 12
+#define DETAIL_MUL 614 // 0.15 << 12
 
-#define fade(t) ((t)*(t)*(t)*((t)*((t)*6-15)+10))
-#define lerp(t,a,b) ((a)+((t)*((b)-(a))))
+static int fade(int t) {
+	int t1 = (t)*6-(15<<12);
+	int t2 = ((t*t1)>>12)+(10<<12);
+	int t3 = (t*t2)>>12;
+	int t4 = (t*t3)>>12;
+	int t5 = (t*t4)>>12;
+	return t5;
+}
 
-static inline float grad(uint8_t hash, float x, float y, float z)
+/* #define fade(t) (
+	(t)*(t)*(t)*(
+		(t)*(
+			(t)*6-(15<<12)
+		)+(10<<12)
+	)
+) */
+
+#define lerp(t,a,b) ( (a) + ( ((t)*((b)-(a))) >> 12) )
+
+static int grad(uint8_t hash, int x, int y, int z)
 {
 	switch(hash & 0xF)
 	{
@@ -31,17 +47,17 @@ static inline float grad(uint8_t hash, float x, float y, float z)
 	}
 }
 
-static float perlin(uint8_t *perm, float x, float y, float z)
+static int perlin(uint8_t *perm, int x, int y, int z)
 {
-	int xi = (int)x & 0xFF;
-	int yi = (int)y & 0xFF;
-	int zi = (int)z & 0xFF;
-	float xf = x-(int)x;
-	float yf = y-(int)y;
-	float zf = z-(int)z;
-	float u = fade(xf);
-	float v = fade(yf);
-	float w = fade(zf);
+	int xi = (x >> 12) & 0xFF;
+	int yi = (y >> 12) & 0xFF;
+	int zi = (z >> 12) & 0xFF;
+	int xf = x & 0xFFF;
+	int yf = y & 0xFFF;
+	int zf = z & 0xFFF;
+	int u = fade(xf);
+	int v = fade(yf);
+	int w = fade(zf);
 
 	int a  = perm[xi]+yi;
 	int aa = perm[a&0xFF]+zi;
@@ -60,13 +76,13 @@ static float perlin(uint8_t *perm, float x, float y, float z)
 	uint8_t bbb = perm[(bb+1)&0xFF];
 
 	return lerp(w, lerp(v, lerp(u, grad(aaa, xf  , yf  , zf   ),
-	                               grad(baa, xf-1, yf  , zf   )),
-	                       lerp(u, grad(aba, xf  , yf-1, zf   ),
-	                               grad(bba, xf-1, yf-1, zf   ))),
-	               lerp(v, lerp(u, grad(aab, xf  , yf  , zf-1 ),
-	                               grad(bab, xf-1, yf  , zf-1 )),
-	                       lerp(u, grad(abb, xf  , yf-1, zf-1 ),
-	                               grad(bbb, xf-1, yf-1, zf-1 ))));
+	                               grad(baa, xf-(1<<12), yf  , zf   )),
+	                       lerp(u, grad(aba, xf  , yf-(1<<12), zf   ),
+	                               grad(bba, xf-(1<<12), yf-(1<<12), zf   ))),
+	               lerp(v, lerp(u, grad(aab, xf  , yf  , zf-(1<<12) ),
+	                               grad(bab, xf-(1<<12), yf  , zf-(1<<12) )),
+	                       lerp(u, grad(abb, xf  , yf-(1<<12), zf-(1<<12) ),
+	                               grad(bbb, xf-(1<<12), yf-(1<<12), zf-(1<<12) ))));
 }
 
 #define SET(x,y,z,b) if (x>=0&&y>=0&&z>=0&&x<lx&&y<ly&&z<lz) map[(((y) * lz + (z)) * lx + (x))] = (b)
@@ -125,10 +141,11 @@ static void world_generate_default(uint8_t *map, int32_t lx, int32_t ly, int32_t
 	{
 		if (pc != NULL) pc(z*lx+x,lz*lx);
 
-		float elevation = perlin(perm, x * ELEVATION_MUL, z * ELEVATION_MUL, 0);
-		float roughness = perlin(perm, x * ROUGHNESS_MUL, z * ROUGHNESS_MUL, 10000);
-		float detail = perlin(perm, x * DETAIL_MUL, z * DETAIL_MUL, 20000) / 2.0;
-		int height = (int) ((elevation + (roughness * detail)) * (ly/4) + (ly/2) + 0.5);
+		int elevation = perlin(perm, x * ELEVATION_MUL, z * ELEVATION_MUL, 0 << 12);
+		int roughness = perlin(perm, x * ROUGHNESS_MUL, z * ROUGHNESS_MUL, 10000 << 12);
+		int detail = perlin(perm, x * DETAIL_MUL, z * DETAIL_MUL, 20000 << 12) >> 1;
+		int height = (int) ((elevation + ((roughness * detail) >> 12)) * (ly/4) + ((ly/2) << 12) + (1 << 11));
+		height >>= 12;
 		if (height > ly-1) height = ly-1;
 		else if (height < 1) height = 1;
 
