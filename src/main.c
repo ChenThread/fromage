@@ -1802,8 +1802,8 @@ int main(void)
 #endif
 
 	sawpads_do_read();
-//	options.debug_mode = ((sawpads_controller[0].buttons & PAD_SELECT) == 0) ? 1 : 0;
-	options.debug_mode = 1;
+	options.debug_mode = ((sawpads_controller[0].buttons & PAD_SELECT) == 0) ? 1 : 0;
+//	options.debug_mode = 1;
 
 	// Ensure notice is displayed for long enough
 	while (vblank_counter < VBLANKS_PER_SEC*8) {
