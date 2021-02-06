@@ -23,7 +23,7 @@ int get_text_width(const char *format, ...)
 
 	va_list args;
 	va_start(args, format);
-	vsnprintf(buffer, sizeof(buffer), format, args);
+	vsniprintf(buffer, sizeof(buffer), format, args);
 
 	len = get_text_width_buffer(buffer);
 
@@ -95,7 +95,7 @@ void draw_text(int x, int y, int color, const char *format, ...)
 
 	va_list args;
 	va_start(args, format);
-	vsnprintf(buffer, sizeof(buffer), format, args);
+	vsniprintf(buffer, sizeof(buffer), format, args);
 
 	draw_text_buffer(x, y, color, buffer);
 
@@ -232,7 +232,7 @@ void draw_status_window(int style, const char *format, ...)
 
 	va_list args;
 	va_start(args, format);
-	vsnprintf(buffer, sizeof(buffer), format, args);
+	vsniprintf(buffer, sizeof(buffer), format, args);
 
 	// Draw text
 	int width = get_text_width_buffer(buffer);
