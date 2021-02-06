@@ -1045,7 +1045,14 @@ void draw_everything(void)
 		draw_text(TEXT_BORDER_X, TEXT_BORDER_Y + 10, 0xFFFFFF, "%d FPS, BS: %d, RT: %d", fps_val, dma_size_used, rendering_calc_cycles);
 		draw_text(TEXT_BORDER_X, TEXT_BORDER_Y + 20, 0xFFFFFF, "RD: %d, J: %02X%02X%02X%02X", render_distance, sawpads_controller[0].axes[0], sawpads_controller[0].axes[1],
 			sawpads_controller[0].axes[2], sawpads_controller[0].axes[3]);
-		draw_text(TEXT_BORDER_X, TEXT_BORDER_Y + 30, 0xFFFFFF, "XYZ: %.2f / %.2f / %.2f", (float)cam_x / 256.0f, (float)cam_y / 256.0f, (float)cam_z / 256.0f);
+		draw_text(TEXT_BORDER_X, TEXT_BORDER_Y + 30, 0xFFFFFF, "XYZ: %d.%02x / %d.%02x / %d.%02x",
+			cam_x >> 8,
+			cam_x & 0xFF,
+			cam_y >> 8,
+			cam_y & 0xFF,
+			cam_z >> 8,
+			cam_z & 0xFF
+		);
 	} else {
 		if (options.show_fps) {
 			draw_text(TEXT_BORDER_X, TEXT_BORDER_Y + 10, 0xFFFFFF, "%d FPS", fps_val);
