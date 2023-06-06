@@ -11,7 +11,7 @@
 #error No defined region!
 #endif
 
-#if VID_USE_640
+#ifdef VID_USE_640
 #define VID_WIDTH 640
 #define VID_WIDTH_MULTIPLIER 2
 #define font_raw font2x_raw
