@@ -11,23 +11,25 @@
 #error No defined region!
 #endif
 
-#if 1
+#if VID_USE_640
 #define VID_WIDTH 640
 #define VID_WIDTH_MULTIPLIER 2
+#define font_raw font2x_raw
 #else
 #define VID_WIDTH 320
 #define VID_WIDTH_MULTIPLIER 1
+#define font_raw font1x_raw
 #endif
 #define VID_HEIGHT 240
 #define VID_HEIGHT_MULTIPLIER 1
 
 #ifdef TV_PAL
 #define VBLANKS_PER_SEC 50
-#define TEXT_BORDER_X 6
+#define TEXT_BORDER_X (3*VID_WIDTH_MULTIPLIER)
 #define TEXT_BORDER_Y 3
 #else
 #define VBLANKS_PER_SEC 60
-#define TEXT_BORDER_X 6
+#define TEXT_BORDER_X (3*VID_WIDTH_MULTIPLIER)
 #define TEXT_BORDER_Y 9
 #endif
 

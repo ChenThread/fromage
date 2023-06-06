@@ -69,7 +69,7 @@ void cdrom_tick_song_player(int vbls, int music_on) {
 
 file_record_t *cdrom_get_file(const char *name) {
 	char fname[16];
-	sniprintf(fname, 16, "%s;1", name);
+	snprintf(fname, 16, "%s;1", name);
 
 	for (int i = 0; i < files_count; i++) {
 		if (strcmp(fname, files[i].filename) == 0) {

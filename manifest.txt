@@ -1,6 +1,6 @@
 bin=fromage.bin
 cue=fromage.cue
-lic=isolicence.pal
+lic=isolicence.dat
 
 # /
 dat=./system.cnf

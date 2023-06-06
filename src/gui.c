@@ -23,7 +23,7 @@ int get_text_width(const char *format, ...)
 
 	va_list args;
 	va_start(args, format);
-	vsniprintf(buffer, sizeof(buffer), format, args);
+	vsnprintf(buffer, sizeof(buffer), format, args);
 
 	len = get_text_width_buffer(buffer);
 
@@ -95,7 +95,7 @@ void draw_text(int x, int y, int color, const char *format, ...)
 
 	va_list args;
 	va_start(args, format);
-	vsniprintf(buffer, sizeof(buffer), format, args);
+	vsnprintf(buffer, sizeof(buffer), format, args);
 
 	draw_text_buffer(x, y, color, buffer);
 
@@ -232,7 +232,7 @@ void draw_status_window(int style, const char *format, ...)
 
 	va_list args;
 	va_start(args, format);
-	vsniprintf(buffer, sizeof(buffer), format, args);
+	vsnprintf(buffer, sizeof(buffer), format, args);
 
 	// Draw text
 	int width = get_text_width_buffer(buffer);
@@ -338,19 +338,19 @@ void draw_hotbar(void)
 		DMA_PUSH(3, 1);
 		dma_buffer[dma_pos++] = 0x60C0C0C0;
 		dma_buffer[dma_pos++] = ((by-(bh/2)-1) << 16) | ((bx-(bw/2)-1) & 0xFFFF);
-		dma_buffer[dma_pos++] = ((2) << 16) | ((bw+2) & 0xFFFF);
+		dma_buffer[dma_pos++] = ((2) << 16) | ((bw-2+(2*VID_WIDTH_MULTIPLIER)) & 0xFFFF);
 		DMA_PUSH(3, 1);
 		dma_buffer[dma_pos++] = 0x60C0C0C0;
 		dma_buffer[dma_pos++] = ((by+(bh/2)-1) << 16) | ((bx-(bw/2)-1) & 0xFFFF);
-		dma_buffer[dma_pos++] = ((2) << 16) | ((bw+2) & 0xFFFF);
+		dma_buffer[dma_pos++] = ((2) << 16) | ((bw-2+(2*VID_WIDTH_MULTIPLIER)) & 0xFFFF);
 		DMA_PUSH(3, 1);
 		dma_buffer[dma_pos++] = 0x60C0C0C0;
 		dma_buffer[dma_pos++] = ((by-(bh/2)-1) << 16) | ((bx-(bw/2)-2) & 0xFFFF);
-		dma_buffer[dma_pos++] = ((bh+2) << 16) | ((4) & 0xFFFF);
+		dma_buffer[dma_pos++] = ((bh+2) << 16) | ((2*VID_WIDTH_MULTIPLIER) & 0xFFFF);
 		DMA_PUSH(3, 1);
 		dma_buffer[dma_pos++] = 0x60C0C0C0;
 		dma_buffer[dma_pos++] = ((by-(bh/2)-1) << 16) | ((bx+(bw/2)-2) & 0xFFFF);
-		dma_buffer[dma_pos++] = ((bh+2) << 16) | ((4) & 0xFFFF);
+		dma_buffer[dma_pos++] = ((bh+2) << 16) | ((2*VID_WIDTH_MULTIPLIER) & 0xFFFF);
 	}
 
 	for (int i = 0; i < HOTBAR_MAX; i++) {

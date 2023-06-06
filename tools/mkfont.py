@@ -39,8 +39,10 @@ for iy in range(64):
 		impc = im.getpixel((ix+1, iy))
 		if (impc[alpha_idx] > 0):
 			v |= 16
-#		fp.write(struct.pack("<B", v))
-		fp.write(struct.pack("<B", (v & 0x1) * 17))
-		fp.write(struct.pack("<B", (v >> 4) * 17))
+		if sys.argv[3] == "2x":
+			fp.write(struct.pack("<B", (v & 0x1) * 17))
+			fp.write(struct.pack("<B", (v >> 4) * 17))
+		else:
+			fp.write(struct.pack("<B", v))
 
 fp.close()

@@ -36,7 +36,7 @@ void write_sjis_name(uint8_t *buffer, const char *format, ...)
 
 	va_list args;
 	va_start(args, format);
-	vsniprintf(text, sizeof(text), format, args);
+	vsnprintf(text, sizeof(text), format, args);
 	va_end(args);
 
 	int pos = 0;
@@ -134,7 +134,7 @@ int load_level(int save_id, level_info *info, uint8_t *target, int32_t target_si
 	int sectors_read = 0;
 
 	if (save_id < 0) return SAVE_ERROR_INVALID_ARGUMENTS;
-	sniprintf(filename, sizeof(filename), REGION_SAVE_FILENAME, save_id);
+	snprintf(filename, sizeof(filename), REGION_SAVE_FILENAME, save_id);
 
 	init_card(pc);
 
@@ -223,7 +223,7 @@ int save_level(int save_id, level_info *info, const uint8_t *data, save_progress
 	char filename[16];
 
 	if (save_id < 0 || save_id > 9) return SAVE_ERROR_INVALID_ARGUMENTS;
-	sniprintf(filename, sizeof(filename), REGION_SAVE_FILENAME, save_id);
+	snprintf(filename, sizeof(filename), REGION_SAVE_FILENAME, save_id);
 
 	int level_size = info->xsize * info->ysize * info->zsize;
 	int level_cmp_size = LZ4_compressBound(level_size);

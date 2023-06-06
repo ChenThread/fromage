@@ -1,4 +1,5 @@
-CROSSPREFIX=mipsel-elf-
+CANDYK=../candyk-psx
+CROSSPREFIX=/opt/wonderful/toolchain/gcc-mipsel-elf/bin/mipsel-elf-
 
 CROSS_CC=$(CROSSPREFIX)gcc
 CROSS_AS=$(CROSSPREFIX)as
@@ -25,7 +26,8 @@ CFLAGS_FAST = -O3
 CFLAGS_SMALL = -Os
 ELF2PSXFLAGS =
 
-LDFLAGS = -g -O3 -flto -Wl,-Tlink.ld -pipe \
+LDFLAGS	:= -Wl,--defsym=vfprintf=__i_vfprintf -Wl,--defsym=vfscanf=__i_vfscanf \
+	-g -O3 -flto -Wl,-Tlink.ld -pipe \
 	-mtune=3000 -march=3000 \
 	-fomit-frame-pointer \
 	-fno-stack-protector \
@@ -34,7 +36,7 @@ LDFLAGS = -g -O3 -flto -Wl,-Tlink.ld -pipe \
 	-msoft-float \
 	-L$(CANDYK)/lib
 
-LIBS = -lm -lorelei -lsawpads -lseedy -lc -lgcc -lchenboot -lnosys
+LIBS = -lm -lorelei -lsawpads -lseedy -lc -lgcc -lchenboot
 
 # stuff omitted:
 # O2:
@@ -44,7 +46,7 @@ LIBS = -lm -lorelei -lsawpads -lseedy -lc -lgcc -lchenboot -lnosys
 #
 
 EXE_NAME=boot
-ISO_NAME=fromage
+ISO_NAME?=fromage
 
 OBJDIR = obj
 RESDIR ?= res
@@ -94,26 +96,41 @@ OBJS_SMALL = \
 	$(OBJDIR)/gui.o \
 	$(OBJDIR)/save.o \
 	\
-	$(OBJDIR)/font.o \
+	$(OBJDIR)/font1x.o \
+	$(OBJDIR)/font2x.o \
 	$(OBJDIR)/icon.o \
 	$(OBJDIR)/license_text.o \
 	\
 	$(OBJDIR)/lz4.o
 
 # uncomment for standalone boot.exe build
+ifeq ($(TYPE),exe)
 CFLAGS += -DSTANDALONE_EXE
+endif
 
 # uncomment for PAL build
+ifeq ($(REGION),europe)
 CFLAGS += -DREGION_EUROPE
 ELF2PSXFLAGS += -p
+endif
 
 # uncomment for NTSC build
-#CFLAGS += -DREGION_USA
-#ELF2PSXFLAGS += -n
+ifeq ($(REGION),usa)
+CFLAGS += -DREGION_USA
+ELF2PSXFLAGS += -n
+endif
+
+ifeq ($(VIDEO_WIDTH),640)
+CFLAGS += -DVID_USE_640
+endif
 
 OBJS =  $(OBJS_FAST) $(OBJS_SMALL)
 
+ifeq ($(TYPE),exe)
+all: $(ISO_NAME).cue
+else
 all: $(EXE_NAME).exe $(ISO_NAME).cue
+endif
 
 clean:
 	$(RM_F) $(OBJS) $(OBJDIR)/$(EXE_NAME).elf $(ISO_NAME).bin $(ISO_NAME).cue
@@ -184,15 +201,22 @@ atlas.lz4: $(OBJDIR)/atlas.raw $(OBJDIR)/lz4pack $(TOOLSDIR)/bin2h.py
 	$(OBJDIR)/lz4pack $(OBJDIR)/atlas.raw atlas.lz4
 	$(PYTHON3) $(TOOLSDIR)/bin2h.py atlas.lz4 > $(OBJDIR)/atlas.lz4.h
 
-$(OBJDIR)/font.o: $(OBJDIR)/font.raw $(TOOLSDIR)/bin2s.py $(INCLUDES)
-	$(PYTHON3) $(TOOLSDIR)/bin2s.py $(OBJDIR)/font.raw > $(OBJDIR)/font.s
-	$(CROSS_AS) -o $@ $(ASFLAGS) $(OBJDIR)/font.s
-
 $(OBJDIR)/atlas.raw: $(RESDIR)/atlas.png $(TOOLSDIR)/mkatlas.py
 	$(PYTHON3) $(TOOLSDIR)/mkatlas.py $(RESDIR)/atlas.png $(OBJDIR)/atlas.raw
 
-$(OBJDIR)/font.raw: $(RESDIR)/font.png
-	$(PYTHON3) $(TOOLSDIR)/mkfont.py $(RESDIR)/font.png $(OBJDIR)/font.raw
+$(OBJDIR)/font1x.o: $(OBJDIR)/font1x.raw $(TOOLSDIR)/bin2s.py $(INCLUDES)
+	$(PYTHON3) $(TOOLSDIR)/bin2s.py $(OBJDIR)/font1x.raw > $(OBJDIR)/font1x.s
+	$(CROSS_AS) -o $@ $(ASFLAGS) $(OBJDIR)/font1x.s
+
+$(OBJDIR)/font2x.o: $(OBJDIR)/font2x.raw $(TOOLSDIR)/bin2s.py $(INCLUDES)
+	$(PYTHON3) $(TOOLSDIR)/bin2s.py $(OBJDIR)/font2x.raw > $(OBJDIR)/font2x.s
+	$(CROSS_AS) -o $@ $(ASFLAGS) $(OBJDIR)/font2x.s
+
+$(OBJDIR)/font1x.raw: $(RESDIR)/font.png
+	$(PYTHON3) $(TOOLSDIR)/mkfont.py $(RESDIR)/font.png $(OBJDIR)/font1x.raw 1x
+
+$(OBJDIR)/font2x.raw: $(RESDIR)/font.png
+	$(PYTHON3) $(TOOLSDIR)/mkfont.py $(RESDIR)/font.png $(OBJDIR)/font2x.raw 2x
 
 $(OBJDIR)/icon.raw: $(RESDIR)/icon.png
 	$(PYTHON3) $(TOOLSDIR)/mkicon.py $(RESDIR)/icon.png $(OBJDIR)/icon.raw
