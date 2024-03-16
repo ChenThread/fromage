@@ -127,7 +127,7 @@ endif
 OBJS =  $(OBJS_FAST) $(OBJS_SMALL)
 
 ifeq ($(TYPE),exe)
-all: $(ISO_NAME).cue
+all: $(EXE_NAME).exe
 else
 all: $(EXE_NAME).exe $(ISO_NAME).cue
 endif
