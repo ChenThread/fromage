@@ -21,7 +21,7 @@ def draw_4bit(im, ix, iy, iw, ih, tx, ty):
 	img_data[0] = np.zeros((iw * ih, 3))
 	img_translucent[0] = np.zeros((iw * ih))
 	for irm in range(1,mipmap_levels+1):
-		img[irm] = img[0].resize((iw>>irm, ih>>irm), Image.ANTIALIAS)
+		img[irm] = img[0].resize((iw>>irm, ih>>irm), Image.LANCZOS)
 		img_data[irm] = np.zeros(((iw>>irm) * (ih>>irm), 3))
 		img_translucent[irm] = np.zeros(((iw>>irm) * (ih>>irm)))
 	has_translucent = False
