@@ -4,7 +4,7 @@ fromage is a voxel engine implementation for the PlayStation 1 video game consol
 
 ## Compilation (2024)
 
-At this time, fromage is **very** unsupported. 
+At this time, fromage is **very** unsupported. You're on your own with this one - I can't promise I will be able to help.
 
 Requirements:
 
@@ -14,5 +14,5 @@ Requirements:
 
 1. Install the MIPS GCC toolchain from Wonderful: `wf-pacman -S toolchain-gcc-mipsel-elf`
 2. Clone candyk-psx to be in a directory adjacent to fromage: `cd ..`, `git clone https://github.com/ChenThread/candyk-psx`
-3. Compile candyk-psx using the Wonderful toolchain: `cd candyk-psx`, `PATH=/opt/wonderful/toolchain/gcc-mipsel-elf/bin:$PATH make`
+3. Compile candyk-psx using the Wonderful toolchain: `cd candyk-psx`, `export PATH=/opt/wonderful/toolchain/gcc-mipsel-elf/bin:$PATH`, `make`
 4. Compile Fromage: `cd ../fromage`, `make TYPE=exe REGION=europe`
