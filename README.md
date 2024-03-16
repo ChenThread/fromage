@@ -11,6 +11,7 @@ Requirements:
 * Linux
 * [Wonderful Toolchain](https://wonderful.asie.pl/docs/getting-started/)
 * Python 3 and requisite dependencies: python3-numpy, python3-scipy, python3-Pillow
+* mkisofs
 
 1. Install the MIPS GCC toolchain from Wonderful: `wf-pacman -S toolchain-gcc-mipsel-elf`
 2. Clone candyk-psx to be in a directory adjacent to fromage: `cd ..`, `git clone https://github.com/ChenThread/candyk-psx`
